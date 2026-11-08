@@ -19,7 +19,7 @@ stdout. stderr is human-readable logging only. Add an `id` to any request; it co
 | Request | Effect | Replies |
 | --- | --- | --- |
 | `{"cmd":"start"}` | Start recording | `recording`, or `error` if the mic is refused |
-| `{"cmd":"stop","clean":false,"paste":false}` | Stop and transcribe; `clean` runs the experimental cleanup, `paste` pastes into the focused app | `processing`, then `result` |
+| `{"cmd":"stop","mode":"ai","paste":false}` | Stop and transcribe. `mode` is `ai`, `correspondence` or `standard` (default); `verbatim: true` skips the tidy rules; `clean: true` runs the experimental Apple-model pass; `paste` pastes into the focused app | `processing`, then `result` |
 | `{"cmd":"cancel"}` | Stop and discard | `cancelled` |
 | `{"cmd":"transcribe","path":"/abs/file.m4a"}` | Transcribe a file | `result` |
 | `{"cmd":"status"}` | Report state | `status` |
@@ -28,7 +28,7 @@ stdout. stderr is human-readable logging only. Add an `id` to any request; it co
 Events:
 
 ```json
-{"event":"ready","model":"parakeet-tdt-0.6b-v3","cleanup":true,"pasteAllowed":false}
+{"event":"ready","model":"bark-3.0-clean","cleanup":true,"pasteAllowed":false}
 {"event":"result","id":7,"text":"Ship it on Monday.","raw":"Ship it on Monday.","audioSeconds":1.9,"asrMs":41,"totalMs":41}
 {"event":"error","id":7,"message":"microphone access was refused"}
 ```
@@ -57,7 +57,7 @@ readline.createInterface({ input: larynx.stdout }).on('line', (line) => {
 const send = (obj) => larynx.stdin.write(JSON.stringify(obj) + '\n');
 
 onHotkeyDown(() => send({ cmd: 'start' }));
-onHotkeyUp(() => send({ cmd: 'stop' }));
+onHotkeyUp(() => send({ cmd: 'stop', mode: 'ai' }));  // Locust's composer talks to AI teammates
 app.on('before-quit', () => send({ cmd: 'quit' }));
 ```
 

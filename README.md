@@ -43,6 +43,21 @@ swift build -c release
 Microphone, Accessibility (to paste) and Input Monitoring (to see the key). Keys: `fn`, `rightOption`,
 `rightCommand`, `rightControl`. `--models-dir <path>` keeps the model somewhere other than FluidAudio's default.
 
+## Cleanup
+
+Larynx cleans as it goes, with no AI rewrite and no added delay:
+
+1. The default speech model, Underdog Bark 3.0 Clean (English), drops "um", "uh", false starts and repeated
+   words while it transcribes. `--engine parakeet` (or `defaults write com.automatedworkflow.larynx engine parakeet`)
+   switches to verbatim Parakeet v3 for 25 European languages.
+2. Tidy rules remove leftover fillers, stranded commas and repeats, and fix capitals.
+3. The app you are dictating into sets the mode. AI chats, terminals and code editors get a light touch (the model
+   reading it doesn't care). Mail, Slack, Messages and Notes get text that ends like a sentence. `--verbatim` skips
+   step 2.
+
+Not yet: understanding corrections such as "three, no wait, four". That needs an AI rewrite, planned for
+correspondence apps only.
+
 ## How it works
 
 | File | Job |
@@ -51,6 +66,7 @@ Microphone, Accessibility (to paste) and Input Monitoring (to see the key). Keys
 | `Transcriber.swift` | Loads Parakeet v3 once, transcribes a clip |
 | `Hotkey.swift` | Event tap on one modifier; re-arms itself when macOS switches it off |
 | `Inserter.swift` | Clipboard plus Cmd+V mapped through the keyboard layout; restores your clipboard; refuses during Secure Input |
+| `Tidy.swift` | Cleanup rules and the per-app mode |
 | `Cleaner.swift` | Optional Apple Foundation Models pass with a guard against answers |
 | `main.swift` | The `transcribe`, `listen` and `serve` commands |
 

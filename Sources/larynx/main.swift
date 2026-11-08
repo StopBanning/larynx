@@ -17,6 +17,7 @@ let modelsDir: URL? = option("--models-dir").map { URL(fileURLWithPath: ($0 as N
         ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Larynx/models", isDirectory: true)
         : nil)
 let wantsClean = args.contains("--clean")
+let verbatim = args.contains("--verbatim")
 
 let usage = """
     larynx: local, offline dictation for macOS (Parakeet TDT v3 on the Neural Engine)
@@ -28,6 +29,8 @@ let usage = """
 
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
     --engine parakeet|clean   clean = English-only model that drops ums, false starts and repeats
+    --mode ai|correspondence|standard   how much to polish (listen picks it from the front app)
+    --verbatim            skip the tidy-up rules
     --clean               tidy the text with Apple's on-device model when available
     """
 
@@ -54,7 +57,7 @@ let transcriber = Transcriber()
 let recorder = Recorder()
 nonisolated(unsafe) var activeHotkey: Hotkey?
 let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
-    ?? Engine(rawValue: UserDefaults.standard.string(forKey: "engine") ?? "") ?? .parakeet
+    ?? Engine(rawValue: UserDefaults.standard.string(forKey: "engine") ?? "") ?? .clean
 let loadTask = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
 
 func requestMicrophone() async -> Bool {
@@ -63,14 +66,15 @@ func requestMicrophone() async -> Bool {
 }
 
 /// Transcribes, optionally cleans, and reports timing for one utterance.
-func finish(_ samples: [Float], clean: Bool) async throws -> [String: Any] {
+func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> [String: Any] {
     let started = Date()
     try await loadTask.value
     let raw = try await transcriber.transcribe(samples)
     let asrMs = ms(since: started)
-    let text = clean ? await Cleaner.clean(raw) : raw
+    let tidied = tidy ? Tidy.apply(raw, mode: mode) : raw
+    let text = clean ? await Cleaner.clean(tidied) : tidied
     return [
-        "text": text, "raw": raw,
+        "text": text, "raw": raw, "mode": mode.rawValue,
         "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
         "asrMs": asrMs, "totalMs": ms(since: started),
     ]
@@ -85,7 +89,7 @@ func runTranscribe() async {
         let loadStart = Date()
         try await loadTask.value
         log("model ready in \(ms(since: loadStart)) ms")
-        let result = try await finish(samples, clean: wantsClean)
+        let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard)
         log("\(result["audioSeconds"]!) s of audio, speech \(result["asrMs"]!) ms, total \(result["totalMs"]!) ms")
         print(result["text"] as! String)
         exit(0)
@@ -161,9 +165,10 @@ func runListen(keys: [Hotkey.Key]) async {
         guard Double(samples.count) / Recorder.sampleRate >= 0.3 else { setStatus("Ready"); return }  // a tap, not dictation
         NSSound(named: "Pop")?.play()
         setStatus("Transcribing...")
+        let target = CleanupMode.frontmost()
         Task {
             do {
-                let result = try await finish(samples, clean: wantsClean)
+                let result = try await finish(samples, clean: wantsClean, mode: target.mode)
                 let text = result["text"] as! String
                 guard !text.isEmpty else {
                     setStatus("Heard nothing")
@@ -174,7 +179,7 @@ func runListen(keys: [Hotkey.Key]) async {
                     do { try Inserter.paste(text); setStatus("Ready") }
                     catch { setStatus("Could not paste: \(error)"); log("\(error)") }
                 }
-                log("\(result["totalMs"]!) ms: \(text)")
+                log("\(result["totalMs"]!) ms [\(target.mode.rawValue) \(target.bundleID ?? "?")]: \(text)")
             } catch { setStatus("Error: \(error)"); log("\(error)") }
         }
     }, onCancel: {
@@ -226,7 +231,9 @@ func runServe() async {
             let samples = recorder.stop()
             reply(["event": "processing", "audioSeconds": Double(samples.count) / Recorder.sampleRate])
             do {
-                var result = try await finish(samples, clean: request["clean"] as? Bool ?? false)
+                var result = try await finish(samples, clean: request["clean"] as? Bool ?? false,
+                                              mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
+                                              tidy: !(request["verbatim"] as? Bool ?? false))
                 if request["paste"] as? Bool == true, let text = result["text"] as? String {
                     do { try await MainActor.run { try Inserter.paste(text) }; result["pasted"] = true }
                     catch { result["pasted"] = false; result["pasteError"] = "\(error)" }
@@ -240,7 +247,9 @@ func runServe() async {
         case "transcribe":
             guard let path = request["path"] as? String else { reply(["event": "error", "message": "transcribe needs a path"]); continue }
             do {
-                var result = try await finish(try loadAudioFile(URL(fileURLWithPath: path)), clean: request["clean"] as? Bool ?? false)
+                var result = try await finish(try loadAudioFile(URL(fileURLWithPath: path)), clean: request["clean"] as? Bool ?? false,
+                                              mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
+                                              tidy: !(request["verbatim"] as? Bool ?? false))
                 result["event"] = "result"
                 reply(result)
             } catch { reply(["event": "error", "message": "\(error)"]) }
@@ -279,6 +288,9 @@ switch args.first {
 case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
+case "tidy":
+    let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
+    print(Tidy.apply(args.last ?? "", mode: mode)); exit(0)
 default: print(usage); exit(args.isEmpty || args.first == "--help" || args.first == "-h" ? 0 : 2)
 }
 RunLoop.main.run()
