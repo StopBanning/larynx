@@ -23,6 +23,13 @@ question into a statement, so it is off by default and falls back to the raw tra
 
 ## Use
 
+The easy way is the menu bar app: `./scripts/make-app.sh` builds `~/Applications/Larynx.app`. Open it, allow
+Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn or Right Option to talk. Its model
+lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some third-party
+keyboards never send Fn to macOS; Right Option always works.
+
+From a terminal:
+
 ```bash
 swift build -c release
 .build/release/larynx transcribe note.m4a          # print a transcript
