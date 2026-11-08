@@ -44,6 +44,43 @@ public enum Inserter {
         }
     }
 
+    /// Puts text on the clipboard and leaves it there, for when pasting is impossible. The transcript is never lost.
+    public static func copyOnly(_ text: String) {
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(text, forType: .string)
+    }
+
+    public enum Delivery: Sendable, Equatable {
+        case inserted
+        case copied(String)  // why the paste didn't happen
+
+        public var label: String { if case .inserted = self { return "inserted" } else { return "copied" } }
+    }
+
+    /// Pastes into `target` (the app that was in front when the user started talking), bringing it back to the front
+    /// first if they switched away. Anything that stops the paste falls back to leaving the text on the clipboard.
+    /// `LARYNX_FORCE_COPY=1` forces the fallback, for testing.
+    @MainActor
+    public static func deliver(_ text: String, to target: NSRunningApplication? = nil) async -> Delivery {
+        if ProcessInfo.processInfo.environment["LARYNX_FORCE_COPY"] == "1" {
+            copyOnly(text); return .copied("LARYNX_FORCE_COPY is set")
+        }
+        if let target, NSWorkspace.shared.frontmostApplication?.processIdentifier != target.processIdentifier {
+            guard !target.isTerminated else { copyOnly(text); return .copied("the app you started in has quit") }
+            target.activate()
+            for _ in 0..<6 where NSWorkspace.shared.frontmostApplication?.processIdentifier != target.processIdentifier {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+            }
+            guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
+                copyOnly(text); return .copied("could not bring \(target.localizedName ?? "the app") back to the front")
+            }
+            try? await Task.sleep(nanoseconds: 80_000_000)  // let its window take key focus
+        }
+        do { try paste(text); return .inserted }
+        catch { copyOnly(text); return .copied("\(error)") }
+    }
+
     private static func sendCommandV() {
         let source = CGEventSource(stateID: .combinedSessionState)
         let key = CGKeyCode(keyCodeForV())

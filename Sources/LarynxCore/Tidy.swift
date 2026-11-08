@@ -119,6 +119,15 @@ public enum Dictionary {
         return map
     }
 
+    /// Adds or replaces one entry and saves the file.
+    public static func add(heard: String, written: String) throws {
+        ensureExists()
+        var map = load()
+        map[heard.lowercased()] = written
+        let data = try JSONSerialization.data(withJSONObject: map, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: url, options: .atomic)
+    }
+
     /// Creates the file with a starter entry if it doesn't exist yet.
     public static func ensureExists() {
         guard !FileManager.default.fileExists(atPath: url.path) else { return }

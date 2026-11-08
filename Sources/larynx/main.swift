@@ -28,6 +28,7 @@ let usage = """
     larynx listen [--key fn|rightOption|rightCommand|rightControl] [--clean]
                                               hold the key, speak, release: text pastes where your cursor is
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
+    larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
 
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
     --engine parakeet|clean   clean = English-only model that drops ums, false starts and repeats
@@ -67,6 +68,27 @@ final class Loader: @unchecked Sendable {
     lazy var task: Task<Void, Error> = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
 }
 
+/// The other speech model, used only when the main one hears nothing in a clip that clearly has speech in it.
+let fallbackTranscriber = Transcriber()
+final class FallbackLoader: @unchecked Sendable {
+    static let shared = FallbackLoader()
+    lazy var task: Task<Void, Error> = Task { try await fallbackTranscriber.load(modelsDir: modelsDir, engine: engine.other) }
+}
+
+/// Retries an empty transcript with the other model when the clip is long and loud enough to be speech
+/// and that model is already downloaded. `LARYNX_FORCE_FALLBACK=1` treats every first pass as empty, for testing.
+func transcribeWithFallback(_ samples: [Float]) async throws -> (text: String, engine: String) {
+    let forced = ProcessInfo.processInfo.environment["LARYNX_FORCE_FALLBACK"] == "1"
+    let first = forced ? "" : try await transcriber.transcribe(samples)
+    guard first.isEmpty else { return (first, engine.rawValue) }
+    let seconds = Double(samples.count) / Recorder.sampleRate, level = Recorder.rms(samples)
+    guard seconds >= 0.5, level >= 0.01 || forced, engine.other.isDownloaded(in: modelsDir) else { return (first, engine.rawValue) }
+    try await FallbackLoader.shared.task.value
+    let second = try await fallbackTranscriber.transcribe(samples)
+    log("fallback engine: \(engine.other.rawValue) (\(String(format: "%.1f", seconds)) s, rms \(String(format: "%.3f", level))): \(second.isEmpty ? "also empty" : second)")
+    return (second, engine.other.rawValue)
+}
+
 func requestMicrophone() async -> Bool {
     if AVCaptureDevice.authorizationStatus(for: .audio) == .authorized { return true }
     return await AVCaptureDevice.requestAccess(for: .audio)
@@ -76,7 +98,7 @@ func requestMicrophone() async -> Bool {
 func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> [String: Any] {
     let started = Date()
     try await Loader.shared.task.value
-    let raw = try await transcriber.transcribe(samples)
+    let (raw, usedEngine) = try await transcribeWithFallback(samples)
     let asrMs = ms(since: started)
     let tidied = tidy ? Tidy.apply(Dictionary.apply(raw), mode: mode) : raw
     let rewriteStart = Date()
@@ -84,7 +106,7 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
                                          : Cleaner.Outcome(text: tidied, used: false, note: "off")
     let text = outcome.text
     return [
-        "text": text, "raw": raw, "mode": mode.rawValue,
+        "text": text, "raw": raw, "mode": mode.rawValue, "engine": usedEngine,
         "rewrite": outcome.note, "rewritten": outcome.used, "rewriteMs": outcome.note == "off" ? 0 : ms(since: rewriteStart),
         "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
         "asrMs": asrMs, "totalMs": ms(since: started),
@@ -168,33 +190,77 @@ func runListen(keys: [Hotkey.Key]) async {
     setStatus("Loading speech model...")
     do { try await Loader.shared.task.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
 
+    // Each press is one utterance with its own target app, captured at key-down, so switching apps mid-sentence
+    // (or a slow result) never sends text to the wrong place.
+    var target: NSRunningApplication?
+    var previewTimer: Timer?
+    var previewBusy = false
+    var session = 0
+    func stopPreview() { previewTimer?.invalidate(); previewTimer = nil }
+
     let hotkey = Hotkey(keys: keys, onDown: {
-        do { try recorder.start(); NSSound(named: "Tink")?.play(); setStatus("Listening...", recording: true); log("recording...") }
-        catch { log("\(error)") }
+        session += 1
+        target = NSWorkspace.shared.frontmostApplication
+        do { try recorder.start() } catch { log("\(error)"); return }
+        NSSound(named: "Tink")?.play()
+        setStatus("Listening...", recording: true)
+        log("recording... [\(target?.bundleIdentifier ?? "?")]")
+        guard inApp, Pill.enabled else { return }
+        Task { @MainActor in Pill.shared.show("Listening…") }
+        let mine = session
+        previewTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { _ in
+            guard !previewBusy, recorder.isRecording, session == mine else { return }
+            let snap = recorder.snapshot()
+            guard Double(snap.count) / Recorder.sampleRate >= 0.5 else { return }
+            previewBusy = true
+            Task {
+                let words = (try? await transcriber.transcribe(snap)) ?? ""
+                await MainActor.run {
+                    previewBusy = false
+                    if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+                }
+            }
+        }
     }, onUp: {
+        stopPreview()
         let samples = recorder.stop()
-        guard Double(samples.count) / Recorder.sampleRate >= 0.3 else { setStatus("Ready"); return }  // a tap, not dictation
+        let app = target
+        guard Double(samples.count) / Recorder.sampleRate >= 0.3 else {  // a tap, not dictation
+            setStatus("Ready"); Task { @MainActor in Pill.shared.hide() }; return
+        }
         NSSound(named: "Pop")?.play()
         setStatus("Transcribing...")
-        let target = CleanupMode.frontmost()
+        Task { @MainActor in Pill.shared.show("Transcribing…") }
+        let mode = CleanupMode.forApp(bundleID: app?.bundleIdentifier)
         Task {
             do {
-                let result = try await finish(samples, clean: wantsClean, mode: target.mode)
+                let result = try await finish(samples, clean: wantsClean, mode: mode)
                 let text = result["text"] as! String
                 guard !text.isEmpty else {
+                    await MainActor.run { Pill.shared.hide() }
                     setStatus("Heard nothing")
                     log("heard nothing in \(result["audioSeconds"]!) s of audio (mic muted, or Microphone permission missing?)")
                     return
                 }
-                await MainActor.run {
-                    do { try Inserter.paste(text); setStatus("Ready") }
-                    catch { setStatus("Could not paste: \(error)"); log("\(error)") }
+                let delivery = await Inserter.deliver(text, to: app)
+                await MainActor.run { Pill.shared.hide() }
+                if case .copied(let why) = delivery {
+                    NSSound(named: "Funk")?.play()
+                    setStatus("Copied, press ⌘V")
+                    log("copied: \(why)")
+                } else {
+                    setStatus("Ready")
                 }
-                log("\(result["totalMs"]!) ms [\(target.mode.rawValue) \(target.bundleID ?? "?")] rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
-            } catch { setStatus("Error: \(error)"); log("\(error)") }
+                log("\(result["totalMs"]!) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
+            } catch {
+                await MainActor.run { Pill.shared.hide() }
+                setStatus("Error: \(error)"); log("\(error)")
+            }
         }
     }, onCancel: {
+        stopPreview()
         recorder.stop()
+        Task { @MainActor in Pill.shared.hide() }
         setStatus("Ready")
         log("cancelled: another key was pressed (a shortcut)")
     })
@@ -245,9 +311,11 @@ func runServe() async {
                 var result = try await finish(samples, clean: request["clean"] as? Bool ?? false,
                                               mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
                                               tidy: !(request["verbatim"] as? Bool ?? false))
-                if request["paste"] as? Bool == true, let text = result["text"] as? String {
-                    do { try await MainActor.run { try Inserter.paste(text) }; result["pasted"] = true }
-                    catch { result["pasted"] = false; result["pasteError"] = "\(error)" }
+                if request["paste"] as? Bool == true, let text = result["text"] as? String, !text.isEmpty {
+                    let delivery = await Inserter.deliver(text)
+                    result["delivered"] = delivery.label
+                    result["pasted"] = delivery == .inserted
+                    if case .copied(let why) = delivery { result["pasteError"] = why }
                 }
                 result["event"] = "result"
                 reply(result)
@@ -300,6 +368,7 @@ switch args.first {
 case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
+case "mcp": Task { await runMCP() }
 case "rewrite":
     // Text in, tidied and (if triggered) rewritten text out; the decision goes to stderr.
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .correspondence

@@ -42,6 +42,20 @@ public final class Recorder: @unchecked Sendable {
         return samples
     }
 
+    /// Everything recorded so far, without stopping (for the live preview).
+    public func snapshot() -> [Float] {
+        lock.lock(); defer { lock.unlock() }
+        return samples
+    }
+
+    /// Root-mean-square loudness. Room noise sits around 0.001-0.005; speech is usually above 0.01.
+    public static func rms(_ samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        var sum: Float = 0
+        for x in samples { sum += x * x }
+        return (sum / Float(samples.count)).squareRoot()
+    }
+
     public var seconds: Double {
         lock.lock(); defer { lock.unlock() }
         return Double(samples.count) / Recorder.sampleRate

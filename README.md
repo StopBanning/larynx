@@ -9,17 +9,20 @@ Built to stand alone and to be embedded: apps such as Locust drive it over JSON 
 
 ## Status
 
-Phase 0 spike. Measured on an M6 Mac mini with 16 GB:
+Daily-driver quality on Apple Silicon, macOS 15+ (the AI rewrite needs macOS 26). Measured on an M6 Mac mini:
+about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite runs.
 
-| Step | Time |
-| --- | --- |
-| First run, model download (about 500 MB) and compile | 46 s, once |
-| Later model loads | about 0.1 s |
-| Transcribing an 8.7 s clip | 51 to 74 ms |
-| Optional cleanup with Apple's on-device model | 1.3 to 3.9 s, results vary run to run |
-
-Cleanup (`--clean`) is experimental. In testing it sometimes dropped words ("I think we should") or turned a
-question into a statement, so it is off by default and falls back to the raw transcript on any doubt.
+- **Hold to talk** with Fn, Right Option or Right Command; pressing another key while holding cancels, so shortcuts still work.
+- **Live preview**: a small pill at the bottom of the screen shows the words as you speak. It never takes focus.
+  Turn it off with `defaults write com.automatedworkflow.larynx preview off`.
+- **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
+  Larynx brings the original back before pasting.
+- **Never loses a transcript**: if pasting is blocked (a password field, missing permission), the text stays on your
+  clipboard and the menu says "Copied, press ⌘V".
+- **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
+- **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
+  spoken numbers, all on-device.
+- **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
 ## Use
 
@@ -27,8 +30,9 @@ The easy way is the menu bar app: `./scripts/make-app.sh` builds `~/Applications
 Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn, Right Option or Right Command to talk (pressing another key while holding cancels, so shortcuts still work). Its model
 lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some keyboards (Keychron, for one) never send
 Fn to macOS. Change the keys with `defaults write com.automatedworkflow.larynx keys rightCommand` (comma-separated).
-The app is signed ad hoc, so each rebuild makes macOS forget its permissions: run
-`tccutil reset All com.automatedworkflow.larynx` and allow them again.
+`make-app.sh` signs with your Apple Development identity if you have one (free with an Apple ID in Xcode), so
+rebuilds keep their permissions and Apple's on-device model works. Without one it signs ad hoc, and each rebuild
+makes macOS forget the permissions (`tccutil reset All com.automatedworkflow.larynx`, then allow them again).
 
 From a terminal:
 
@@ -37,6 +41,7 @@ swift build -c release
 .build/release/larynx transcribe note.m4a          # print a transcript
 .build/release/larynx listen --key fn              # system-wide hold-to-talk
 .build/release/larynx serve                        # JSON lines for host apps
+.build/release/larynx mcp                          # MCP server for agents
 ```
 
 `listen` needs three macOS permissions, each granted by you in System Settings > Privacy & Security:
@@ -62,17 +67,17 @@ a sentence for Mail, Slack, Messages and Notes.
 ## Testing
 
 `python3 tests/suite.py --rewrite auto` speaks about 40 messy sentences in five voices at two speeds, transcribes
-them and scores the result. It also runs 25 exact tidy-rule checks and a 22-case rewrite benchmark that includes
+them and scores the result. It also runs 28 exact tidy-rule checks and a 26-case rewrite benchmark that includes
 questions, requests and "actually"/"sorry"/"I mean" sentences the rewrite must leave alone. Latest run (Nov 8, 2026):
 
 | Area | Pass |
 | --- | --- |
-| Tidy rules (exact) | 25/25 |
-| AI rewrite benchmark | 22/22 on 3 of 4 runs, 21/22 on one |
+| Tidy rules (exact) | 28/28 |
+| AI rewrite benchmark | 26/26 on 4 of 4 runs |
 | Fillers | 72/80 |
 | Repeats | 57/60 |
 | False starts | 10/10 |
-| Self-corrections | 28/40 (0/40 before the rewrite layer) |
+| Self-corrections | 38/40 (0/40 before the rewrite layer) |
 | Must not change | 95/120 |
 | Real-world messages | 30/30 |
 
@@ -87,16 +92,18 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 | `Recorder.swift` | AVAudioEngine tap, resampled to 16 kHz mono |
 | `Transcriber.swift` | Loads Parakeet v3 once, transcribes a clip |
 | `Hotkey.swift` | Event tap on one modifier; re-arms itself when macOS switches it off |
-| `Inserter.swift` | Clipboard plus Cmd+V mapped through the keyboard layout; restores your clipboard; refuses during Secure Input |
+| `Inserter.swift` | Clipboard plus Cmd+V mapped through the keyboard layout; restores your clipboard; brings the target app back; falls back to copy |
 | `Tidy.swift` | Cleanup rules and the per-app mode |
 | `Cleaner.swift` | Optional Apple Foundation Models pass with a guard against answers |
-| `main.swift` | The `transcribe`, `listen` and `serve` commands |
+| `Pill.swift` | The live preview panel |
+| `MCP.swift` | The `mcp` command |
+| `main.swift` | The `transcribe`, `listen`, `serve`, `rewrite` and `tidy` commands, and the menu bar app |
 
 ## Roadmap
 
-1. Daily driver: menu bar app, overlay, sounds, history, personal dictionary, a better cleanup model, guided permissions.
+1. Daily driver: history, a settings window, guided permissions.
 2. Context: text around the cursor and the selection via Accessibility, per-app styles, code words.
-3. Voice edits on selected text, learning from your fixes.
+3. Voice edits on selected text, learning from your fixes, vocabulary learned from your code.
 4. Signed, notarized releases; Windows later.
 
 ## License

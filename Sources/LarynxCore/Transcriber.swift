@@ -23,7 +23,16 @@ public enum Engine: String, CaseIterable, Sendable {
     case clean
 
     var version: AsrModelVersion { self == .clean ? .bark3Clean : .v3 }
-    var folder: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
+    public var folder: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
+    public var other: Engine { self == .clean ? .parakeet : .clean }
+
+    /// True when this model is already on disk, so using it never triggers a download.
+    public func isDownloaded(in modelsDir: URL?) -> Bool {
+        guard let modelsDir else { return false }
+        let dir = modelsDir.appendingPathComponent(folder, isDirectory: true)
+        return ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).contains { $0.hasSuffix(".mlmodelc") }
+    }
+
     public var modelName: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
 }
 

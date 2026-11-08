@@ -33,7 +33,11 @@ Events:
 {"event":"error","id":7,"message":"microphone access was refused"}
 ```
 
-`result.pasted` and `result.pasteError` appear only when `paste` was requested.
+`result.delivered` (`inserted` or `copied`), `result.pasted` and `result.pasteError` appear only when `paste` was
+requested. If pasting is impossible (no Accessibility permission, a password field, any error) the text is left on
+the clipboard and `delivered` is `copied`, so a transcript is never lost. `result.engine` says which speech model
+produced the text: when the main model returns nothing for a clip that clearly has speech in it, Larynx retries with
+the other model if it is already downloaded.
 
 ## Two ways to use it in Locust
 
@@ -61,8 +65,27 @@ onHotkeyUp(() => send({ cmd: 'stop', mode: 'ai' }));  // Locust's composer talks
 app.on('before-quit', () => send({ cmd: 'quit' }));
 ```
 
+## MCP server for agents
+
+`larynx mcp` speaks the Model Context Protocol over stdio (JSON-RPC 2.0, one message per line), so agents can use
+Larynx directly. Tools:
+
+| Tool | Arguments | Returns |
+| --- | --- | --- |
+| `transcribe_file` | `path`, optional `mode` | The cleaned transcript of an audio file |
+| `clean_text` | `text`, optional `mode` (default `correspondence`) | Dictionary, tidy rules and, when needed, the AI rewrite |
+| `add_dictionary_word` | `heard`, `written` | Adds an entry to `~/Library/Application Support/Larynx/dictionary.json` |
+| `status` | none | Speech model, rewrite availability, dictionary size |
+
+Claude Code:
+
+```bash
+claude mcp add larynx -- ~/work/larynx/.build/release/larynx mcp --models-dir "$HOME/Library/Application Support/Larynx/models"
+```
+
 ## Not yet
 
-- No streaming partial text while you speak; the result arrives on `stop` (about 50 ms for a short clip).
+- `serve` has no partial text while you speak (the menu bar app shows a live preview); the result arrives on
+  `stop` (about 50 ms for a short clip).
 - Mic recording through `serve` has been built but not yet tested live; file transcription is tested.
 - Apple Silicon and macOS 15 or later only.
