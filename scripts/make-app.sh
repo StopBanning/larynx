@@ -23,5 +23,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSMicrophoneUsageDescription</key><string>Larynx listens while you hold the talk key and turns your speech into text, on this Mac.</string>
 </dict></plist>
 PLIST
-codesign --force --sign - --identifier com.automatedworkflow.larynx "$APP"
+# A stable identity keeps macOS permissions across rebuilds (see scripts/make-signing-cert.sh); ad hoc otherwise.
+IDENTITY="-"
+security find-certificate -c "Larynx Local Signing" >/dev/null 2>&1 && IDENTITY="Larynx Local Signing"
+codesign --force --sign "$IDENTITY" --identifier com.automatedworkflow.larynx "$APP"
+echo "signed with: $IDENTITY"
 echo "$APP"
