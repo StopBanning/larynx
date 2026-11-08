@@ -30,16 +30,20 @@ public final class Hotkey: @unchecked Sendable {
     private let keys: [Key]
     private let onDown: () -> Void
     private let onUp: () -> Void
+    private let onCancel: () -> Void
     private var tap: CFMachPort?
     private var isDown = false
+    private var cancelled = false
 
     public convenience init(key: Key, onDown: @escaping () -> Void, onUp: @escaping () -> Void) {
-        self.init(keys: [key], onDown: onDown, onUp: onUp)
+        self.init(keys: [key], onDown: onDown, onUp: onUp, onCancel: {})
     }
 
     /// Any one of `keys` works as the talk key.
-    public init(keys: [Key], onDown: @escaping () -> Void, onUp: @escaping () -> Void) {
+    /// `onCancel` fires instead of `onUp` when another key is pressed while the talk key is held (a shortcut, not dictation).
+    public init(keys: [Key], onDown: @escaping () -> Void, onUp: @escaping () -> Void, onCancel: @escaping () -> Void) {
         self.keys = keys
+        self.onCancel = onCancel
         self.onDown = onDown
         self.onUp = onUp
     }
@@ -53,7 +57,7 @@ public final class Hotkey: @unchecked Sendable {
     /// Needs Input Monitoring permission. Returns false if macOS refused the tap.
     @discardableResult
     public func start() -> Bool {
-        let mask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+        let mask = CGEventMask(1 << CGEventType.flagsChanged.rawValue) | CGEventMask(1 << CGEventType.keyDown.rawValue)
         let me = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap, place: .headInsertEventTap, options: .listenOnly,
@@ -75,6 +79,10 @@ public final class Hotkey: @unchecked Sendable {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return
         }
+        if type == .keyDown {
+            if isDown { isDown = false; cancelled = true; onCancel() }
+            return
+        }
         guard type == .flagsChanged else { return }
         let code = event.getIntegerValueField(.keyboardEventKeycode)
         if ProcessInfo.processInfo.environment["LARYNX_DEBUG"] != nil {
@@ -82,7 +90,7 @@ public final class Hotkey: @unchecked Sendable {
         }
         guard let key = keys.first(where: { $0.keyCode == code }) else { return }
         let pressed = event.flags.contains(key.flag)
-        if pressed, !isDown { isDown = true; onDown() }
-        else if !pressed, isDown { isDown = false; onUp() }
+        if pressed, !isDown, !cancelled { isDown = true; onDown() }
+        else if !pressed { if isDown { isDown = false; onUp() }; cancelled = false }
     }
 }

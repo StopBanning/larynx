@@ -24,9 +24,11 @@ question into a statement, so it is off by default and falls back to the raw tra
 ## Use
 
 The easy way is the menu bar app: `./scripts/make-app.sh` builds `~/Applications/Larynx.app`. Open it, allow
-Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn or Right Option to talk. Its model
-lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some third-party
-keyboards never send Fn to macOS; Right Option always works.
+Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn, Right Option or Right Command to talk (pressing another key while holding cancels, so shortcuts still work). Its model
+lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some keyboards (Keychron, for one) never send
+Fn to macOS. Change the keys with `defaults write com.automatedworkflow.larynx keys rightCommand` (comma-separated).
+The app is signed ad hoc, so each rebuild makes macOS forget its permissions: run
+`tccutil reset All com.automatedworkflow.larynx` and allow them again.
 
 From a terminal:
 

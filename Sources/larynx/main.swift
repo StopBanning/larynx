@@ -155,6 +155,7 @@ func runListen(keys: [Hotkey.Key]) async {
         catch { log("\(error)") }
     }, onUp: {
         let samples = recorder.stop()
+        guard Double(samples.count) / Recorder.sampleRate >= 0.3 else { setStatus("Ready"); return }  // a tap, not dictation
         NSSound(named: "Pop")?.play()
         setStatus("Transcribing...")
         Task {
@@ -173,6 +174,10 @@ func runListen(keys: [Hotkey.Key]) async {
                 log("\(result["totalMs"]!) ms: \(text)")
             } catch { setStatus("Error: \(error)"); log("\(error)") }
         }
+    }, onCancel: {
+        recorder.stop()
+        setStatus("Ready")
+        log("cancelled: another key was pressed (a shortcut)")
     })
     let started = await MainActor.run { hotkey.start() }
     guard started else { setStatus("macOS refused the key listener"); log("macOS refused the key listener"); return }
@@ -252,7 +257,10 @@ func runServe() async {
 // MARK: - Entry
 
 setvbuf(stdout, nil, _IOLBF, 0)
-let listenKeys: [Hotkey.Key] = option("--key").flatMap(Hotkey.Key.init(rawValue:)).map { [$0] } ?? [.fn, .rightOption]
+// Talk keys: --key, else `defaults write com.automatedworkflow.larynx keys fn,rightCommand`, else Fn, Right Option or Right Command.
+let savedKeys = (UserDefaults.standard.string(forKey: "keys") ?? "").split(separator: ",").compactMap { Hotkey.Key(rawValue: String($0)) }
+let listenKeys: [Hotkey.Key] = option("--key").flatMap(Hotkey.Key.init(rawValue:)).map { [$0] }
+    ?? (savedKeys.isEmpty ? [.fn, .rightOption, .rightCommand] : savedKeys)
 if inApp && args.isEmpty {
     // Launched as Larynx.app: log to ~/Library/Logs/Larynx.log and live in the menu bar.
     let logURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Larynx.log")
