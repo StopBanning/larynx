@@ -30,6 +30,27 @@ let e = CGEvent(keyboardEventSource: CGEventSource(stateID: .hidSystemState), vi
 e.type = .flagsChanged; e.flags = down ? .maskCommand : []; e.post(tap: .cghidEventTap)
 ```
 
+## Item 0 (in progress, do first): bare "no" corrections
+
+Found by Colin in Messages: "Tuesday, no Wednesday" / "Tuesday. No, Wednesday." went through untouched (no trigger),
+and once triggered, Apple's model sometimes keeps the WRONG half ("Put me down for Tuesday.").
+Done so far (uncommitted work committed as WIP, NOT yet in the installed app):
+- `Cleaner.bareNoCue` triggers on ", no X" / ". No, X" (excludes no problem/worries/thanks/...).
+- Prompt has two bare-no examples; correction rule says keep the part said after the cue.
+- Guard `correctedWord(in:)`: for corrections, the first word after the cue must survive, else fall back to the tidied text.
+  Colin's exact Messages sentences now come out "...for Wednesday." Benchmark: 24/26.
+Still to fix:
+1. Guard bug: in "two, no wait, three thirty" the regex's ", no" branch matches first and picks "wait" as the
+   corrected word, rejecting a good rewrite. Match the longer cues first (put `no wait`/`wait no` before the bare
+   `[,.]\s+no`, or skip "wait" as the captured word) and skip number words after them.
+2. "Put me down for Tuesday, no Wednesday" and "Book me for Friday, no Saturday": the model keeps the first half;
+   the guard now rejects it safely (text stays as spoken). Try one retry with a second prompt variant, or a
+   deterministic rule for the common shape "<X>, no <Y>" where X and Y are the same kind of word (weekday, month,
+   number, time): replace X with Y and delete ", no Y". Prefer the rule for weekdays/months: exact and instant.
+3. Re-run `python3 tests/suite.py --only r-` three times (target 26/26), then a full run with `--rewrite auto`.
+4. Rebuild the app (`./scripts/make-app.sh`; permissions persist) and self-test in Messages-like mode with TextEdit
+   in front: "I wanna add you on my schedule for Tuesday, no Wednesday."
+
 ## Work items, in order
 
 ### 1. Never lose a transcript (small)

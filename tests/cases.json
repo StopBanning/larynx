@@ -570,6 +570,26 @@
    "in": "Hey Sam, so the vendor quoted us three thousand dollars, sorry, three thousand five hundred, and they can, you know, start next week. Let me know if that works.",
    "expect": "Hey Sam, so the vendor quoted us $3,500, and they can start next week. Let me know if that works.",
    "soft": true
+  },
+  {
+   "id": "r-bare-no",
+   "in": "Put me down for Tuesday, no Wednesday.",
+   "expect": "Put me down for Wednesday."
+  },
+  {
+   "id": "r-bare-no-period",
+   "in": "The call is on Friday. No, Thursday.",
+   "expect": "The call is on Thursday."
+  },
+  {
+   "id": "r-safe-no-problem",
+   "in": "Thanks for the help. No problem if you can't make it.",
+   "expect": "Thanks for the help. No problem if you can't make it."
+  },
+  {
+   "id": "r-safe-no-answer",
+   "in": "Did you finish it? No, not yet.",
+   "expect": "Did you finish it? No, not yet."
   }
  ]
 }

@@ -13,10 +13,14 @@ public enum Cleaner {
     static let ticCues = #"(?i)\b(you know|kind of like|sort of like|basically|literally|like,)"#
     static let numberCues = #"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|percent|dollars?|cents?|o'clock)\b"#
 
+    /// "Tuesday, no Wednesday" / "Tuesday. No, Wednesday" -- a bare "no" after a pause, but not "no problem", "no thanks"...
+    static let bareNoCue = #"(?i)[,.]\s+no,?\s+(?!problem|worries|thanks|thank|way|idea|doubt|one|longer|more|need|big|rush|matter|clue)\w"#
+
     /// Why a rewrite is worth it, or nil when the tidy rules are enough.
     public static func reason(for text: String, mode: CleanupMode) -> String? {
         guard mode != .ai else { return nil }  // models reading it don't care
         if text.range(of: correctionCues, options: .regularExpression) != nil { return "correction" }
+        if text.range(of: bareNoCue, options: .regularExpression) != nil { return "correction" }
         if text.range(of: ticCues, options: .regularExpression) != nil { return "verbal tic" }
         if text.range(of: numberCues, options: .regularExpression) != nil { return "numbers" }
         if text.split(separator: " ").count >= 60 { return "long" }
@@ -27,7 +31,7 @@ public enum Cleaner {
 
     static let instructions = """
         You edit dictated text with the smallest possible change. Do only these edits:
-        1. When the speaker corrects themselves (no wait, I mean, actually, sorry, scratch that), keep only the correction.
+        1. When the speaker corrects themselves (no, no wait, I mean, actually, sorry, scratch that), keep only the correction (the part said after it).
         2. Delete verbal tics used as filler: you know, basically, like.
         3. Write numbers, money, percentages and times as digits: twenty dollars becomes $20, seven thirty becomes 7:30.
         4. Fix punctuation and capitals.
@@ -40,6 +44,10 @@ public enum Cleaner {
         Output: Can you pick up oat milk on the way home?
         Input: The flight leaves at nine, sorry, ten fifteen tomorrow.
         Output: The flight leaves at 10:15 tomorrow.
+        Input: Ship it on Monday, no Tuesday.
+        Output: Ship it on Tuesday.
+        Input: Meet me at the cafe. No, the library.
+        Output: Meet me at the library.
         Input: The rent is nine hundred actually nine fifty a month.
         Output: The rent is $950 a month.
         Input: The repair was, you know, like three hundred dollars.
@@ -109,6 +117,23 @@ public enum Cleaner {
         let known = Set(before)
         let novel = after.filter { !known.contains($0) && !$0.allSatisfy(\.isNumber) && Double($0) == nil }
         if !novel.isEmpty { return "new words \(novel)" }
+        if correction, let kept = correctedWord(in: original), !after.contains(kept) {
+            return "dropped the correction \"\(kept)\""
+        }
         return nil
+    }
+
+    static let numberWords: Set<String> = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "eleven", "twelve", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand"]
+
+    /// The first real word said after a correction cue ("Tuesday, no Wednesday" -> "wednesday"). A rewrite that drops it
+    /// kept the wrong half. Number words are skipped because they legitimately turn into digits.
+    static func correctedWord(in text: String) -> String? {
+        let pattern = #"(?i)(?:[,.]\s+no,?|no wait,?|wait no,?|sorry,?|i mean,?|actually,?|make that|or rather,?|scratch that,?)\s+(?:the\s+|a\s+|an\s+)?([a-z']+)"#
+        guard let re = try? NSRegularExpression(pattern: pattern),
+              let m = re.matches(in: text, range: NSRange(text.startIndex..., in: text)).last,
+              let r = Range(m.range(at: 1), in: text) else { return nil }
+        let word = text[r].lowercased()
+        return numberWords.contains(word) ? nil : word
     }
 }
