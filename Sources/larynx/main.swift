@@ -27,6 +27,7 @@ let usage = """
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
 
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
+    --engine parakeet|clean   clean = English-only model that drops ums, false starts and repeats
     --clean               tidy the text with Apple's on-device model when available
     """
 
@@ -52,7 +53,9 @@ func ms(since start: Date) -> Int { Int(Date().timeIntervalSince(start) * 1000) 
 let transcriber = Transcriber()
 let recorder = Recorder()
 nonisolated(unsafe) var activeHotkey: Hotkey?
-let loadTask = Task { try await transcriber.load(modelsDir: modelsDir) }
+let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
+    ?? Engine(rawValue: UserDefaults.standard.string(forKey: "engine") ?? "") ?? .parakeet
+let loadTask = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
 
 func requestMicrophone() async -> Bool {
     if AVCaptureDevice.authorizationStatus(for: .audio) == .authorized { return true }
@@ -197,7 +200,7 @@ func runServe() async {
     Task {
         do {
             try await loadTask.value
-            emit(["event": "ready", "model": "parakeet-tdt-0.6b-v3", "cleanup": Cleaner.isAvailable,
+            emit(["event": "ready", "model": engine.modelName, "cleanup": Cleaner.isAvailable,
                   "pasteAllowed": Inserter.isTrusted])
         } catch {
             emit(["event": "error", "message": "model failed to load: \(error)"])

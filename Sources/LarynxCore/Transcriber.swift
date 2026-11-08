@@ -15,6 +15,18 @@ public enum LarynxError: Error, CustomStringConvertible {
     }
 }
 
+/// Which speech model to run. All are Parakeet TDT 0.6B variants on the Neural Engine.
+public enum Engine: String, CaseIterable, Sendable {
+    /// Parakeet TDT v3: verbatim, 25 European languages.
+    case parakeet
+    /// Underdog Bark 3.0 Clean: English only; drops fillers, false starts and repeated words as it transcribes.
+    case clean
+
+    var version: AsrModelVersion { self == .clean ? .bark3Clean : .v3 }
+    var folder: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
+    public var modelName: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
+}
+
 /// Runs NVIDIA Parakeet TDT v3 (25 European languages) on the Neural Engine through FluidAudio. Fully offline after the first model download.
 public actor Transcriber {
     private var manager: AsrManager?
@@ -24,11 +36,11 @@ public actor Transcriber {
     public var isLoaded: Bool { manager != nil }
 
     /// Downloads the model on first run (about 500 MB), then loads it from `modelsDir` or FluidAudio's default folder.
-    public func load(modelsDir: URL? = nil) async throws {
+    public func load(modelsDir: URL? = nil, engine: Engine = .parakeet) async throws {
         guard manager == nil else { return }
         // FluidAudio treats the path as the model's own folder, so give it a subfolder of modelsDir.
-        let target = modelsDir?.appendingPathComponent("parakeet-tdt-0.6b-v3", isDirectory: true)
-        let models = try await AsrModels.downloadAndLoad(to: target, version: .v3)
+        let target = modelsDir?.appendingPathComponent(engine.folder, isDirectory: true)
+        let models = try await AsrModels.downloadAndLoad(to: target, version: engine.version)
         let asr = AsrManager(config: .default)
         try await asr.loadModels(models)
         manager = asr
