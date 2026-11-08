@@ -78,7 +78,7 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
     try await Loader.shared.task.value
     let raw = try await transcriber.transcribe(samples)
     let asrMs = ms(since: started)
-    let tidied = tidy ? Tidy.apply(raw, mode: mode) : raw
+    let tidied = tidy ? Tidy.apply(Dictionary.apply(raw), mode: mode) : raw
     let rewriteStart = Date()
     let outcome = (clean || autoRewrite) ? await Cleaner.rewrite(tidied, mode: mode, force: clean)
                                          : Cleaner.Outcome(text: tidied, used: false, note: "off")
@@ -291,6 +291,7 @@ if inApp && args.isEmpty {
     setvbuf(stderr, nil, _IOLBF, 0)
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
+    Dictionary.ensureExists()
     makeMenuBarItem(keys: listenKeys)
     Task { await runListen(keys: listenKeys) }
     app.run()
