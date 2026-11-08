@@ -53,6 +53,8 @@ public enum Tidy {
             previous = s
             s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b", with: "$1", options: .regularExpression)
         }
+        // 2b. "Tuesday, no Wednesday" / "at three. No, four": same kind of word on both sides, so keep the second.
+        s = sameKindCorrections(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
@@ -66,6 +68,23 @@ public enum Tidy {
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
         if mode == .correspondence, let last = s.last, !".!?:)\"'".contains(last) { s += "." }
+        return s
+    }
+
+    static let correctionKinds = [
+        "(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight)",
+        "(?:january|february|march|april|may|june|july|august|september|october|november|december)",
+        "(?:\\d+(?::\\d\\d)?(?:\\s?[ap]\\.?m\\.?)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
+            + "fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)",
+    ]
+
+    /// Replaces "<X>, no <Y>" with "<Y>" when X and Y are the same kind (weekday, month, number or time).
+    /// Exact and instant, and the shape Apple's model most often gets backwards.
+    static func sameKindCorrections(_ text: String) -> String {
+        var s = text
+        for kind in correctionKinds {
+            s = s.replacingOccurrences(of: "(?i)\\b\(kind)[,.]\\s+no,?\\s+(\(kind))\\b", with: "$1", options: .regularExpression)
+        }
         return s
     }
 

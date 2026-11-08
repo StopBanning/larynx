@@ -456,6 +456,24 @@
    "mode": "standard",
    "in": "We should, we should go.",
    "expect": "We should go."
+  },
+  {
+   "id": "t-samekind-day",
+   "mode": "correspondence",
+   "in": "Put me down for Tuesday, no Wednesday.",
+   "expect": "Put me down for Wednesday."
+  },
+  {
+   "id": "t-samekind-time",
+   "mode": "standard",
+   "in": "meet at 3, no 4 pm",
+   "expect": "Meet at 4 pm"
+  },
+  {
+   "id": "t-samekind-safe",
+   "mode": "correspondence",
+   "in": "one, no problem",
+   "expect": "One, no problem."
   }
  ],
  "rewrite": [

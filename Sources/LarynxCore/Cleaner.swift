@@ -129,7 +129,8 @@ public enum Cleaner {
     /// The first real word said after a correction cue ("Tuesday, no Wednesday" -> "wednesday"). A rewrite that drops it
     /// kept the wrong half. Number words are skipped because they legitimately turn into digits.
     static func correctedWord(in text: String) -> String? {
-        let pattern = #"(?i)(?:[,.]\s+no,?|no wait,?|wait no,?|sorry,?|i mean,?|actually,?|make that|or rather,?|scratch that,?)\s+(?:the\s+|a\s+|an\s+)?([a-z']+)"#
+        // "no wait" / "wait no" come first so ", no wait, three" never captures "wait".
+        let pattern = #"(?i)(?:(?:[,.]\s+)?(?:no,? wait|wait,? no)|[,.]\s+no|sorry|i mean|actually|make that|or rather|scratch that),?\s+(?:the\s+|a\s+|an\s+)?([a-z']+)"#
         guard let re = try? NSRegularExpression(pattern: pattern),
               let m = re.matches(in: text, range: NSRange(text.startIndex..., in: text)).last,
               let r = Range(m.range(at: 1), in: text) else { return nil }
