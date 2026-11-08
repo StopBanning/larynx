@@ -24,8 +24,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 # A stable identity keeps macOS permissions across rebuilds (see scripts/make-signing-cert.sh); ad hoc otherwise.
+# Preference: a real Apple Development identity (free personal team in Xcode; needed for Apple's on-device model),
+# then the local certificate, then ad hoc.
 IDENTITY="-"
 security find-certificate -c "Larynx Local Signing" >/dev/null 2>&1 && IDENTITY="Larynx Local Signing"
+APPLE_ID=$(security find-identity -v -p codesigning | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"' || true)
+[ -n "$APPLE_ID" ] && IDENTITY="$APPLE_ID"
 codesign --force --sign "$IDENTITY" --identifier com.automatedworkflow.larynx "$APP"
 echo "signed with: $IDENTITY"
 echo "$APP"

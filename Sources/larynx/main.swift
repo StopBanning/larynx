@@ -190,7 +190,7 @@ func runListen(keys: [Hotkey.Key]) async {
                     do { try Inserter.paste(text); setStatus("Ready") }
                     catch { setStatus("Could not paste: \(error)"); log("\(error)") }
                 }
-                log("\(result["totalMs"]!) ms [\(target.mode.rawValue) \(target.bundleID ?? "?")]: \(text)")
+                log("\(result["totalMs"]!) ms [\(target.mode.rawValue) \(target.bundleID ?? "?")] rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
             } catch { setStatus("Error: \(error)"); log("\(error)") }
         }
     }, onCancel: {

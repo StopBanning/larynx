@@ -74,7 +74,9 @@ public enum Cleaner {
         #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
             do {
-                let session = LanguageModelSession(instructions: instructions)
+                // Editing the user's own words is a content transformation; the default guardrails can refuse to load outside Developer ID apps.
+                let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
+                let session = LanguageModelSession(model: model, instructions: instructions)
                 let reply = try await session.respond(to: "Input: \(text)\nOutput:", options: GenerationOptions(sampling: .greedy))
                 var edited = reply.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 if edited.lowercased().hasPrefix("output:") { edited = String(edited.dropFirst(7)).trimmingCharacters(in: .whitespaces) }
