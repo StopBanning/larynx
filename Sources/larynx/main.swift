@@ -16,7 +16,9 @@ let modelsDir: URL? = option("--models-dir").map { URL(fileURLWithPath: ($0 as N
     ?? (Bundle.main.bundleURL.pathExtension == "app"
         ? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Larynx/models", isDirectory: true)
         : nil)
-let wantsClean = args.contains("--clean")
+let wantsClean = args.contains("--clean")  // always rewrite
+/// AI rewrite policy: `--rewrite auto|off`, else `defaults write com.automatedworkflow.larynx rewrite auto`. Auto rewrites only when a trigger fires.
+let autoRewrite = (option("--rewrite") ?? UserDefaults.standard.string(forKey: "rewrite") ?? "auto") == "auto"
 let verbatim = args.contains("--verbatim")
 
 let usage = """
@@ -31,7 +33,8 @@ let usage = """
     --engine parakeet|clean   clean = English-only model that drops ums, false starts and repeats
     --mode ai|correspondence|standard   how much to polish (listen picks it from the front app)
     --verbatim            skip the tidy-up rules
-    --clean               tidy the text with Apple's on-device model when available
+    --rewrite auto|off    AI rewrite for corrections, numbers and verbal tics, only when needed (Apple's on-device model)
+    --clean               always run the AI rewrite with Apple's on-device model when available
     """
 
 // MARK: - Output
@@ -58,7 +61,11 @@ let recorder = Recorder()
 nonisolated(unsafe) var activeHotkey: Hotkey?
 let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
     ?? Engine(rawValue: UserDefaults.standard.string(forKey: "engine") ?? "") ?? .clean
-let loadTask = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
+/// Loads the speech model on first use only, so text-only commands never touch it.
+final class Loader: @unchecked Sendable {
+    static let shared = Loader()
+    lazy var task: Task<Void, Error> = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
+}
 
 func requestMicrophone() async -> Bool {
     if AVCaptureDevice.authorizationStatus(for: .audio) == .authorized { return true }
@@ -68,13 +75,17 @@ func requestMicrophone() async -> Bool {
 /// Transcribes, optionally cleans, and reports timing for one utterance.
 func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> [String: Any] {
     let started = Date()
-    try await loadTask.value
+    try await Loader.shared.task.value
     let raw = try await transcriber.transcribe(samples)
     let asrMs = ms(since: started)
     let tidied = tidy ? Tidy.apply(raw, mode: mode) : raw
-    let text = clean ? await Cleaner.clean(tidied) : tidied
+    let rewriteStart = Date()
+    let outcome = (clean || autoRewrite) ? await Cleaner.rewrite(tidied, mode: mode, force: clean)
+                                         : Cleaner.Outcome(text: tidied, used: false, note: "off")
+    let text = outcome.text
     return [
         "text": text, "raw": raw, "mode": mode.rawValue,
+        "rewrite": outcome.note, "rewritten": outcome.used, "rewriteMs": outcome.note == "off" ? 0 : ms(since: rewriteStart),
         "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
         "asrMs": asrMs, "totalMs": ms(since: started),
     ]
@@ -87,7 +98,7 @@ func runTranscribe() async {
     do {
         let samples = try loadAudioFile(URL(fileURLWithPath: args[1]))
         let loadStart = Date()
-        try await loadTask.value
+        try await Loader.shared.task.value
         log("model ready in \(ms(since: loadStart)) ms")
         let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard)
         log("\(result["audioSeconds"]!) s of audio, speech \(result["asrMs"]!) ms, total \(result["totalMs"]!) ms")
@@ -155,7 +166,7 @@ func runListen(keys: [Hotkey.Key]) async {
         try? await Task.sleep(nanoseconds: 1_000_000_000)
     }
     setStatus("Loading speech model...")
-    do { try await loadTask.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
+    do { try await Loader.shared.task.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
 
     let hotkey = Hotkey(keys: keys, onDown: {
         do { try recorder.start(); NSSound(named: "Tink")?.play(); setStatus("Listening...", recording: true); log("recording...") }
@@ -204,8 +215,8 @@ func runServe() async {
     }
     Task {
         do {
-            try await loadTask.value
-            emit(["event": "ready", "model": engine.modelName, "cleanup": Cleaner.isAvailable,
+            try await Loader.shared.task.value
+            emit(["event": "ready", "model": engine.modelName, "rewriteAvailable": Cleaner.isAvailable,
                   "pasteAllowed": Inserter.isTrusted])
         } catch {
             emit(["event": "error", "message": "model failed to load: \(error)"])
@@ -255,7 +266,7 @@ func runServe() async {
             } catch { reply(["event": "error", "message": "\(error)"]) }
         case "status":
             reply(["event": "status", "loaded": await transcriber.isLoaded, "recording": recorder.isRecording,
-                   "cleanup": Cleaner.isAvailable, "pasteAllowed": Inserter.isTrusted])
+                   "rewriteAvailable": Cleaner.isAvailable, "pasteAllowed": Inserter.isTrusted])
         case "quit":
             recorder.stop()
             exit(0)
@@ -288,6 +299,16 @@ switch args.first {
 case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
+case "rewrite":
+    // Text in, tidied and (if triggered) rewritten text out; the decision goes to stderr.
+    let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .correspondence
+    let input = args.last ?? ""
+    Task {
+        let started = Date()
+        let outcome = await Cleaner.rewrite(Tidy.apply(input, mode: mode), mode: mode, force: wantsClean)
+        log("\(outcome.used ? "rewrote" : "kept") in \(ms(since: started)) ms: \(outcome.note)")
+        print(outcome.text); exit(0)
+    }
 case "tidy":
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
     print(Tidy.apply(args.last ?? "", mode: mode)); exit(0)

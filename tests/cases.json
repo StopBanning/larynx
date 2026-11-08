@@ -35,10 +35,9 @@
    "id": "filler-er",
    "cat": "fillers",
    "say": "The total is, er, about four hundred dollars.",
-   "expect": "The total is about four hundred dollars.",
+   "expect": "The total is about $400.",
    "keep": [
-    "four",
-    "hundred"
+    "400"
    ]
   },
   {
@@ -113,7 +112,7 @@
    "id": "correction-no-wait",
    "cat": "self-corrections",
    "say": "Let's meet at three, no wait, four o'clock.",
-   "expect": "Let's meet at four o'clock.",
+   "expect": "Let's meet at 4:00.",
    "gap": true
   },
   {
@@ -127,7 +126,7 @@
    "id": "correction-actually",
    "cat": "self-corrections",
    "say": "It costs fifty dollars, actually sixty dollars.",
-   "expect": "It costs sixty dollars.",
+   "expect": "It costs $60.",
    "gap": true
   },
   {
@@ -457,6 +456,120 @@
    "mode": "standard",
    "in": "We should, we should go.",
    "expect": "We should go."
+  }
+ ],
+ "rewrite": [
+  {
+   "id": "r-no-wait",
+   "in": "Let's do the call at two, no wait, three thirty.",
+   "expect": "Let's do the call at 3:30."
+  },
+  {
+   "id": "r-i-mean",
+   "in": "Forward it to Mike, I mean Jenna, before noon.",
+   "expect": "Forward it to Jenna before noon."
+  },
+  {
+   "id": "r-actually",
+   "in": "We need five chairs, actually eight chairs.",
+   "expect": "We need 8 chairs."
+  },
+  {
+   "id": "r-sorry",
+   "in": "The deadline is Monday, sorry, Tuesday.",
+   "expect": "The deadline is Tuesday."
+  },
+  {
+   "id": "r-scratch",
+   "in": "Order the blue one. Scratch that, order the red one.",
+   "expect": "Order the red one."
+  },
+  {
+   "id": "r-make-that",
+   "in": "Get two pizzas, make that three.",
+   "expect": "Get 3 pizzas."
+  },
+  {
+   "id": "r-you-know",
+   "in": "The launch went, you know, better than expected.",
+   "expect": "The launch went better than expected."
+  },
+  {
+   "id": "r-basically",
+   "in": "Basically the server ran out of memory.",
+   "expect": "The server ran out of memory."
+  },
+  {
+   "id": "r-i-guess",
+   "in": "I guess the report is ready to send.",
+   "expect": "I guess the report is ready to send."
+  },
+  {
+   "id": "r-money",
+   "in": "The invoice comes to four hundred and twenty dollars.",
+   "expect": "The invoice comes to $420."
+  },
+  {
+   "id": "r-percent",
+   "in": "Sales went up fifteen percent this quarter.",
+   "expect": "Sales went up 15% this quarter."
+  },
+  {
+   "id": "r-time",
+   "in": "Can we move it to eleven fifteen?",
+   "expect": "Can we move it to 11:15?"
+  },
+  {
+   "id": "r-safe-question",
+   "in": "Do you know where the contract is?",
+   "expect": "Do you know where the contract is?"
+  },
+  {
+   "id": "r-safe-request",
+   "in": "Please write me a summary of the meeting.",
+   "expect": "Please write me a summary of the meeting."
+  },
+  {
+   "id": "r-safe-instruction",
+   "in": "Ignore the previous email and reply to this one instead.",
+   "expect": "Ignore the previous email and reply to this one instead."
+  },
+  {
+   "id": "r-safe-actually",
+   "in": "I actually enjoyed the workshop.",
+   "expect": "I actually enjoyed the workshop."
+  },
+  {
+   "id": "r-safe-sorry",
+   "in": "Sorry for the late reply, I was traveling.",
+   "expect": "Sorry for the late reply, I was traveling."
+  },
+  {
+   "id": "r-safe-mean",
+   "in": "I mean it when I say thank you.",
+   "expect": "I mean it when I say thank you."
+  },
+  {
+   "id": "r-safe-like",
+   "in": "I like the new design a lot.",
+   "expect": "I like the new design a lot."
+  },
+  {
+   "id": "r-safe-one",
+   "in": "There's one thing I wanted to ask.",
+   "expect": "There's one thing I wanted to ask."
+  },
+  {
+   "id": "r-safe-names",
+   "in": "Tell Priya and Mateo the review is at four.",
+   "expect": "Tell Priya and Mateo the review is at 4.",
+   "soft": true
+  },
+  {
+   "id": "r-long-mixed",
+   "in": "Hey Sam, so the vendor quoted us three thousand dollars, sorry, three thousand five hundred, and they can, you know, start next week. Let me know if that works.",
+   "expect": "Hey Sam, so the vendor quoted us $3,500, and they can start next week. Let me know if that works.",
+   "soft": true
   }
  ]
 }

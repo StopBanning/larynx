@@ -21,10 +21,14 @@ ROOT = Path(__file__).resolve().parent.parent
 FILLERS = {"um", "uh", "uhm", "umm", "uhh", "er", "erm", "hmm", "hm"}
 
 
+SMALL = {"zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7",
+         "eight": "8", "nine": "9", "ten": "10"}
+
+
 def norm(text):
-    text = text.lower().replace("-", " ")
+    text = text.lower().replace("-", " ").replace("%", " percent")
     text = re.sub(r"[^\w\s']", " ", text)
-    return text.split()
+    return [SMALL.get(w, w) for w in text.split()]  # "eight chairs" and "8 chairs" count as the same
 
 
 def wer(ref, hyp):
@@ -69,7 +73,7 @@ def run_text(binary, cases, only):
     return rows
 
 
-def run_spoken(binary, cases, voices, rates, engine, models, only, workdir):
+def run_spoken(binary, cases, voices, rates, engine, models, only, workdir, rewrite="off"):
     jobs = []
     for c in cases:
         if only and only not in c["id"]:
@@ -79,7 +83,7 @@ def run_spoken(binary, cases, voices, rates, engine, models, only, workdir):
                 path = workdir / f"{c['id']}__{v}__{r}.aiff"
                 subprocess.run(["say", "-v", v, "-r", str(r), "-o", str(path), c["say"]], check=True)
                 jobs.append((c, v, r, path))
-    cmd = [binary, "serve", "--engine", engine] + (["--models-dir", models] if models else [])
+    cmd = [binary, "serve", "--engine", engine, "--rewrite", rewrite] + (["--models-dir", models] if models else [])
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
     for i, (_, _, _, path) in enumerate(jobs):
         proc.stdin.write(json.dumps({"id": i, "cmd": "transcribe", "path": str(path), "mode": "standard"}) + "\n")
@@ -110,6 +114,7 @@ def main():
     ap.add_argument("--engine", default="clean")
     ap.add_argument("--models-dir", default=os.path.expanduser("~/Library/Application Support/Larynx/models"))
     ap.add_argument("--only", default="")
+    ap.add_argument("--rewrite", default="off", help="auto: spoken cases also go through the AI rewrite layer")
     ap.add_argument("--json", help="write every result to this file")
     a = ap.parse_args()
     data = json.loads((ROOT / "tests/cases.json").read_text())
@@ -121,9 +126,23 @@ def main():
         if not ok:
             print(f"  FAIL {c['id']}: {c['in']!r} -> {out!r} (want {c['expect']!r})")
 
+    rw = [c for c in data.get("rewrite", []) if not a.only or a.only in c["id"]]
+    if rw:
+        good = 0
+        print("\nAI REWRITE (Apple on-device, correspondence mode)")
+        for c in rw:
+            res = subprocess.run([a.binary, "rewrite", "--mode", "correspondence", c["in"]], capture_output=True, text=True)
+            out = res.stdout.strip()
+            note = res.stderr.strip().splitlines()[-1].replace("larynx: ", "") if res.stderr.strip() else ""
+            ok = bool(norm(out) == norm(c["expect"]) or (c.get("soft") and wer(c["expect"], out) <= 0.2))
+            good += ok
+            if not ok:
+                print(f"  FAIL {c['id']}: {c['in']!r}\n       -> {out!r}\n       want {c['expect']!r}  [{note}]")
+        print(f"  {good}/{len(rw)} match")
+
     with tempfile.TemporaryDirectory(dir=os.path.expanduser("~/work/scratch")) as tmp:
         rows = run_spoken(a.binary, data["spoken"], a.voices.split(","), [int(r) for r in a.rates.split(",")],
-                          a.engine, a.models_dir, a.only, Path(tmp))
+                          a.engine, a.models_dir, a.only, Path(tmp), a.rewrite)
 
     by_cat = defaultdict(lambda: [0, 0])
     gaps = defaultdict(lambda: [0, 0])
@@ -132,7 +151,7 @@ def main():
         bucket[row["case"]["cat"]][0] += row["ok"]
         bucket[row["case"]["cat"]][1] += 1
     core = [r for r in rows if not r["case"].get("gap")]
-    print(f"\nSPOKEN ({a.engine}, {len(a.voices.split(','))} voices x {len(a.rates.split(','))} speeds)  "
+    print(f"\nSPOKEN ({a.engine}, rewrite {a.rewrite}, {len(a.voices.split(','))} voices x {len(a.rates.split(','))} speeds)  "
           f"{sum(r['ok'] for r in core)}/{len(core)} pass, excluding known gaps")
     for cat, (ok, n) in sorted(by_cat.items()):
         print(f"  {cat:<18} {ok:>3}/{n}")

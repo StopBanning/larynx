@@ -45,38 +45,40 @@ Microphone, Accessibility (to paste) and Input Monitoring (to see the key). Keys
 
 ## Cleanup
 
-Larynx cleans as it goes, with no AI rewrite and no added delay:
+Three layers, cheapest first:
 
-1. The default speech model, Underdog Bark 3.0 Clean (English), drops "um", "uh", false starts and repeated
-   words while it transcribes. `--engine parakeet` (or `defaults write com.automatedworkflow.larynx engine parakeet`)
-   switches to verbatim Parakeet v3 for 25 European languages.
-2. Tidy rules remove leftover fillers, stranded commas and repeats, and fix capitals.
-3. The app you are dictating into sets the mode. AI chats, terminals and code editors get a light touch (the model
-   reading it doesn't care). Mail, Slack, Messages and Notes get text that ends like a sentence. `--verbatim` skips
-   step 2.
+1. **Speech model.** The default, Underdog Bark 3.0 Clean (English), drops "um", "uh", false starts and repeated words
+   as it transcribes. `--engine parakeet` switches to verbatim Parakeet v3 for 25 European languages.
+2. **Tidy rules.** Leftover fillers, stutters ("the the", "I, I"), stranded commas and capitals. Instant, never
+   rewrites a word, and leaves real doubles alone ("very very", "had had").
+3. **AI rewrite, only when needed.** Self-corrections ("three, no wait, four"), verbal tics ("you know", "basically")
+   and spoken numbers go to Apple's on-device model (macOS 26+, free, about 0.3 s). It never runs for AI chats,
+   terminals or code editors, and a guard rejects any reply that adds a word or drops too much, falling back to
+   the tidied text. Turn it off with `--rewrite off` or `defaults write com.automatedworkflow.larynx rewrite off`.
 
-Not yet: understanding corrections such as "three, no wait, four". That needs an AI rewrite, planned for
-correspondence apps only.
+The app you are dictating into sets the mode: a light touch for AI chats, terminals and editors; text that ends like
+a sentence for Mail, Slack, Messages and Notes.
 
 ## Testing
 
-`python3 tests/suite.py` speaks about 40 messy sentences (fillers, repeats, false starts, corrections, verbal tics,
-plus traps such as "very very", "had had", "umbrella", "hummus") in five voices at two speeds, transcribes them,
-and scores the result. It also runs 25 exact checks on the tidy rules. Latest run (Nov 8, 2026):
+`python3 tests/suite.py --rewrite auto` speaks about 40 messy sentences in five voices at two speeds, transcribes
+them and scores the result. It also runs 25 exact tidy-rule checks and a 22-case rewrite benchmark that includes
+questions, requests and "actually"/"sorry"/"I mean" sentences the rewrite must leave alone. Latest run (Nov 8, 2026):
 
 | Area | Pass |
 | --- | --- |
 | Tidy rules (exact) | 25/25 |
+| AI rewrite benchmark | 22/22 on 3 of 4 runs, 21/22 on one |
 | Fillers | 72/80 |
 | Repeats | 57/60 |
 | False starts | 10/10 |
+| Self-corrections | 28/40 (0/40 before the rewrite layer) |
 | Must not change | 95/120 |
 | Real-world messages | 30/30 |
 
-Nearly every miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio", "uh-huh"
-as "aha"), not the cleanup. Self-corrections ("three, no wait, four"), "you know"/"like", trailing off and spoken
-numbers are tracked as known gaps for the AI rewrite layer. NeMo inverse text normalization was tried for numbers
-and rejected: it turned "two thirty and it costs" into "32 it costs".
+Nearly every remaining miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio",
+"uh-huh" as "aha"). Still open: trailing off ("and, um.") and some verbal tics. NeMo inverse text normalization was
+tried for numbers and rejected: it turned "two thirty and it costs" into "32 it costs".
 
 ## How it works
 
