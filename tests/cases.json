@@ -1,0 +1,462 @@
+{
+ "_about": "Spoken cases: macOS `say` speaks `say`, Larynx transcribes it, the result is compared with `expect` (case and punctuation ignored). `keep` words must survive. `gap` marks things the rule-based cleanup is not meant to fix yet (they need the AI rewrite layer); they are reported separately, not counted as failures.",
+ "spoken": [
+  {
+   "id": "filler-start",
+   "cat": "fillers",
+   "say": "Um, can you send me the report?",
+   "expect": "Can you send me the report?"
+  },
+  {
+   "id": "filler-middle",
+   "cat": "fillers",
+   "say": "I think we should, uh, move the meeting to Thursday.",
+   "expect": "I think we should move the meeting to Thursday."
+  },
+  {
+   "id": "filler-end",
+   "cat": "fillers",
+   "say": "The numbers look good, um.",
+   "expect": "The numbers look good."
+  },
+  {
+   "id": "filler-many",
+   "cat": "fillers",
+   "say": "Um, so, uh, I was, um, wondering if, uh, you had time today.",
+   "expect": "So I was wondering if you had time today."
+  },
+  {
+   "id": "filler-hmm",
+   "cat": "fillers",
+   "say": "Hmm, let me check the calendar and get back to you.",
+   "expect": "Let me check the calendar and get back to you."
+  },
+  {
+   "id": "filler-er",
+   "cat": "fillers",
+   "say": "The total is, er, about four hundred dollars.",
+   "expect": "The total is about four hundred dollars.",
+   "keep": [
+    "four",
+    "hundred"
+   ]
+  },
+  {
+   "id": "filler-every-word",
+   "cat": "fillers",
+   "say": "Uh, I, uh, need, uh, the, uh, keys.",
+   "expect": "I need the keys."
+  },
+  {
+   "id": "filler-uhm",
+   "cat": "fillers",
+   "say": "Uhm, yeah, that works for me.",
+   "expect": "Yeah, that works for me."
+  },
+  {
+   "id": "repeat-word",
+   "cat": "repeats",
+   "say": "Can you send the the invoice today?",
+   "expect": "Can you send the invoice today?"
+  },
+  {
+   "id": "repeat-two-words",
+   "cat": "repeats",
+   "say": "We could, we could push it to next week.",
+   "expect": "We could push it to next week."
+  },
+  {
+   "id": "repeat-three-words",
+   "cat": "repeats",
+   "say": "I want to, I want to thank everyone for coming.",
+   "expect": "I want to thank everyone for coming."
+  },
+  {
+   "id": "repeat-pronoun",
+   "cat": "repeats",
+   "say": "I, I, I really appreciate it.",
+   "expect": "I really appreciate it."
+  },
+  {
+   "id": "repeat-with-filler",
+   "cat": "repeats",
+   "say": "It's in the, uh, the shared folder.",
+   "expect": "It's in the shared folder."
+  },
+  {
+   "id": "repeat-start",
+   "cat": "repeats",
+   "say": "So so the plan is to ship on Monday.",
+   "expect": "So the plan is to ship on Monday."
+  },
+  {
+   "id": "false-start-1",
+   "cat": "false starts",
+   "say": "I went to the, I drove to the store after work.",
+   "expect": "I drove to the store after work."
+  },
+  {
+   "id": "false-start-2",
+   "cat": "false starts",
+   "say": "Can you, could you take a look at the draft?",
+   "expect": "Could you take a look at the draft?",
+   "gap": true
+  },
+  {
+   "id": "false-start-3",
+   "cat": "false starts",
+   "say": "The thing is, what I mean is, we need more time.",
+   "expect": "What I mean is, we need more time.",
+   "gap": true
+  },
+  {
+   "id": "correction-no-wait",
+   "cat": "self-corrections",
+   "say": "Let's meet at three, no wait, four o'clock.",
+   "expect": "Let's meet at four o'clock.",
+   "gap": true
+  },
+  {
+   "id": "correction-i-mean",
+   "cat": "self-corrections",
+   "say": "Send it to John, I mean Sarah, by Friday.",
+   "expect": "Send it to Sarah by Friday.",
+   "gap": true
+  },
+  {
+   "id": "correction-actually",
+   "cat": "self-corrections",
+   "say": "It costs fifty dollars, actually sixty dollars.",
+   "expect": "It costs sixty dollars.",
+   "gap": true
+  },
+  {
+   "id": "correction-sorry",
+   "cat": "self-corrections",
+   "say": "Book the room for Tuesday, sorry, Wednesday.",
+   "expect": "Book the room for Wednesday.",
+   "gap": true
+  },
+  {
+   "id": "hedge-you-know",
+   "cat": "verbal tics",
+   "say": "It was, you know, a really long day.",
+   "expect": "It was a really long day.",
+   "gap": true
+  },
+  {
+   "id": "hedge-like",
+   "cat": "verbal tics",
+   "say": "The file was like really big.",
+   "expect": "The file was really big.",
+   "gap": true
+  },
+  {
+   "id": "hedge-basically",
+   "cat": "verbal tics",
+   "say": "So basically we need to redo the slides.",
+   "expect": "We need to redo the slides.",
+   "gap": true
+  },
+  {
+   "id": "trail-off",
+   "cat": "trailing off",
+   "say": "I'll call you later and, um.",
+   "expect": "I'll call you later.",
+   "gap": true
+  },
+  {
+   "id": "keep-very-very",
+   "cat": "must not change",
+   "say": "That was very, very good work.",
+   "expect": "That was very, very good work.",
+   "keep": [
+    "very very"
+   ]
+  },
+  {
+   "id": "keep-umbrella",
+   "cat": "must not change",
+   "say": "Bring an umbrella to the summer drum circle.",
+   "expect": "Bring an umbrella to the summer drum circle.",
+   "keep": [
+    "umbrella",
+    "summer",
+    "drum"
+   ]
+  },
+  {
+   "id": "keep-hummus",
+   "cat": "must not change",
+   "say": "We ordered hummus and humble pie.",
+   "expect": "We ordered hummus and humble pie.",
+   "keep": [
+    "hummus",
+    "humble"
+   ]
+  },
+  {
+   "id": "keep-uh-huh",
+   "cat": "must not change",
+   "say": "Uh-huh, I agree with that.",
+   "expect": "Uh-huh, I agree with that.",
+   "keep": [
+    "huh"
+   ]
+  },
+  {
+   "id": "keep-had-had",
+   "cat": "must not change",
+   "say": "She had had enough of the delays.",
+   "expect": "She had had enough of the delays.",
+   "keep": [
+    "had had"
+   ]
+  },
+  {
+   "id": "keep-that-that",
+   "cat": "must not change",
+   "say": "I knew that that would happen.",
+   "expect": "I knew that that would happen.",
+   "keep": [
+    "that that"
+   ]
+  },
+  {
+   "id": "keep-no-no",
+   "cat": "must not change",
+   "say": "No, no, that's not what I meant.",
+   "expect": "No, no, that's not what I meant.",
+   "keep": [
+    "no no"
+   ]
+  },
+  {
+   "id": "keep-list",
+   "cat": "must not change",
+   "say": "We need eggs, milk, and bread.",
+   "expect": "We need eggs, milk, and bread.",
+   "keep": [
+    "eggs",
+    "milk",
+    "bread"
+   ]
+  },
+  {
+   "id": "keep-question",
+   "cat": "must not change",
+   "say": "Did you get my email about the budget?",
+   "expect": "Did you get my email about the budget?"
+  },
+  {
+   "id": "keep-names",
+   "cat": "must not change",
+   "say": "Ask Priya and Mateo to join the call.",
+   "expect": "Ask Priya and Mateo to join the call.",
+   "keep": [
+    "priya",
+    "mateo"
+   ]
+  },
+  {
+   "id": "keep-swear",
+   "cat": "must not change",
+   "say": "Damn, that build failed again.",
+   "expect": "Damn, that build failed again.",
+   "keep": [
+    "damn"
+   ]
+  },
+  {
+   "id": "keep-so-start",
+   "cat": "must not change",
+   "say": "So what do you think about the new design?",
+   "expect": "So what do you think about the new design?",
+   "keep": [
+    "so"
+   ]
+  },
+  {
+   "id": "long-ramble",
+   "cat": "real-world",
+   "say": "Hey, um, so I just wanted to, uh, follow up on the, the proposal we talked about. Um, I think the, the pricing looks fine, but, uh, can we, can we push the start date to March?",
+   "expect": "Hey, I just wanted to follow up on the proposal we talked about. I think the pricing looks fine, but can we push the start date to March?"
+  },
+  {
+   "id": "code-prompt",
+   "cat": "real-world",
+   "say": "Um, can you fix the bug in the, uh, login function and, and add a test for it?",
+   "expect": "Can you fix the bug in the login function and add a test for it?"
+  },
+  {
+   "id": "slack-message",
+   "cat": "real-world",
+   "say": "Uh, hey team, the, the deploy is done, um, let me know if you see anything weird.",
+   "expect": "Hey team, the deploy is done, let me know if you see anything weird."
+  },
+  {
+   "id": "numbers",
+   "cat": "numbers",
+   "say": "Um, the meeting is at two thirty and, uh, it costs twenty five dollars.",
+   "expect": "The meeting is at 2:30 and it costs $25.",
+   "keep": [
+    "meeting",
+    "costs"
+   ],
+   "loose": true,
+   "gap": true
+  }
+ ],
+ "text": [
+  {
+   "id": "t-comma-joiner",
+   "mode": "standard",
+   "in": "I was thinking we could maybe meet on, Thursday.",
+   "expect": "I was thinking we could maybe meet on Thursday."
+  },
+  {
+   "id": "t-capital",
+   "mode": "standard",
+   "in": "let's ship it.",
+   "expect": "Let's ship it."
+  },
+  {
+   "id": "t-capital-after-period",
+   "mode": "standard",
+   "in": "Done. next we test.",
+   "expect": "Done. Next we test."
+  },
+  {
+   "id": "t-corr-period",
+   "mode": "correspondence",
+   "in": "Thanks for the update",
+   "expect": "Thanks for the update."
+  },
+  {
+   "id": "t-ai-no-period",
+   "mode": "ai",
+   "in": "fix the failing test",
+   "expect": "Fix the failing test"
+  },
+  {
+   "id": "t-keep-question",
+   "mode": "correspondence",
+   "in": "Can you make it?",
+   "expect": "Can you make it?"
+  },
+  {
+   "id": "t-decimal",
+   "mode": "standard",
+   "in": "It went up 4.5 percent, uh, this week",
+   "expect": "It went up 4.5 percent, this week"
+  },
+  {
+   "id": "t-url",
+   "mode": "ai",
+   "in": "open example.com slash docs",
+   "expect": "Open example.com slash docs"
+  },
+  {
+   "id": "t-version",
+   "mode": "standard",
+   "in": "We're on v2.1 now.",
+   "expect": "We're on v2.1 now."
+  },
+  {
+   "id": "t-very-very",
+   "mode": "standard",
+   "in": "That was very, very good.",
+   "expect": "That was very, very good."
+  },
+  {
+   "id": "t-had-had",
+   "mode": "standard",
+   "in": "She had had enough.",
+   "expect": "She had had enough."
+  },
+  {
+   "id": "t-that-that",
+   "mode": "standard",
+   "in": "I knew that that was wrong.",
+   "expect": "I knew that that was wrong."
+  },
+  {
+   "id": "t-no-no",
+   "mode": "standard",
+   "in": "No, no, that's fine.",
+   "expect": "No, no, that's fine."
+  },
+  {
+   "id": "t-bye-bye",
+   "mode": "standard",
+   "in": "Okay, bye bye.",
+   "expect": "Okay, bye bye."
+  },
+  {
+   "id": "t-umbrella",
+   "mode": "standard",
+   "in": "Grab the umbrella.",
+   "expect": "Grab the umbrella."
+  },
+  {
+   "id": "t-uh-huh",
+   "mode": "standard",
+   "in": "Uh-huh, sounds good.",
+   "expect": "Uh-huh, sounds good."
+  },
+  {
+   "id": "t-mhm",
+   "mode": "standard",
+   "in": "Mhm, sounds good.",
+   "expect": "Mhm, sounds good."
+  },
+  {
+   "id": "t-list-and",
+   "mode": "standard",
+   "in": "Red, blue, and green.",
+   "expect": "Red, blue, and green."
+  },
+  {
+   "id": "t-the-the",
+   "mode": "standard",
+   "in": "Check the the logs.",
+   "expect": "Check the logs."
+  },
+  {
+   "id": "t-filler-only",
+   "mode": "standard",
+   "in": "Um.",
+   "expect": ""
+  },
+  {
+   "id": "t-ellipsis",
+   "mode": "standard",
+   "in": "Wait... what?",
+   "expect": "Wait... what?"
+  },
+  {
+   "id": "t-quote",
+   "mode": "correspondence",
+   "in": "She said \"ship it\"",
+   "expect": "She said \"ship it\""
+  },
+  {
+   "id": "t-emoji-word",
+   "mode": "standard",
+   "in": "Great job team",
+   "expect": "Great job team"
+  },
+  {
+   "id": "t-i-i",
+   "mode": "standard",
+   "in": "I, I, I think so.",
+   "expect": "I think so."
+  },
+  {
+   "id": "t-two-word-repeat",
+   "mode": "standard",
+   "in": "We should, we should go.",
+   "expect": "We should go."
+  }
+ ]
+}

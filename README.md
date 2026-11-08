@@ -58,6 +58,26 @@ Larynx cleans as it goes, with no AI rewrite and no added delay:
 Not yet: understanding corrections such as "three, no wait, four". That needs an AI rewrite, planned for
 correspondence apps only.
 
+## Testing
+
+`python3 tests/suite.py` speaks about 40 messy sentences (fillers, repeats, false starts, corrections, verbal tics,
+plus traps such as "very very", "had had", "umbrella", "hummus") in five voices at two speeds, transcribes them,
+and scores the result. It also runs 25 exact checks on the tidy rules. Latest run (Nov 8, 2026):
+
+| Area | Pass |
+| --- | --- |
+| Tidy rules (exact) | 25/25 |
+| Fillers | 72/80 |
+| Repeats | 57/60 |
+| False starts | 10/10 |
+| Must not change | 95/120 |
+| Real-world messages | 30/30 |
+
+Nearly every miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio", "uh-huh"
+as "aha"), not the cleanup. Self-corrections ("three, no wait, four"), "you know"/"like", trailing off and spoken
+numbers are tracked as known gaps for the AI rewrite layer. NeMo inverse text normalization was tried for numbers
+and rejected: it turned "two thirty and it costs" into "32 it costs".
+
 ## How it works
 
 | File | Job |

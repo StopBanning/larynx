@@ -37,7 +37,9 @@ public enum CleanupMode: String, Sendable {
 
 /// Rule-based tidy-up: instant, and it never rewrites a real word.
 public enum Tidy {
-    static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+|m+h+m*)"
+    static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
+    /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
+    static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
     static let joiners = "to|on|at|in|of|for|with|from|about|the|a|an|and|but|or|is|was|are|were|be|my|your|our|their"
 
     public static func apply(_ text: String, mode: CleanupMode) -> String {
@@ -46,7 +48,11 @@ public enum Tidy {
         s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .regularExpression)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place".
         s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)\\b(\\w+),?\\s+\\1\\b", with: "$1", options: .regularExpression)
+        var previous = ""
+        while previous != s {  // "I, I, I think" needs two passes
+            previous = s
+            s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b", with: "$1", options: .regularExpression)
+        }
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
@@ -63,12 +69,19 @@ public enum Tidy {
         return s
     }
 
+    /// Capitalizes the first letter and the first letter after ". ", "! " or "? ", but not after "..." or inside "example.com".
     static func capitalizeSentences(_ s: String) -> String {
+        let chars = Array(s)
         var out = ""
         var capNext = true
-        for ch in s {
+        for (i, ch) in chars.enumerated() {
             if capNext, ch.isLetter { out += ch.uppercased(); capNext = false; continue }
-            if ".!?".contains(ch) { capNext = true } else if !ch.isWhitespace { capNext = false }
+            if capNext, !ch.isWhitespace { capNext = false }
+            if ".!?".contains(ch) {
+                let next = i + 1 < chars.count ? chars[i + 1] : " "
+                let ellipsis = ch == "." && ((i > 0 && chars[i - 1] == ".") || next == ".")
+                capNext = next.isWhitespace && !ellipsis
+            }
             out.append(ch)
         }
         return out
