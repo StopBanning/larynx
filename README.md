@@ -69,22 +69,24 @@ a sentence for Mail, Slack, Messages and Notes.
 ## Testing
 
 `python3 tests/suite.py --rewrite auto` speaks about 40 messy sentences in five voices at two speeds, transcribes
-them and scores the result. It also runs 28 exact tidy-rule checks and a 26-case rewrite benchmark that includes
+them and scores the result. It also runs 36 exact tidy-rule checks and a 26-case rewrite benchmark that includes
 questions, requests and "actually"/"sorry"/"I mean" sentences the rewrite must leave alone. Latest run (Nov 8, 2026):
 
 | Area | Pass |
 | --- | --- |
-| Tidy rules (exact) | 28/28 |
+| Tidy rules (exact) | 36/36 |
 | AI rewrite benchmark | 26/26 on 4 of 4 runs |
 | Fillers | 72/80 |
 | Repeats | 57/60 |
 | False starts | 10/10 |
 | Self-corrections | 38/40 (0/40 before the rewrite layer) |
+| Trailing off | 10/10 |
+| Verbal tics | 30/30 |
 | Must not change | 95/120 |
 | Real-world messages | 30/30 |
 
 Nearly every remaining miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio",
-"uh-huh" as "aha"). Still open: trailing off ("and, um.") and some verbal tics. NeMo inverse text normalization was
+"uh-huh" as "aha"). Still open: dropping a spoken preamble ("The thing is, what I mean is, ...") is left alone on purpose. NeMo inverse text normalization was
 tried for numbers and rejected: it turned "two thirty and it costs" into "32 it costs".
 
 ## How it works

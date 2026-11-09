@@ -55,6 +55,15 @@ public enum Tidy {
         }
         // 2b. "Tuesday, no Wednesday" / "at three. No, four": same kind of word on both sides, so keep the second.
         s = sameKindCorrections(s)
+        // 2c. A question restarted with a different opener: "can you could you take a look" -> "could you take a look".
+        s = s.replacingOccurrences(of: "(?i)\\b(?:\(questionOpeners))\\s+(?:you|i|we),?\\s+(?=(?:\(questionOpeners))\\s+(?:you|i|we)\\b)",
+                                   with: "", options: .regularExpression)
+        // 2d. "like" as filler between a form of "be" and an intensifier: "was like really big". "I like really spicy food" stays.
+        s = s.replacingOccurrences(of: "(?i)\\b(was|is|are|were|it's|that's|they're|we're|you're|i'm)\\s+like,?\\s+(?=(?:really|so|very|super|totally|pretty|literally)\\b)",
+                                   with: "$1 ", options: .regularExpression)
+        // 2e. Trailing off: a sentence can't end on "and", "but" or "or" ("I'll call you later and, um.").
+        let trailed = s.replacingOccurrences(of: "(?i)[\\s,.]+(?:and|but|or|an)[\\s,.]*$", with: "", options: .regularExpression)
+        if trailed != s, !trailed.isEmpty { s = trailed + (mode == .ai ? "" : ".") }
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
@@ -70,6 +79,8 @@ public enum Tidy {
         if mode == .correspondence, let last = s.last, !".!?:)\"'".contains(last) { s += "." }
         return s
     }
+
+    static let questionOpeners = "can|could|will|would|should|do|did|shall"
 
     static let correctionKinds = [
         "(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight)",

@@ -154,7 +154,7 @@
    "id": "hedge-basically",
    "cat": "verbal tics",
    "say": "So basically we need to redo the slides.",
-   "expect": "We need to redo the slides.",
+   "expect": "So we need to redo the slides.",
    "gap": true
   },
   {
@@ -474,6 +474,54 @@
    "mode": "correspondence",
    "in": "one, no problem",
    "expect": "One, no problem."
+  },
+  {
+   "id": "t-trail-and",
+   "mode": "standard",
+   "in": "I'll call you later and,",
+   "expect": "I'll call you later."
+  },
+  {
+   "id": "t-trail-an",
+   "mode": "correspondence",
+   "in": "I'll call you later. An",
+   "expect": "I'll call you later."
+  },
+  {
+   "id": "t-trail-safe",
+   "mode": "standard",
+   "in": "We need salt and pepper",
+   "expect": "We need salt and pepper"
+  },
+  {
+   "id": "t-restart-question",
+   "mode": "standard",
+   "in": "can you could you take a look at the draft",
+   "expect": "Could you take a look at the draft"
+  },
+  {
+   "id": "t-restart-safe",
+   "mode": "standard",
+   "in": "what can you do",
+   "expect": "What can you do"
+  },
+  {
+   "id": "t-like-filler",
+   "mode": "standard",
+   "in": "the file was like really big",
+   "expect": "The file was really big"
+  },
+  {
+   "id": "t-like-verb",
+   "mode": "standard",
+   "in": "I like really spicy food",
+   "expect": "I like really spicy food"
+  },
+  {
+   "id": "t-like-simile",
+   "mode": "standard",
+   "in": "it's like a dream",
+   "expect": "It's like a dream"
   }
  ],
  "rewrite": [
