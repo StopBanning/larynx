@@ -16,7 +16,7 @@ public enum Inserter {
     /// Password fields turn on Secure Input, which blocks synthetic keystrokes.
     public static var secureInputActive: Bool { IsSecureEventInputEnabled() }
 
-    public static func paste(_ text: String, restoreAfter delay: TimeInterval = 0.5) throws {
+    public static func paste(_ text: String, restoreAfter delay: TimeInterval = 0.5, restore: Bool = true) throws {
         guard !text.isEmpty else { return }
         guard isTrusted else { throw LarynxError.notTrusted }
         guard !secureInputActive else { throw LarynxError.secureInput }
@@ -30,6 +30,7 @@ public enum Inserter {
         let ourChange = board.changeCount
 
         sendCommandV()
+        guard restore else { return }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             // Leave the clipboard alone if the user copied something new meanwhile.
@@ -54,8 +55,15 @@ public enum Inserter {
     public enum Delivery: Sendable, Equatable {
         case inserted
         case copied(String)  // why the paste didn't happen
+        case pastedAndCopied(String)  // pasted, but it's unclear a text field took it, so it's also on the clipboard
 
-        public var label: String { if case .inserted = self { return "inserted" } else { return "copied" } }
+        public var label: String {
+            switch self {
+            case .inserted: return "inserted"
+            case .copied: return "copied"
+            case .pastedAndCopied: return "pasted+copied"
+            }
+        }
     }
 
     /// Pastes into `target` (the app that was in front when the user started talking), bringing it back to the front
@@ -77,8 +85,54 @@ public enum Inserter {
             }
             try? await Task.sleep(nanoseconds: 80_000_000)  // let its window take key focus
         }
-        do { try paste(text); return .inserted }
+        let focus = focusedField(in: target ?? NSWorkspace.shared.frontmostApplication)
+        guard focus.editable != false else {
+            // Nothing to type into: pressing ⌘V would lose the words, so leave them on the clipboard.
+            copyOnly(text); return .copied("no text field has focus (\(focus.role))")
+        }
+        do {
+            // When macOS can't say whether a text field has focus, paste anyway but keep the words on the clipboard.
+            try paste(text, restore: focus.editable == true)
+            return focus.editable == true ? .inserted : .pastedAndCopied(focus.role)
+        }
         catch { copyOnly(text); return .copied("\(error)") }
+    }
+
+    /// What has keyboard focus in `app`: `editable` is true for a text field, false for something that can't take
+    /// text (a button, a list, the window itself, nothing at all), nil when the app doesn't say.
+    public static func focusedField(in app: NSRunningApplication?) -> (editable: Bool?, role: String) {
+        guard isTrusted, let app else { return (nil, "unknown") }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        // Chrome and Electron apps (Claude, Slack, VS Code) only build their accessibility tree when asked.
+        AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+        var value: CFTypeRef?
+        let err = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value)
+        if err == .noValue {
+            // Chrome can report no focused element even with a page open; only trust "nothing" when there's no window either.
+            var window: CFTypeRef?
+            let hasWindow = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &window) == .success
+            return hasWindow ? (nil, "window without a focused element") : (false, "no window")
+        }
+        guard err == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return (nil, "unknown (\(err.rawValue))") }
+        let element = value as! AXUIElement
+        func string(_ attr: String) -> String? {
+            var v: CFTypeRef?
+            return AXUIElementCopyAttributeValue(element, attr as CFString, &v) == .success ? v as? String : nil
+        }
+        let role = string(kAXRoleAttribute) ?? "?"
+        if ["AXTextField", "AXTextArea", "AXComboBox", "AXSearchField"].contains(role) { return (true, role) }
+        var settable: DarwinBoolean = false
+        if AXUIElementIsAttributeSettable(element, kAXSelectedTextRangeAttribute as CFString, &settable) == .success, settable.boolValue {
+            return (true, role)
+        }
+        var editable: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, "AXEditable" as CFString, &editable) == .success, (editable as? Bool) == true {
+            return (true, role)
+        }
+        // Terminals and some custom editors take typing without looking like text fields.
+        if ["AXScrollArea", "AXGroup", "AXUnknown", "AXWebArea"].contains(role) { return (nil, role) }
+        return (false, role)
     }
 
     private static func sendCommandV() {

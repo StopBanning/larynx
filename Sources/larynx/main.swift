@@ -263,13 +263,17 @@ func runListen(keys: [Hotkey.Key]) async {
                 }
                 let delivery = await Inserter.deliver(text, to: app)
                 MenuController.shared.remember(text)
-                await MainActor.run { Pill.shared.hide() }
                 if case .copied(let why) = delivery {
+                    // Nowhere to type: say so where the user is looking, and keep the words on the clipboard.
                     NSSound(named: "Funk")?.play()
                     setStatus("Copied, press ⌘V")
                     log("copied: \(why)")
+                    await MainActor.run { Pill.shared.show(Pill.enabled ? "Copied, press ⌘V to paste" : "") }
+                    try? await Task.sleep(nanoseconds: 2_500_000_000)
+                    await MainActor.run { Pill.shared.hide() }
                 } else {
-                    setStatus("Ready")
+                    await MainActor.run { Pill.shared.hide() }
+                    setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
                 }
                 log("\(result["totalMs"]!) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
             } catch {
@@ -334,7 +338,7 @@ func runServe() async {
                 if request["paste"] as? Bool == true, let text = result["text"] as? String, !text.isEmpty {
                     let delivery = await Inserter.deliver(text)
                     result["delivered"] = delivery.label
-                    result["pasted"] = delivery == .inserted
+                    result["pasted"] = { if case .copied = delivery { return false } else { return true } }()
                     if case .copied(let why) = delivery { result["pasteError"] = why }
                 }
                 result["event"] = "result"
@@ -391,6 +395,14 @@ case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
 case "mcp": Task { await runMCP() }
+case "focus":
+    // What has focus in the front app, after an optional delay: larynx focus [seconds]. Needs Accessibility.
+    let wait = Double(args.dropFirst().first ?? "") ?? 0
+    Thread.sleep(forTimeInterval: wait)
+    let app = NSWorkspace.shared.frontmostApplication
+    let f = Inserter.focusedField(in: app)
+    print("\(app?.bundleIdentifier ?? "?"): editable=\(f.editable.map(String.init) ?? "unknown") role=\(f.role)")
+    exit(0)
 case "vocab":
     // The words Larynx listens for, and where they come from.
     Vocabulary.ensureExists()

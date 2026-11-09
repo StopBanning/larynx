@@ -17,8 +17,10 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   Turn it off from the menu (Live Preview).
 - **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
   Larynx brings the original back before pasting.
-- **Never loses a transcript**: if pasting is blocked (a password field, missing permission), the text stays on your
-  clipboard and the menu says "Copied, press ⌘V".
+- **Never loses a transcript**: before pasting, Larynx asks macOS whether a text field has focus. If nothing can take
+  the text (no text box clicked, a password field, missing permission), it stays on your clipboard and the pill says
+  "Copied, press ⌘V to paste". When an app won't say what has focus, Larynx pastes and keeps the text on the
+  clipboard too.
 - **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
 - **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
   spoken numbers, all on-device.
