@@ -66,6 +66,23 @@ let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
 final class Loader: @unchecked Sendable {
     static let shared = Loader()
     lazy var task: Task<Void, Error> = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
+    /// Your vocabulary (project names, dictionary, vocabulary.txt). Loads after the speech model; the app doesn't wait for it.
+    lazy var vocabulary: Task<Void, Never> = Task { await reloadVocabulary() }
+}
+
+/// `--vocab off` or `defaults write com.automatedworkflow.larynx vocabulary off` turns vocabulary boosting off.
+var vocabularyEnabled: Bool { (option("--vocab") ?? UserDefaults.standard.string(forKey: "vocabulary") ?? "on") != "off" }
+
+func reloadVocabulary() async {
+    do {
+        try await Loader.shared.task.value
+        let started = Date()
+        let terms = vocabularyEnabled ? Vocabulary.terms() : []
+        try await transcriber.loadVocabulary(terms, modelsDir: modelsDir)
+        if !terms.isEmpty { log("vocabulary: \(await transcriber.vocabularySize) words in \(ms(since: started)) ms") }
+    } catch {
+        log("vocabulary failed to load: \(error)")
+    }
 }
 
 /// The other speech model, used only when the main one hears nothing in a clip that clearly has speech in it.
@@ -98,6 +115,7 @@ func requestMicrophone() async -> Bool {
 func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> [String: Any] {
     let started = Date()
     try await Loader.shared.task.value
+    if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
     let (raw, usedEngine) = try await transcribeWithFallback(samples)
     let asrMs = ms(since: started)
     let tidied = tidy ? Tidy.apply(Dictionary.apply(raw), mode: mode) : raw
@@ -182,6 +200,7 @@ func runListen(keys: [Hotkey.Key]) async {
     }
     setStatus("Loading speech model...")
     do { try await Loader.shared.task.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
+    _ = Loader.shared.vocabulary  // starts loading in the background
 
     // Each press is one utterance with its own target app, captured at key-down, so switching apps mid-sentence
     // (or a slow result) never sends text to the wrong place.
@@ -361,6 +380,7 @@ if inApp && args.isEmpty {
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
     Dictionary.ensureExists()
+    Vocabulary.ensureExists()
     makeMenuBarItem()
     MenuController.shared.setUpLoginItemOnce()
     Task { await runListen(keys: listenKeys) }
@@ -371,6 +391,12 @@ case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
 case "mcp": Task { await runMCP() }
+case "vocab":
+    // The words Larynx listens for, and where they come from.
+    Vocabulary.ensureExists()
+    print(Vocabulary.terms().joined(separator: "\n"))
+    log("edit \(Vocabulary.url.path); project names come from \(Vocabulary.roots.map(\.path).joined(separator: ", "))")
+    exit(0)
 case "pill-demo":
     // Holds the live preview on screen so it can be looked at or screenshotted: larynx pill-demo [seconds] [text]
     let seconds = Double(args.dropFirst().first ?? "") ?? 15

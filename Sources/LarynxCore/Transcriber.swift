@@ -39,6 +39,8 @@ public enum Engine: String, CaseIterable, Sendable {
 /// Runs NVIDIA Parakeet TDT v3 (25 European languages) on the Neural Engine through FluidAudio. Fully offline after the first model download.
 public actor Transcriber {
     private var manager: AsrManager?
+    private var boosting: VocabularyBoostingSession?
+    public private(set) var vocabularySize = 0
 
     public init() {}
 
@@ -55,12 +57,61 @@ public actor Transcriber {
         manager = asr
     }
 
+    /// Loads the small keyword model (Parakeet CTC 110M, downloaded once into `modelsDir`) and the terms to listen for.
+    /// Afterwards each transcript is rescored against the audio, and close-sounding words are swapped for your terms.
+    public func loadVocabulary(_ terms: [String], modelsDir: URL?) async throws {
+        guard !terms.isEmpty else { boosting = nil; vocabularySize = 0; return }
+        let ctc = try await CtcModels.downloadAndLoad(to: modelsDir?.appendingPathComponent("parakeet-ctc-110m-coreml", isDirectory: true))
+        let context = CustomVocabularyContext(terms: terms.map { CustomVocabularyTerm(text: $0) })
+        boosting = try await VocabularyBoostingSession(vocabulary: context, ctcModels: ctc)
+        vocabularySize = boosting?.vocabulary.terms.count ?? 0
+    }
+
     /// Returns the transcript for 16 kHz mono samples. Clips shorter than a quarter second come back empty.
     public func transcribe(_ samples: [Float]) async throws -> String {
         guard let manager else { throw LarynxError.notLoaded }
         guard samples.count >= Int(Recorder.sampleRate / 4) else { return "" }
         var state = try TdtDecoderState()
         let result = try await manager.transcribe(samples, decoderState: &state)
-        return result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = result.text
+        if let boosting, let timings = result.tokenTimings, !timings.isEmpty,
+           let out = await boosting.rescore(text: text, tokenTimings: timings, audioSamples: samples), out.wasModified {
+            // FluidAudio's own rewritten text is far too eager with a short word list ("update to GitHub" -> "update to Govee"),
+            // so take only its one-word swaps where the heard word looks like the term ("Gavy" -> "Govee").
+            for r in out.replacements where r.shouldReplace {
+                guard let term = r.replacementWord else { continue }
+                text = Transcriber.swap(r.originalWord, for: term, in: text)
+            }
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Replaces one word with a vocabulary term when they sound alike: same first letter and nearly the same consonants
+    /// ("macropod"/"Macropad", "Gavie"/"Govee", "locus"/"Locust"). Anything else is left as heard.
+    static func swap(_ heard: String, for term: String, in text: String) -> String {
+        // A suggestion can cover a few words ("Gavy app"); swap only the one that sounds like the term.
+        let words = heard.split(separator: " ").map { $0.trimmingCharacters(in: .punctuationCharacters) }
+        guard !term.contains(" "), let h = words.first(where: { $0.lowercased() != term.lowercased() && soundsAlike($0, term) })
+        else { return text }
+        let pattern = "(?i)\\b" + NSRegularExpression.escapedPattern(for: h) + "\\b"
+        guard let range = text.range(of: pattern, options: .regularExpression) else { return text }
+        return text.replacingCharacters(in: range, with: term)
+    }
+
+    static func soundsAlike(_ a: String, _ b: String) -> Bool {
+        func skeleton(_ s: String) -> [Character] {
+            Array(s.lowercased().filter { $0.isLetter && !"aeiouy".contains($0) })
+        }
+        let x = skeleton(a), y = skeleton(b)
+        guard x.count >= 2, y.count >= 2, a.lowercased().first == b.lowercased().first else { return false }
+        var d = Array(0...y.count)  // edit distance between the consonant skeletons
+        for i in 1...x.count {
+            var prev = d[0]; d[0] = i
+            for j in 1...y.count {
+                let cur = min(d[j] + 1, d[j - 1] + 1, prev + (x[i - 1] == y[j - 1] ? 0 : 1))
+                prev = d[j]; d[j] = cur
+            }
+        }
+        return d[y.count] <= max(x.count, y.count) / 4
     }
 }

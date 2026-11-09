@@ -47,7 +47,7 @@ Lesson: never run live paste tests while Colin is at the keyboard. TextEdit didn
 lines pasted into his Safari. Use `LARYNX_FORCE_COPY=1` (clipboard only, restore it after) or file transcription.
 
 ## Later (not in this round)
-- Learn vocabulary from code in `~/work` (identifiers, file names) and feed FluidAudio's custom vocabulary.
+- Done (Nov 9): vocabulary from `~/work` project names + dictionary + vocabulary.txt, via FluidAudio CTC rescoring filtered by a sounds-alike check (its raw rewrite is too eager: "update to GitHub" -> "update to Govee").
 - Learn from fixes made right after a paste (Accessibility read of the field) and offer dictionary entries.
 - Windows helper.
 

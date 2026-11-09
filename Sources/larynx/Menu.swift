@@ -78,6 +78,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         let dict = NSMenuItem(title: "Edit Dictionary...", action: #selector(openDictionary), keyEquivalent: "")
         dict.target = self
         menu.addItem(dict)
+        let vocab = NSMenuItem(title: "Edit Vocabulary...", action: #selector(openVocabulary), keyEquivalent: "")
+        vocab.target = self
+        menu.addItem(vocab)
+        let reload = NSMenuItem(title: "Reload Vocabulary", action: #selector(reloadVocab), keyEquivalent: "")
+        reload.target = self
+        menu.addItem(reload)
         menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -117,6 +123,16 @@ final class MenuController: NSObject, NSMenuDelegate {
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
             else { try SMAppService.mainApp.register() }
         } catch { log("login item: \(error)") }
+    }
+
+    @objc func openVocabulary() {
+        Vocabulary.ensureExists()
+        NSWorkspace.shared.open(Vocabulary.url)
+    }
+
+    @objc func reloadVocab() {
+        setStatus("Loading vocabulary...")
+        Task { await reloadVocabulary(); setStatus("Ready") }
     }
 
     @objc func openDictionary() {

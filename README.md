@@ -22,6 +22,12 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
 - **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
 - **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
   spoken numbers, all on-device.
+- **Knows your words**: project names from `~/work` (one-word folders like "larynx", and the unusual part of names
+  like "govee-lights"), your dictionary, and anything in `~/Library/Application Support/Larynx/vocabulary.txt`.
+  A small keyword model (Parakeet CTC 110M, downloaded once) listens for them after each transcript and swaps a
+  misheard word only when it sounds like the term ("macropod" becomes "Macropad"). `larynx vocab` lists them; change
+  the folders with `defaults write com.automatedworkflow.larynx vocabularyRoots ~/work,~/code`; turn it off with
+  `defaults write com.automatedworkflow.larynx vocabulary off`.
 - **Menu bar settings**: Live Preview, AI Cleanup, Talk Key and Open at Login are checkboxes in the menu; Recent lists
   your last 10 transcripts (click to copy; kept in memory only, never saved to disk). Opens at login by default.
 - **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
@@ -99,6 +105,7 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 | `Inserter.swift` | Clipboard plus Cmd+V mapped through the keyboard layout; restores your clipboard; brings the target app back; falls back to copy |
 | `Tidy.swift` | Cleanup rules and the per-app mode |
 | `Cleaner.swift` | Optional Apple Foundation Models pass with a guard against answers |
+| `Vocabulary.swift` | Your words: project names, dictionary, vocabulary.txt |
 | `Pill.swift` | The live preview panel |
 | `Menu.swift` | The menu bar menu: recent transcripts and settings |
 | `MCP.swift` | The `mcp` command |
@@ -108,7 +115,7 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 
 1. Daily driver: guided permissions.
 2. Context: text around the cursor and the selection via Accessibility, per-app styles, code words.
-3. Voice edits on selected text, learning from your fixes, vocabulary learned from your code.
+3. Voice edits on selected text, learning from your fixes.
 4. Signed, notarized releases; Windows later.
 
 ## License
