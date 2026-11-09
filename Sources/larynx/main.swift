@@ -203,11 +203,18 @@ func runListen(keys: [Hotkey.Key]) async {
         let mine = session
         previewTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { _ in
             guard !previewBusy, recorder.isRecording, session == mine else { return }
-            let snap = recorder.snapshot()
-            guard Double(snap.count) / Recorder.sampleRate >= 0.5 else { return }
+            let all = recorder.snapshot()
+            guard Double(all.count) / Recorder.sampleRate >= 0.5 else { return }
+            // Only the last 12 seconds: the preview stays fast however long you talk, and the pill shows the newest words.
+            let window = Int(Recorder.sampleRate * 12)
+            let trimmed = all.count > window
+            let snap = trimmed ? Array(all.suffix(window)) : all
             previewBusy = true
             Task {
-                let words = (try? await transcriber.transcribe(snap)) ?? ""
+                var words = (try? await transcriber.transcribe(snap)) ?? ""
+                if trimmed, let cut = words.firstIndex(of: " ") {  // the first word may be cut in half
+                    words = "…" + words[words.index(after: cut)...]
+                }
                 await MainActor.run {
                     previewBusy = false
                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }

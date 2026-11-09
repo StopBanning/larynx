@@ -18,20 +18,27 @@ final class Pill {
     func show(_ text: String) {
         guard Pill.enabled else { return }
         let (panel, label) = build()
-        label.stringValue = text
         // Wrap to at most three lines and keep the newest words: the pill grows upward, never off the screen.
         let textWidth = Pill.maxWidth - Pill.padding.width * 2
         label.preferredMaxLayoutWidth = textWidth
-        let one = label.sizeThatFits(NSSize(width: 10_000, height: 10_000))
-        let width = min(Pill.maxWidth, max(150, one.width + Pill.padding.width * 2))
-        let lineHeight = ceil(label.font!.boundingRectForFont.height)
-        var shown = text
-        var size = label.sizeThatFits(NSSize(width: width - Pill.padding.width * 2, height: 10_000))
-        while size.height > lineHeight * 3 + 2, shown.count > 20 {  // drop the oldest words
-            shown = "…" + shown.dropFirst(40)
-            label.stringValue = shown
-            size = label.sizeThatFits(NSSize(width: width - Pill.padding.width * 2, height: 10_000))
+        // Measure the full text (the label itself is capped at three lines, so it can't tell us when text overflows).
+        let font = label.font!
+        func measure(_ t: String, _ w: CGFloat) -> NSSize {
+            let r = (t as NSString).boundingRect(with: NSSize(width: w, height: 10_000),
+                                                 options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
+            return NSSize(width: ceil(r.width), height: ceil(r.height))
         }
+        let width = min(Pill.maxWidth, max(150, measure(text, 10_000).width + Pill.padding.width * 2))
+        let inner = width - Pill.padding.width * 2 - 6  // NSTextField insets its text slightly
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        var shown = text
+        while measure(shown, inner).height > lineHeight * 3 + 2, shown.count > 20 {  // keep the newest words
+            let rest = shown.drop(while: { $0 == "…" })
+            guard let space = rest.dropFirst(8).firstIndex(of: " ") else { break }
+            shown = "…" + rest[rest.index(after: space)...]
+        }
+        label.stringValue = shown
+        let size = measure(shown, inner)
         let height = ceil(size.height) + Pill.padding.height * 2
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         let area = screen?.visibleFrame ?? .zero
