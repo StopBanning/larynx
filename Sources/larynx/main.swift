@@ -369,6 +369,17 @@ case "transcribe": Task { await runTranscribe() }
 case "listen": Task { await runListen(keys: listenKeys) }
 case "serve": Task { await runServe() }
 case "mcp": Task { await runMCP() }
+case "pill-demo":
+    // Holds the live preview on screen so it can be looked at or screenshotted: larynx pill-demo [seconds] [text]
+    let seconds = Double(args.dropFirst().first ?? "") ?? 15
+    let sample = args.count > 2 ? args[2] : "I wanna add you on my schedule for Wednesday, and can you send the report before the meeting starts on Friday afternoon?"
+    NSApplication.shared.setActivationPolicy(.accessory)
+    Task { @MainActor in
+        Pill.shared.show(sample)
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+        exit(0)
+    }
+    NSApplication.shared.run()
 case "rewrite":
     // Text in, tidied and (if triggered) rewritten text out; the decision goes to stderr.
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .correspondence
