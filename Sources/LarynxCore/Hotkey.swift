@@ -27,7 +27,8 @@ public final class Hotkey: @unchecked Sendable {
         }
     }
 
-    private let keys: [Key]
+    /// Can change while running (the menu bar app's Talk Key menu).
+    public var keys: [Key]
     private let onDown: () -> Void
     private let onUp: () -> Void
     private let onCancel: () -> Void

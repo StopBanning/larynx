@@ -14,7 +14,7 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
 
 - **Hold to talk** with Fn, Right Option or Right Command; pressing another key while holding cancels, so shortcuts still work.
 - **Live preview**: a small pill at the bottom of the screen shows the words as you speak. It never takes focus.
-  Turn it off with `defaults write com.automatedworkflow.larynx preview off`.
+  Turn it off from the menu (Live Preview).
 - **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
   Larynx brings the original back before pasting.
 - **Never loses a transcript**: if pasting is blocked (a password field, missing permission), the text stays on your
@@ -22,6 +22,8 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
 - **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
 - **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
   spoken numbers, all on-device.
+- **Menu bar settings**: Live Preview, AI Cleanup, Talk Key and Open at Login are checkboxes in the menu; Recent lists
+  your last 10 transcripts (click to copy; kept in memory only, never saved to disk). Opens at login by default.
 - **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
 ## Use
@@ -96,12 +98,13 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 | `Tidy.swift` | Cleanup rules and the per-app mode |
 | `Cleaner.swift` | Optional Apple Foundation Models pass with a guard against answers |
 | `Pill.swift` | The live preview panel |
+| `Menu.swift` | The menu bar menu: recent transcripts and settings |
 | `MCP.swift` | The `mcp` command |
 | `main.swift` | The `transcribe`, `listen`, `serve`, `rewrite` and `tidy` commands, and the menu bar app |
 
 ## Roadmap
 
-1. Daily driver: history, a settings window, guided permissions.
+1. Daily driver: guided permissions.
 2. Context: text around the cursor and the selection via Accessibility, per-app styles, code words.
 3. Voice edits on selected text, learning from your fixes, vocabulary learned from your code.
 4. Signed, notarized releases; Windows later.

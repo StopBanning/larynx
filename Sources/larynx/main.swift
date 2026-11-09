@@ -18,7 +18,7 @@ let modelsDir: URL? = option("--models-dir").map { URL(fileURLWithPath: ($0 as N
         : nil)
 let wantsClean = args.contains("--clean")  // always rewrite
 /// AI rewrite policy: `--rewrite auto|off`, else `defaults write com.automatedworkflow.larynx rewrite auto`. Auto rewrites only when a trigger fires.
-let autoRewrite = (option("--rewrite") ?? UserDefaults.standard.string(forKey: "rewrite") ?? "auto") == "auto"
+var autoRewrite: Bool { (option("--rewrite") ?? UserDefaults.standard.string(forKey: "rewrite") ?? "auto") == "auto" }
 let verbatim = args.contains("--verbatim")
 
 let usage = """
@@ -144,21 +144,14 @@ func setStatus(_ text: String, recording: Bool = false) {
     }
 }
 
-func makeMenuBarItem(keys: [Hotkey.Key]) {
+func makeMenuBarItem() {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     item.button?.image = NSImage(systemSymbolName: "mic", accessibilityDescription: "Larynx")
     let menu = NSMenu()
-    let line = NSMenuItem(title: "Starting...", action: nil, keyEquivalent: "")
-    line.isEnabled = false
-    menu.addItem(line)
-    let hint = NSMenuItem(title: "Hold " + keys.map(\.label).joined(separator: " or ") + " to talk", action: nil, keyEquivalent: "")
-    hint.isEnabled = false
-    menu.addItem(hint)
-    menu.addItem(.separator())
-    menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    menu.delegate = MenuController.shared
     item.menu = menu
     statusItem = item
-    statusLine = line
+    statusLine = MenuController.shared.statusLine
 }
 
 extension Hotkey.Key {
@@ -243,6 +236,7 @@ func runListen(keys: [Hotkey.Key]) async {
                     return
                 }
                 let delivery = await Inserter.deliver(text, to: app)
+                MenuController.shared.remember(text)
                 await MainActor.run { Pill.shared.hide() }
                 if case .copied(let why) = delivery {
                     NSSound(named: "Funk")?.play()
@@ -360,7 +354,8 @@ if inApp && args.isEmpty {
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
     Dictionary.ensureExists()
-    makeMenuBarItem(keys: listenKeys)
+    makeMenuBarItem()
+    MenuController.shared.setUpLoginItemOnce()
     Task { await runListen(keys: listenKeys) }
     app.run()
 }
