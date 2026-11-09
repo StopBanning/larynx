@@ -76,7 +76,7 @@ final class Pill {
         if #available(macOS 26.0, *) {
             let glass = NSGlassEffectView()
             glass.contentView = host
-            glass.style = .regular
+            glass.style = .clear  // the see-through variant; .regular reads as thick
             glass.cornerRadius = 22
             panel.contentView = glass
         } else {
