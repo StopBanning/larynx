@@ -37,8 +37,21 @@ public enum Vocabulary {
         ((try? String(contentsOf: url, encoding: .utf8)) ?? "").split(separator: "\n").forEach { add(String($0)) }
         Dictionary.load().values.forEach(add)
         projectNames().forEach(add)
+        if UserDefaults.standard.string(forKey: "devTerms") != "off" { developerTerms.forEach(add) }
         return out
     }
+
+    /// Tools and services developers name all the time. Only distinctive names: short or everyday-sounding ones
+    /// ("Rust", "React", "Linear") would risk swapping real words. `defaults write ... devTerms off` removes them.
+    static let developerTerms = [
+        "Supabase", "MongoDB", "Vercel", "PostgreSQL", "Postgres", "Redis", "Kubernetes", "Docker", "Terraform", "Nginx",
+        "GraphQL", "Prisma", "Tailwind", "Svelte", "Webpack", "Django", "FastAPI", "Laravel", "Firebase", "Netlify",
+        "Cloudflare", "Heroku", "Twilio", "Datadog", "Grafana", "Kafka", "RabbitMQ", "Elasticsearch", "DynamoDB", "SQLite",
+        "MySQL", "Auth0", "Homebrew", "Xcode", "SwiftUI", "Kotlin", "Golang", "TypeScript", "JavaScript", "PyTorch",
+        "TensorFlow", "Ollama", "LangChain", "OpenAI", "Anthropic", "Windsurf", "Copilot", "Codex", "Electron", "Tauri",
+        "Vitest", "Playwright", "Cypress", "ESLint", "Prettier", "Figma", "Airtable", "Shopify", "Webflow", "Zapier",
+        "FluidAudio", "Parakeet", "CoreML", "Vite", "Nuxt", "Deno", "pnpm", "Sentry", "Drizzle", "Upstash",
+    ]
 
     /// Distinctive names from the folders directly inside each root: a one-word folder ("larynx", "macropad") is kept
     /// as is; from a multi-word one ("govee-lights") only the parts that aren't ordinary English words ("Govee").
@@ -59,8 +72,22 @@ public enum Vocabulary {
         return names
     }
 
+    /// Writes vocabulary names the way they're spelled ("prisma" -> "Prisma", "mongodb" -> "MongoDB"). Only names that
+    /// aren't ordinary English, so "roundup" in a sentence stays lowercase.
+    public static func fixCase(_ text: String, terms: [String]) -> String {
+        var s = text
+        for term in terms where !term.contains(" ") {
+            s = s.replacingOccurrences(of: "(?i)(?<![\\w.])" + NSRegularExpression.escapedPattern(for: term) + "(?![\\w])",
+                                       with: NSRegularExpression.escapedTemplate(for: term), options: .regularExpression)
+        }
+        return s
+    }
+
+    /// The terms `fixCase` should use: everything that isn't an ordinary English word.
+    public static func caseTerms(_ terms: [String]) -> [String] { terms.filter { !isEnglish($0) } }
+
     /// Ordinary English according to macOS's spell checker ("chat", "jobs", "coding"), so they aren't boosted.
-    static func isEnglish(_ word: String) -> Bool {
+    public static func isEnglish(_ word: String) -> Bool {
         let checker = NSSpellChecker.shared
         return checker.checkSpelling(of: word.lowercased(), startingAt: 0, language: "en", wrap: false,
                                      inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound

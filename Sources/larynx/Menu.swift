@@ -72,6 +72,17 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
         keyItem.submenu = keyMenu
         menu.addItem(keyItem)
+        let modelItem = NSMenuItem(title: "Speech Model", action: nil, keyEquivalent: "")
+        let modelMenu = NSMenu()
+        for (choice, title) in [(Engine.clean, "English, drops ums as it listens"), (Engine.parakeet, "25 languages (Parakeet v3)")] {
+            let item = NSMenuItem(title: title, action: #selector(chooseEngine(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = choice.rawValue
+            item.state = engine == choice ? .on : .off
+            modelMenu.addItem(item)
+        }
+        modelItem.submenu = modelMenu
+        menu.addItem(modelItem)
         menu.addItem(toggle("Open at Login", on: SMAppService.mainApp.status == .enabled, #selector(toggleLogin)))
 
         menu.addItem(.separator())
@@ -81,6 +92,9 @@ final class MenuController: NSObject, NSMenuDelegate {
         let vocab = NSMenuItem(title: "Edit Vocabulary...", action: #selector(openVocabulary), keyEquivalent: "")
         vocab.target = self
         menu.addItem(vocab)
+        let snippets = NSMenuItem(title: "Edit Snippets...", action: #selector(openSnippets), keyEquivalent: "")
+        snippets.target = self
+        menu.addItem(snippets)
         let reload = NSMenuItem(title: "Reload Vocabulary", action: #selector(reloadVocab), keyEquivalent: "")
         reload.target = self
         menu.addItem(reload)
@@ -118,11 +132,29 @@ final class MenuController: NSObject, NSMenuDelegate {
         log("talk keys: " + keys.map(\.label).joined(separator: ", "))
     }
 
+    /// Switching models means loading a different one, so Larynx restarts itself.
+    @objc func chooseEngine(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, raw != engine.rawValue else { return }
+        defaults.set(raw, forKey: "engine")
+        defaults.synchronize()
+        log("speech model: \(raw), restarting")
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+
     @objc func toggleLogin() {
         do {
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() }
             else { try SMAppService.mainApp.register() }
         } catch { log("login item: \(error)") }
+    }
+
+    @objc func openSnippets() {
+        Snippets.ensureExists()
+        NSWorkspace.shared.open(Snippets.url)
     }
 
     @objc func openVocabulary() {

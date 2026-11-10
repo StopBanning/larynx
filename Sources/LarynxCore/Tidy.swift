@@ -64,11 +64,13 @@ public enum Tidy {
         // 2e. Trailing off: a sentence can't end on "and", "but" or "or" ("I'll call you later and, um.").
         let trailed = s.replacingOccurrences(of: "(?i)[\\s,.]+(?:and|but|or|an)[\\s,.]*$", with: "", options: .regularExpression)
         if trailed != s, !trailed.isEmpty { s = trailed + (mode == .ai ? "" : ".") }
+        // 2f. Spoken code: case commands, file names, acronyms.
+        s = CodeWords.apply(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
         s = s.replacingOccurrences(of: "\\s*,\\s*,+", with: ",", options: .regularExpression)
-        s = s.replacingOccurrences(of: "\\s+([,.!?;:])", with: "$1", options: .regularExpression)
+        s = s.replacingOccurrences(of: "\\s+([,!?;:]|\\.(?![A-Za-z]))", with: "$1", options: .regularExpression)  // but not ".env"
         s = s.replacingOccurrences(of: "^[\\s,.;:]+", with: "", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -105,7 +107,14 @@ public enum Tidy {
         var out = ""
         var capNext = true
         for (i, ch) in chars.enumerated() {
-            if capNext, ch.isLetter { out += ch.uppercased(); capNext = false; continue }
+            if capNext, ch.isLetter {
+                capNext = false
+                // Leave code alone: userId, user_id, main.swift, iOS keep their case.
+                let word = chars[i...].prefix { !$0.isWhitespace }
+                let codeLike = word.contains("_") || word.dropFirst().contains(where: \.isUppercase)
+                    || word.dropLast().contains(".") || ch.isUppercase
+                if !codeLike { out += ch.uppercased(); continue }
+            }
             if capNext, !ch.isWhitespace { capNext = false }
             if ".!?".contains(ch) {
                 let next = i + 1 < chars.count ? chars[i + 1] : " "

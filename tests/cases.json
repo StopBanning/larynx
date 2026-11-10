@@ -522,6 +522,48 @@
    "mode": "standard",
    "in": "it's like a dream",
    "expect": "It's like a dream"
+  },
+  {
+   "id": "t-code-camel",
+   "mode": "ai",
+   "in": "rename camel case user id to camel case account id",
+   "expect": "Rename userId to accountId"
+  },
+  {
+   "id": "t-code-snake",
+   "mode": "ai",
+   "in": "add a snake case max retries constant",
+   "expect": "Add a max_retries constant"
+  },
+  {
+   "id": "t-code-files",
+   "mode": "ai",
+   "in": "open main dot swift and the dot env file",
+   "expect": "Open main.swift and the .env file"
+  },
+  {
+   "id": "t-code-acronyms",
+   "mode": "ai",
+   "in": "the api returns json from the github url",
+   "expect": "The API returns JSON from the GitHub URL"
+  },
+  {
+   "id": "t-code-pascal-kebab",
+   "mode": "standard",
+   "in": "pascal case user profile view, then kebab case my cool page.",
+   "expect": "UserProfileView, then my-cool-page."
+  },
+  {
+   "id": "t-code-constant",
+   "mode": "ai",
+   "in": "call the screaming snake case api key please",
+   "expect": "Call the API_KEY please"
+  },
+  {
+   "id": "t-code-dotcom",
+   "mode": "standard",
+   "in": "check the dot com page",
+   "expect": "Check the dot com page"
   }
  ],
  "rewrite": [

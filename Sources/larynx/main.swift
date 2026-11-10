@@ -73,11 +73,15 @@ final class Loader: @unchecked Sendable {
 /// `--vocab off` or `defaults write com.automatedworkflow.larynx vocabulary off` turns vocabulary boosting off.
 var vocabularyEnabled: Bool { (option("--vocab") ?? UserDefaults.standard.string(forKey: "vocabulary") ?? "on") != "off" }
 
+/// Vocabulary names to write with their own spelling ("prisma" -> "Prisma"); filled when the vocabulary loads.
+nonisolated(unsafe) var caseTerms: [String] = []
+
 func reloadVocabulary() async {
     do {
         try await Loader.shared.task.value
         let started = Date()
         let terms = vocabularyEnabled ? Vocabulary.terms() : []
+        caseTerms = Vocabulary.caseTerms(terms)
         try await transcriber.loadVocabulary(terms, modelsDir: modelsDir)
         if !terms.isEmpty { log("vocabulary: \(await transcriber.vocabularySize) words in \(ms(since: started)) ms") }
     } catch {
@@ -118,7 +122,13 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
     if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
     let (raw, usedEngine) = try await transcribeWithFallback(samples)
     let asrMs = ms(since: started)
-    let tidied = tidy ? Tidy.apply(Dictionary.apply(raw), mode: mode) : raw
+    if tidy, let snippet = Snippets.match(raw) {  // a voice shortcut: type the saved text exactly
+        return ["text": snippet.text, "raw": raw, "mode": mode.rawValue, "engine": usedEngine, "snippet": snippet.cue,
+                "rewrite": "snippet", "rewritten": false, "rewriteMs": 0,
+                "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
+                "asrMs": asrMs, "totalMs": ms(since: started)]
+    }
+    let tidied = tidy ? Tidy.apply(Vocabulary.fixCase(Dictionary.apply(raw), terms: caseTerms), mode: mode) : raw
     let rewriteStart = Date()
     let outcome = (clean || autoRewrite) ? await Cleaner.rewrite(tidied, mode: mode, force: clean)
                                          : Cleaner.Outcome(text: tidied, used: false, note: "off")
@@ -274,6 +284,7 @@ func runListen(keys: [Hotkey.Key]) async {
                 } else {
                     await MainActor.run { Pill.shared.hide() }
                     setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
+                    if delivery == .inserted { watchForFixes(text, in: app) }
                 }
                 log("\(result["totalMs"]!) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
             } catch {
@@ -293,6 +304,26 @@ func runListen(keys: [Hotkey.Key]) async {
     activeHotkey = hotkey
     setStatus(Inserter.isTrusted ? "Ready" : "Ready (needs Accessibility to paste)")
     log("ready: hold " + keys.map(\.label).joined(separator: " or ") + ", speak, release")
+}
+
+/// Reads the text field again 15 seconds after a paste and learns any word the user corrected.
+/// `defaults write com.automatedworkflow.larynx learn off` turns it off.
+func watchForFixes(_ pasted: String, in app: NSRunningApplication?) {
+    guard UserDefaults.standard.string(forKey: "learn") != "off" else { return }
+    Task { @MainActor in
+        guard let field = Learner.focusedTextElement(in: app) else { return }
+        try? await Task.sleep(nanoseconds: 15_000_000_000)
+        guard let now = Learner.text(of: field) else { return }
+        let fixes = Learner.fixes(pasted: pasted, now: now)
+        guard !fixes.isEmpty else { return }
+        let added = Learner.learn(fixes)
+        log("learned from your fix: " + fixes.map { "\($0.heard) -> \($0.fixed)" }.joined(separator: ", "))
+        guard !added.isEmpty else { return }
+        Pill.shared.show("Learned: " + added.joined(separator: ", "))
+        Task { await reloadVocabulary() }
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        if !recorder.isRecording { Pill.shared.hide() }
+    }
 }
 
 /// One JSON object per line in, one per line out. Commands run in order.
@@ -385,6 +416,7 @@ if inApp && args.isEmpty {
     app.setActivationPolicy(.accessory)
     Dictionary.ensureExists()
     Vocabulary.ensureExists()
+    Snippets.ensureExists()
     makeMenuBarItem()
     MenuController.shared.setUpLoginItemOnce()
     Task { await runListen(keys: listenKeys) }
@@ -402,6 +434,12 @@ case "focus":
     let app = NSWorkspace.shared.frontmostApplication
     let f = Inserter.focusedField(in: app)
     print("\(app?.bundleIdentifier ?? "?"): editable=\(f.editable.map(String.init) ?? "unknown") role=\(f.role)")
+    exit(0)
+case "fixes":
+    // What Larynx would learn if you pasted <before> and the field later said <after> (nothing is saved).
+    guard args.count >= 3 else { print("larynx fixes <pasted> <field now>"); exit(2) }
+    let found = Learner.fixes(pasted: args[1], now: args[2])
+    print(found.isEmpty ? "nothing to learn" : found.map { "\($0.heard) -> \($0.fixed)" }.joined(separator: ", "))
     exit(0)
 case "vocab":
     // The words Larynx listens for, and where they come from.

@@ -98,7 +98,7 @@ public actor Transcriber {
         return text.replacingCharacters(in: range, with: term)
     }
 
-    static func soundsAlike(_ a: String, _ b: String) -> Bool {
+    public static func soundsAlike(_ a: String, _ b: String) -> Bool {
         func skeleton(_ s: String) -> [Character] {
             Array(s.lowercased().filter { $0.isLetter && !"aeiouy".contains($0) })
         }
