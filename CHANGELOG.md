@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **New default speech model: Parakeet Ultra.** Picked by benchmark (docs/BENCHMARKS.md): about 37% fewer word
+  errors than Bark 3.0 Clean on jargon, noise and hard speech, names spelled right twice as often, and 25 languages
+  instead of English only. New tidy rules remove what Bark Clean used to drop inside the model: false starts ("I went
+  to the, I drove" → "I drove"), repeated phrases, and mid-sentence "er/ah/eh". On the 300-clip cleanup suite Ultra
+  now scores 272 against Bark Clean's 264. Bark Clean is still in the Speech Model menu. First launch downloads the
+  model (about 500 MB) if it isn't on disk.
+- A word cut off as you restart a phrase is dropped: "when we w when we want" → "when we want".
 - **Numbers as digits, in every app:** "Opus five point five" → "Opus 5.5", "Fable at ninety-four" → "94", "three
   percent" → "3%", "two hundred K" → "200K", "Max twenty X" → "20x", "seven thirty tonight" → "7:30", "twenty
   twenty-six" → "2026". Rules, not an AI model, so it's instant and works in Claude and terminals too. Small numbers

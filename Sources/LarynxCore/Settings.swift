@@ -23,7 +23,7 @@ public final class Settings: @unchecked Sendable {
 
         public var defaultValue: String {
             switch self {
-            case .engine: return "clean"
+            case .engine: return "ultra"
             case .rewrite: return "auto"
             case .vocabularyRoots: return "~/work"
             case .keys, .toggleKeys: return ""

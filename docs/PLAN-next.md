@@ -1,6 +1,7 @@
 # Larynx: handoff and plan (updated Nov 10, 2026)
 
-**Start with `docs/HANDOFF.md` (Nov 11): full status, rules for working with Colin, what is in flight.**
+**Start with `docs/HANDOFF.md` (Nov 11: status and the rules for working with Colin), then `docs/PLAN-v1.md`
+(the order of work from v0.5 to v1.0).**
 
 
 Start here. Colin uses Larynx for all his dictation now (Right Command, mostly into Claude desktop, Messages).

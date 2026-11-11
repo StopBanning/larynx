@@ -84,6 +84,9 @@ master plan's invariants (never lose words, never slower, never change a right w
 
 ## In flight at handoff (finish first)
 
+**Update, later on Nov 11:** item 1 is done. Bark Clean reran at 264/300 (no regression), Ultra at 272/300, so the
+default is now Parakeet Ultra, installed. The plan this handoff asked for is `docs/PLAN-v1.md`: work from it.
+
 1. **Switching the default to Parakeet Ultra.** Ultra failed the cleanup gate (257 vs Clean 264) because it types
    false starts and repeats verbatim. New tidy rules (uncommitted at writing, committed with this handoff) remove
    false starts ("I went to the, I drove" -> "I drove"), 2-3 word repeats without a comma, mid-sentence er/ah/eh, and

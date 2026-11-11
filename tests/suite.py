@@ -111,7 +111,7 @@ def main():
     ap.add_argument("--binary", default=str(ROOT / ".build/release/larynx"))
     ap.add_argument("--voices", default="Samantha,Daniel,Karen,Rishi,Moira")
     ap.add_argument("--rates", default="175,230")
-    ap.add_argument("--engine", default="clean")
+    ap.add_argument("--engine", default="ultra")
     ap.add_argument("--models-dir", default=os.path.expanduser("~/Library/Application Support/Larynx/models"))
     ap.add_argument("--only", default="")
     ap.add_argument("--rewrite", default="off", help="auto: spoken cases also go through the AI rewrite layer")

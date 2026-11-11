@@ -660,6 +660,18 @@
       "mode": "standard",
       "in": "And then and then we left.",
       "expect": "And then we left."
+    },
+    {
+      "id": "t-cut-off-restart",
+      "mode": "standard",
+      "in": "Walk me through it when we w when we want to look at it.",
+      "expect": "Walk me through it when we want to look at it."
+    },
+    {
+      "id": "t-cut-off-restart-two-letters",
+      "mode": "standard",
+      "in": "Tell them th them that we agree.",
+      "expect": "Tell them that we agree."
     }
   ],
   "rewrite": [
@@ -1453,6 +1465,31 @@
       "id": "keep-blah",
       "in": "Analytics, blah blah blah blah.",
       "expect": "Analytics, blah blah blah blah."
+    },
+    {
+      "id": "keep-cutoff-01",
+      "in": "The answer is an answer nobody wanted.",
+      "expect": "The answer is an answer nobody wanted."
+    },
+    {
+      "id": "keep-cutoff-02",
+      "in": "Because of plan B because the first one failed.",
+      "expect": "Because of plan B because the first one failed."
+    },
+    {
+      "id": "keep-cutoff-03",
+      "in": "We went to the W hotel when we were in town.",
+      "expect": "We went to the W hotel when we were in town."
+    },
+    {
+      "id": "keep-cutoff-04",
+      "in": "To go or not to go, that is up to you.",
+      "expect": "To go or not to go, that is up to you."
+    },
+    {
+      "id": "keep-cutoff-05",
+      "in": "It is in the b branch, so check that branch.",
+      "expect": "It is in the b branch, so check that branch."
     }
   ],
   "numbers": {

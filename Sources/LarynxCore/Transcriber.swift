@@ -46,7 +46,7 @@ public enum Engine: String, CaseIterable, Sendable {
         }
     }
     /// The second-chance model when this one hears nothing.
-    public var other: Engine { self == .parakeet ? .clean : .parakeet }
+    public var other: Engine { self == .parakeet || self == .ultra ? .clean : .parakeet }
 
     /// True when this model is already on disk, so using it never triggers a download.
     public func isDownloaded(in modelsDir: URL?) -> Bool {

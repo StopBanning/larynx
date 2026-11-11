@@ -1,5 +1,8 @@
 # Larynx master plan: free, open, local, and better than Wispr Flow
 
+**Nov 11, 2026: the order of work and the status table now live in `docs/PLAN-v1.md`.** This file remains the
+reference for task detail (PLAN-v1 cites tasks here as "master 2.1"), the invariants and the scoreboard.
+
 Written Nov 10, 2026 for an executing agent (Opus). Read this whole file once, then work top to bottom.
 `docs/PLAN-next.md` stays as the short handoff (where things live, how to work with Colin). This file is the roadmap.
 

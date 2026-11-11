@@ -30,7 +30,7 @@ stdout. stderr is human-readable logging only. Add an `id` to any request; it co
 Events:
 
 ```json
-{"event":"ready","model":"bark-3.0-clean","cleanup":true,"pasteAllowed":false}
+{"event":"ready","model":"parakeet-ultra","cleanup":true,"pasteAllowed":false}
 {"event":"result","id":7,"text":"Ship it on Monday.","raw":"Ship it on Monday.","audioSeconds":1.9,"asrMs":41,"totalMs":41}
 {"event":"error","id":7,"message":"microphone access was refused"}
 ```

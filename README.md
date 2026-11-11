@@ -93,7 +93,7 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   "main dot swift" becomes `main.swift`, "dot env" becomes `.env`, and API, JSON, URL, GitHub, iOS and friends get
   their proper spelling. About 70 developer names (Supabase, Vercel, Postgres, Kubernetes...) are in the vocabulary
   out of the box (`defaults write com.automatedworkflow.larynx devTerms off` removes them).
-- **25 languages**: switch the Speech Model in the menu to Parakeet v3.
+- **25 languages**: the default model, Parakeet Ultra, covers 25 European languages with no switch.
 - **Menu bar settings**: Live Preview, AI Cleanup, Talk Key and Open at Login are checkboxes in the menu; Recent lists
   your last 10 transcripts (click to copy). Opens at login by default.
 - **History that stays on your Mac**: dictations are kept for 30 days in a local database you can search with
@@ -133,8 +133,10 @@ Microphone, Accessibility (to paste) and Input Monitoring (to see the key). Keys
 
 Three layers, cheapest first:
 
-1. **Speech model.** The default, Underdog Bark 3.0 Clean (English), drops "um", "uh", false starts and repeated words
-   as it transcribes. `--engine parakeet` switches to verbatim Parakeet v3 for 25 European languages.
+1. **Speech model.** The default, Parakeet Ultra (25 European languages), was picked by benchmark: about 37% fewer
+   word errors than the previous default on jargon, noise and hard speech, and names spelled right twice as often
+   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)). It types what you said, so the tidy rules remove the ums, repeats and
+   false starts. `--engine clean` switches to Underdog Bark 3.0 Clean (English), which drops them as it listens.
 2. **Tidy rules.** Leftover fillers, stutters ("the the", "I, I"), stranded commas and capitals. Instant, never
    rewrites a word, and leaves real doubles alone ("very very", "had had").
 3. **AI rewrite, only when needed.** Self-corrections ("three, no wait, four"), verbal tics ("you know", "basically")

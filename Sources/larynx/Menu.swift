@@ -117,7 +117,9 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(toggleItem)
         let modelItem = NSMenuItem(title: "Speech Model", action: nil, keyEquivalent: "")
         let modelMenu = NSMenu()
-        for (choice, title) in [(Engine.clean, "English, drops ums as it listens"), (Engine.parakeet, "25 languages (Parakeet v3)")] {
+        for (choice, title) in [(Engine.ultra, "Most accurate, 25 languages (Parakeet Ultra)"),
+                                (Engine.clean, "English, drops ums as it listens (Bark Clean)"),
+                                (Engine.parakeet, "25 languages (Parakeet v3)")] {
             let item = NSMenuItem(title: title, action: #selector(chooseEngine(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = choice.rawValue

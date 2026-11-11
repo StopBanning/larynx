@@ -9,7 +9,7 @@ let transcriber = Transcriber()
 let recorder = Recorder()
 nonisolated(unsafe) var activeHotkey: Hotkey?
 let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
-    ?? Engine(rawValue: Settings.shared.string(.engine)) ?? .clean
+    ?? Engine(rawValue: Settings.shared.string(.engine)) ?? .ultra
 /// Loads the speech model on first use only, so text-only commands never touch it.
 final class Loader: @unchecked Sendable {
     static let shared = Loader()

@@ -50,6 +50,9 @@ public enum Tidy {
         // "I went to the, I drove to the store" -> "I drove to the store". "I went to the store, I bought milk" stays.
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)(i|we|you|he|she|they|it)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|to|of|for|with|in|on|at|and|my|your|our|their),\\s+(?=\\2\\b)",
                                    with: "$1", options: .regularExpression)
+        // 1e. A word cut off as the speaker starts the phrase again: "when we w when we want" -> "when we when we want"
+        // (the repeat is removed next).
+        s = cutOffRestarts(s)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place".
         s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
         s = repeatedPhrases(s)
@@ -91,6 +94,30 @@ public enum Tidy {
 
     /// "we could we could push", "I want to I want to thank": a 2-3 word phrase said twice in a row. Counting
     /// ("one two one two"), numbers ("one to one to") and repeated single words ("wow wow wow wow") are left alone.
+    /// Real one- and two-letter words: never treated as a cut-off word.
+    static let shortWords: Set<String> = ["a", "i", "an", "as", "at", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my",
+        "no", "of", "on", "or", "so", "to", "up", "us", "we", "am", "oh", "ok", "hi", "ha", "ah", "eh", "er", "um", "uh", "ma", "pa",
+        "yo", "ya", "ye", "id", "ex"]
+
+    /// Drops a lowercase one- or two-letter fragment when it is the start of a word said up to three words earlier and
+    /// that same word comes right after it: the speaker stumbled and restarted ("when we w when we"). A capital letter
+    /// is a label ("plan B because"), and real short words ("an answer is an answer") are never fragments.
+    static func cutOffRestarts(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "\\b(([a-z]{1,2})[a-z']+)\\s+((?:[\\w']+\\s+){0,2})\\2\\s+(?=\\1\\b)",
+                                                options: [.caseInsensitive]) else { return text }
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(m.range, in: s), let word = Range(m.range(at: 1), in: s),
+                  let between = Range(m.range(at: 3), in: s) else { continue }
+            // The fragment is the last token of the match.
+            guard let fragment = s[whole].split(whereSeparator: \.isWhitespace).last.map(String.init) else { continue }
+            if fragment != fragment.lowercased() || shortWords.contains(fragment) { continue }
+            // "them th them": nothing in between, so the word itself was said twice; keep the one that follows.
+            s.replaceSubrange(whole, with: s[between].isEmpty ? "" : s[word] + " " + s[between])
+        }
+        return s
+    }
+
     static func repeatedPhrases(_ text: String) -> String {
         guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){1,2})\\s+\\1\\b") else { return text }
         let numberWords: Set<String> = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "zero"]

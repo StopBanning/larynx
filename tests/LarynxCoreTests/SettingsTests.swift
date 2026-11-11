@@ -23,7 +23,7 @@ private final class SettingsFixture {
 
 @Test func settingsReloadJSONAndPreserveLegacyFallbacks() throws {
     let f = try SettingsFixture()
-    #expect(f.settings.string(.engine) == "clean")
+    #expect(f.settings.string(.engine) == "ultra")
     f.defaults.set("parakeet", forKey: "engine")
     #expect(f.settings.string(.engine) == "parakeet")
     try f.write(#"{"engine":"clean","stages":{"tidy":"shadow"},"loginItemSet":true}"#)
