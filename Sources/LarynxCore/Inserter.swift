@@ -143,10 +143,13 @@ public enum Inserter {
     static func focusedElement(in app: NSRunningApplication?) -> AXUIElement? {
         guard isTrusted, let app else { return nil }
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(app.processIdentifier),
-                                            kAXFocusedUIElementAttribute as CFString, &value) == .success,
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(appElement, 0.25)  // a hung or sleeping app must not stall delivery
+        guard AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value) == .success,
               let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        return (value as! AXUIElement)
+        let element = value as! AXUIElement
+        AXUIElementSetMessagingTimeout(element, 0.25)
+        return element
     }
 
     /// The field's text before the cursor and how many characters are selected (nil when it can't be read).
@@ -212,6 +215,7 @@ public enum Inserter {
     public static func focusedField(in app: NSRunningApplication?) -> (editable: Bool?, role: String) {
         guard isTrusted, let app else { return (nil, "unknown") }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(appElement, 0.25)  // a hung or sleeping app must not stall delivery
         // Chrome and Electron apps (Claude, Slack, VS Code) only build their accessibility tree when asked.
         AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue)
         AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)

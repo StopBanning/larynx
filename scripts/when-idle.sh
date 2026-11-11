@@ -38,6 +38,11 @@ start=$(idle)
 while kill -0 $pid 2>/dev/null; do
   sleep 0.3
   now=$(idle)
+  if locked; then   # windows can't come to the front on a locked screen
+    pkill -P $pid 2>/dev/null; kill $pid 2>/dev/null
+    echo "when-idle: the screen locked, stopped the command" >&2
+    exit 3
+  fi
   if [[ -e "$LARYNX_LIVE_MARK" ]]; then start=$now; continue; fi
   if (( now < start )); then   # idle time went back down: someone touched the keyboard or mouse
     pkill -P $pid 2>/dev/null; kill $pid 2>/dev/null
@@ -47,6 +52,6 @@ while kill -0 $pid 2>/dev/null; do
   start=$now
 done
 wait $pid
-status=$?
+rc=$?
 rm -f "$LARYNX_LIVE_MARK"
-exit $status
+exit $rc
