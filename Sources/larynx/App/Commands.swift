@@ -30,6 +30,7 @@ let usage = """
     larynx history [--search words] [--json]   your recent dictations (kept on this Mac, 30 days by default)
     larynx recover                             transcribe recordings a crash left behind
     larynx mine [--log <file>] [--apply]       find words you fixed by saying them again, and learn them
+    larynx review [--hours 24] [--text]        the daily read: speed, deliveries, doubtful, fixes, shadow proposals
     larynx golden list|add <id>|candidates     your recordings with what you really said, the benchmark (bench/run.py --sets golden)
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
     larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
@@ -280,6 +281,53 @@ case "numbers":
     while let line = readLine() {
         let out = Numbers.apply(line)
         if out != line { print("- \(line)\n+ \(out)\n") }
+    }
+    exit(0)
+case "review":
+    // The daily read (PLAN-v1 B8): larynx review [--hours 24] [--text]. Counts only unless --text.
+    let hours = Double(option("--hours") ?? "") ?? 24
+    let showText = args.contains("--text")
+    let since = Date().addingTimeInterval(-hours * 3600)
+    let rows = History.shared.recent(limit: 5000).filter { $0.time >= since }.sorted { $0.time < $1.time }
+    func pct(_ xs: [Int], _ q: Double) -> Int { let s = xs.sorted(); return s.isEmpty ? 0 : s[min(s.count - 1, Int(Double(s.count) * q))] }
+    print("Last \(Int(hours)) h: \(rows.count) dictations, \(Int(rows.reduce(0) { $0 + $1.audioSeconds })) s of speech")
+    guard !rows.isEmpty else { exit(0) }
+    let short = rows.filter { $0.audioSeconds < 60 }
+    for engine in Set(short.map(\.engine)).sorted() {
+        let ms = short.filter { $0.engine == engine }.map(\.totalMs)
+        let ok = pct(ms, 0.5) <= 150 && pct(ms, 0.9) <= 350
+        print("  speed \(engine): key-up to text p50 \(pct(ms, 0.5)) ms, p90 \(pct(ms, 0.9)) ms over \(ms.count)\(ok ? "" : "  OVER the 150/350 ms budget")")
+    }
+    let deliveries = Swift.Dictionary(grouping: rows, by: { $0.delivery }).map { "\($0.key) \($0.value.count)" }.sorted()
+    print("  delivered: " + deliveries.joined(separator: ", "))
+    var stageChanges: [String: Int] = [:]
+    for r in rows { for st in r.steps where st.applied && st.before != st.after { stageChanges[st.stage, default: 0] += 1 } }
+    print("  stages that changed text: " + stageChanges.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", "))
+    let doubtful = rows.filter { $0.flags.contains("doubtful") }
+    let undone = rows.filter { $0.flags.contains("undone") }
+    let corrections = History.shared.corrections()
+    let fixed = rows.filter { corrections[$0.id] != nil }
+    var repeats: [(History.Row, History.Row)] = []
+    for (a, b) in zip(rows, rows.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= 90 && Golden.isWordFix(a.text, b.text) { repeats.append((a, b)) }
+    var shadow: [String: Int] = [:]
+    for r in rows { for st in r.steps where !st.applied && st.before != st.after { shadow[st.stage, default: 0] += 1 } }
+    print("  not sure (doubtful): \(doubtful.count), undone (scratch that): \(undone.count), fixed by you: \(fixed.count), said again with a word changed: \(repeats.count)")
+    print("  shadow proposals: " + (shadow.isEmpty ? "none" : shadow.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")))
+    // From the log (no text there): microphone start, tails, edit watching, lessons. Since the log began.
+    let logText = (try? String(contentsOfFile: NSHomeDirectory() + "/Library/Logs/Larynx.log", encoding: .utf8)) ?? ""
+    let lines = logText.split(separator: "\n")
+    let mics = lines.compactMap { l -> Int? in
+        guard let r = l.range(of: #"mic (\d+) ms"#, options: .regularExpression) else { return nil }
+        return Int(l[r].split(separator: " ")[1])
+    }
+    if !mics.isEmpty { print("  mic start (log): p50 \(pct(mics, 0.5)) ms, p90 \(pct(mics, 0.9)) ms over \(mics.count) presses (0 = warm)") }
+    let count = { (needle: String) in lines.filter { $0.contains(needle) }.count }
+    print("  log: tails \(count("kept listening")), edit watches \(count("edit watch:")) (readable \(count("edit watch: readable")), fixed \(count("word fixed"))), lessons \(count("learned from"))")
+    if showText {
+        for r in doubtful { print("\n[not sure] \(r.id)  \(r.text)") }
+        for r in fixed { print("\n[fixed] \(r.id)\n   typed: \(r.text)\n   meant: \(corrections[r.id]?.text ?? "")") }
+        for (a, b) in repeats { print("\n[said again] \(a.id)\n   first:  \(a.text)\n   second: \(b.text)") }
+        for r in undone { print("\n[undone] \(r.id)  \(r.text)") }
     }
     exit(0)
 case "capture-window":

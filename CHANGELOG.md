@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `larynx review`: the daily read in one command: speed per model against the budget, how dictations were
+  delivered, which cleanup stages changed text, doubtful, undone and fixed dictations, shadow proposals, microphone
+  start times. Counts only; `--text` shows the words.
+- `bench/latency.py`: the speed gate run before each release (50 clips, full pipeline; fails over 150 ms median or
+  350 ms p90). First run: 66 ms median.
 - **The first word isn't lost either.** The microphone took 150-300 ms to start on every press, enough to swallow
   a first syllable. It now stays open for 30 s after a dictation (`micWarm`), so the next press starts instantly and
   includes the 0.15 s before it. Audio while waiting only passes through a 0.15 s buffer in memory and is never

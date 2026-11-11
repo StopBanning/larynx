@@ -252,7 +252,8 @@ func logNote(_ note: String) -> String {
 func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? = nil) {
     guard Settings.shared.string(.learn) != "off" else { return }
     Task { @MainActor in
-        guard let field = Learner.focusedTextElement(in: app) else { return }
+        // "edit watch:" lines count outcomes without any text (PLAN-v1 B7: prove learning from edits fires).
+        guard let field = Learner.focusedTextElement(in: app) else { log("edit watch: field not readable"); return }
         // Look every second for 20 s and keep the last version that still holds the pasted words: people fix a word
         // and hit send within seconds, and after sending the field is empty.
         var latest: String?
@@ -261,9 +262,10 @@ func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? 
             guard let now = Learner.text(of: field) else { break }
             if Learner.stillHolds(pasted, in: now) { latest = now } else if latest != nil { break }
         }
-        guard let now = latest else { return }
+        guard let now = latest else { log("edit watch: readable, dictation not found in it"); return }
         let fixes = Learner.fixes(pasted: pasted, now: now)
-        guard !fixes.isEmpty else { return }
+        guard !fixes.isEmpty else { log("edit watch: readable, no word fixed"); return }
+        log("edit watch: readable, \(fixes.count) word\(fixes.count == 1 ? "" : "s") fixed")
         // What the dictation should have said, for the golden set.
         if let id { History.shared.recordCorrection(id: id, text: Learner.applying(fixes, to: pasted), source: "edit") }
         let added = Learner.learn(fixes)
