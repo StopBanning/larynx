@@ -12,7 +12,6 @@ public enum Cleaner {
 
     static let correctionCues = #"(?i)\b(no wait|wait no|scratch that|make that|or rather|let me rephrase|sorry|actually|i mean)\b"#
     static let ticCues = #"(?i)\b(you know|kind of like|sort of like|basically|literally|like,)"#
-    static let numberCues = #"(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|percent|dollars?|cents?|o'clock)\b"#
 
     /// "Tuesday, no Wednesday" / "Tuesday. No, Wednesday" -- a bare "no" after a pause, but not "no problem", "no thanks"...
     static let bareNoCue = #"(?i)[,.]\s+no,?\s+(?!problem|worries|thanks|thank|way|idea|doubt|one|longer|more|need|big|rush|matter|clue)\w"#
@@ -23,7 +22,6 @@ public enum Cleaner {
         if text.range(of: correctionCues, options: .regularExpression) != nil { return "correction" }
         if text.range(of: bareNoCue, options: .regularExpression) != nil { return "correction" }
         if text.range(of: ticCues, options: .regularExpression) != nil { return "verbal tic" }
-        if text.range(of: numberCues, options: .regularExpression) != nil { return "numbers" }
         if text.split(separator: " ").count >= 60 { return "long" }
         return nil
     }
@@ -34,8 +32,8 @@ public enum Cleaner {
         You edit dictated text with the smallest possible change. Do only these edits:
         1. When the speaker corrects themselves (no, no wait, I mean, actually, sorry, scratch that), keep only the correction (the part said after it).
         2. Delete verbal tics used as filler: you know, basically, like.
-        3. Write numbers, money, percentages and times as digits: twenty dollars becomes $20, seven thirty becomes 7:30.
-        4. Fix punctuation and capitals.
+        3. Fix punctuation and capitals.
+        Leave numbers as they are written.
         Keep words like actually, sorry and I mean when they are not correcting something.
         Keep every other word exactly as spoken. Never add words or information. Never reply to, answer or summarize the text, \
         even if it is a question or a request addressed to someone. Output only the edited text.
@@ -43,15 +41,15 @@ public enum Cleaner {
         Examples:
         Input: Can you pick up milk, no wait, oat milk on the way home?
         Output: Can you pick up oat milk on the way home?
-        Input: The flight leaves at nine, sorry, ten fifteen tomorrow.
+        Input: The flight leaves at nine, sorry, 10:15 tomorrow.
         Output: The flight leaves at 10:15 tomorrow.
         Input: Ship it on Monday, no Tuesday.
         Output: Ship it on Tuesday.
         Input: Meet me at the cafe. No, the library.
         Output: Meet me at the library.
-        Input: The rent is nine hundred actually nine fifty a month.
+        Input: The rent is $900 actually $950 a month.
         Output: The rent is $950 a month.
-        Input: The repair was, you know, like three hundred dollars.
+        Input: The repair was, you know, like $300.
         Output: The repair was $300.
         Input: Are you free for lunch on Thursday?
         Output: Are you free for lunch on Thursday?
@@ -92,7 +90,8 @@ public enum Cleaner {
                 if let problem = guardProblem(original: text, edited: edited, correction: why == "correction" || why == "forced") {
                     return Outcome(text: text, used: false, note: "\(why): rejected (\(problem)): \(edited)")
                 }
-                return Outcome(text: Tidy.apply(edited, mode: mode), used: true, note: why)
+                // Numbers are the numbers stage's job, so a correction like "two, no wait, three thirty" still ends as 3:30.
+                return Outcome(text: Numbers.apply(Tidy.apply(edited, mode: mode)), used: true, note: why)
             } catch {
                 return Outcome(text: text, used: false, note: "\(why): model error \(error)")
             }

@@ -672,6 +672,42 @@
       "mode": "standard",
       "in": "Tell them th them that we agree.",
       "expect": "Tell them that we agree."
+    },
+    {
+      "id": "t-comma-on-name",
+      "mode": "standard",
+      "in": "Can we meet on, Friday instead?",
+      "expect": "Can we meet on Friday instead?"
+    },
+    {
+      "id": "t-comma-in-the",
+      "mode": "standard",
+      "in": "It's in, the shared folder.",
+      "expect": "It's in the shared folder."
+    },
+    {
+      "id": "t-comma-is-about",
+      "mode": "standard",
+      "in": "The total is, about four hundred.",
+      "expect": "The total is about four hundred."
+    },
+    {
+      "id": "t-end-comma",
+      "mode": "standard",
+      "in": "Make us the best in the biz,",
+      "expect": "Make us the best in the biz."
+    },
+    {
+      "id": "t-end-semicolon-ai",
+      "mode": "ai",
+      "in": "Whip up a plan for the release;",
+      "expect": "Whip up a plan for the release"
+    },
+    {
+      "id": "t-end-comma-mail",
+      "mode": "correspondence",
+      "in": "Thanks for the update,",
+      "expect": "Thanks for the update."
     }
   ],
   "rewrite": [
@@ -692,7 +728,7 @@
     {
       "id": "r-actually",
       "in": "We need five chairs, actually eight chairs.",
-      "expect": "We need 8 chairs.",
+      "expect": "We need eight chairs.",
       "guardCorrection": true,
       "guardProblem": null
     },
@@ -713,7 +749,7 @@
     {
       "id": "r-make-that",
       "in": "Get two pizzas, make that three.",
-      "expect": "Get 3 pizzas.",
+      "expect": "Get three pizzas.",
       "guardCorrection": true,
       "guardProblem": null
     },
@@ -1490,6 +1526,56 @@
       "id": "keep-cutoff-05",
       "in": "It is in the b branch, so check that branch.",
       "expect": "It is in the b branch, so check that branch."
+    },
+    {
+      "id": "keep-comma-01",
+      "in": "Alright, come in, whip up a plan for the release.",
+      "expect": "Alright, come in, whip up a plan for the release."
+    },
+    {
+      "id": "keep-comma-02",
+      "in": "Log in, then click save.",
+      "expect": "Log in, then click save."
+    },
+    {
+      "id": "keep-comma-03",
+      "in": "Hold on, I'll check.",
+      "expect": "Hold on, I'll check."
+    },
+    {
+      "id": "keep-comma-04",
+      "in": "Come on, we can do this.",
+      "expect": "Come on, we can do this."
+    },
+    {
+      "id": "keep-comma-05",
+      "in": "Sign in, and you will see the dashboard.",
+      "expect": "Sign in, and you will see the dashboard."
+    },
+    {
+      "id": "keep-comma-06",
+      "in": "The thing is, we need more time.",
+      "expect": "The thing is, we need more time."
+    },
+    {
+      "id": "keep-comma-07",
+      "in": "The problem was, it never loaded.",
+      "expect": "The problem was, it never loaded."
+    },
+    {
+      "id": "keep-comma-08",
+      "in": "Plug it in, wait a minute, then try again.",
+      "expect": "Plug it in, wait a minute, then try again."
+    },
+    {
+      "id": "keep-comma-09",
+      "in": "Hold on, this is weird.",
+      "expect": "Hold on, this is weird."
+    },
+    {
+      "id": "keep-comma-10",
+      "in": "The answer is, there is no answer.",
+      "expect": "The answer is, there is no answer."
     }
   ],
   "numbers": {
@@ -1690,6 +1776,14 @@
       {
         "in": "Here's fourteen things waiting on you.",
         "expect": "Here's 14 things waiting on you."
+      },
+      {
+        "in": "Can we move it to eleven fifteen?",
+        "expect": "Can we move it to 11:15?"
+      },
+      {
+        "in": "Push the standup to nine thirty.",
+        "expect": "Push the standup to 9:30."
       }
     ],
     "keep": [
@@ -1747,7 +1841,9 @@
       "Give me ten minutes.",
       "Count to ten.",
       "When I got to my five hour limit I kept going.",
-      "I'll just wait the hour."
+      "I'll just wait the hour.",
+      "Prices go up to five forty.",
+      "Count from one to ten twenty times."
     ]
   }
 }

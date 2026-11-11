@@ -222,11 +222,47 @@ final class MenuController: NSObject, NSMenuDelegate {
         log("talk keys: " + keys.map(\.label).joined(separator: ", "))
     }
 
-    /// Switching models means loading a different one, so Larynx restarts itself.
+    /// The model being prepared after a Speech Model pick, so a second click doesn't start another.
+    private var preparing: String?
+
+    /// Switching models means loading a different one, so Larynx restarts itself. A model this app has never loaded
+    /// takes the Neural Engine a minute or two to compile, so it is loaded here first, in the background, while the
+    /// current model keeps taking dictation; the compiled copy is cached, so the restarted app loads it in under a second.
     @objc func chooseEngine(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String, raw != engine.rawValue else { return }
-        guard save(raw, for: .engine) else { return }
-        log("speech model: \(raw), restarting")
+        guard let raw = sender.representedObject as? String, raw != engine.rawValue, preparing == nil,
+              let choice = Engine(rawValue: raw) else { return }
+        preparing = raw
+        log("speech model: \(raw), preparing it before restarting")
+        setStatus("Preparing the new speech model (one time)...")
+        nonisolated(unsafe) let controller = self  // only touched again on the main queue
+        Task.detached {
+            let started = Date()
+            do {
+                try await Transcriber().load(modelsDir: modelsDir, engine: choice)
+            } catch {
+                log("speech model \(raw) failed to load, staying on \(engine.rawValue): \(error)")
+                DispatchQueue.main.async { controller.preparing = nil; setStatus("Could not load that model; still using the current one") }
+                return
+            }
+            log("speech model \(raw) ready in \(ms(since: started)) ms")
+            DispatchQueue.main.async {
+                guard controller.save(raw, for: .engine) else { controller.preparing = nil; return }
+                controller.restartWhenIdle()
+            }
+        }
+    }
+
+    /// Restarts once nothing has been recorded for 3 s in a row, so a dictation in progress is never cut off.
+    private func restartWhenIdle(quiet: Int = 0) {
+        if recorder.isRecording {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.restartWhenIdle(quiet: 0) }
+            return
+        }
+        guard quiet >= 3 else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.restartWhenIdle(quiet: quiet + 1) }
+            return
+        }
+        log("speech model: \(preparing ?? "?"), restarting")
         let config = NSWorkspace.OpenConfiguration()
         config.createsNewApplicationInstance = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config) { _, _ in

@@ -132,7 +132,9 @@ public enum Numbers {
         var minutes: Int?
         if rest.count == 2, rest[0] == "oh", let m = units[rest[1]], (1...9).contains(m) { minutes = m }
         else if let m = value(rest), (10...59).contains(m), !rest.contains(where: { scales[$0] != nil }) { minutes = m }
-        guard let m = minutes, timeBefore.contains(prev) || timeAfter.contains(next) else { return nil }
+        // "move it to eleven fifteen": after "to", only quarter and half hours, so "up to five forty" stays a number.
+        guard let m = minutes, timeBefore.contains(prev) || timeAfter.contains(next) || (prev == "to" && [15, 30, 45].contains(m))
+        else { return nil }
         let text = "\(h):" + (m < 10 ? "0\(m)" : "\(m)")
         if next == "pm" || next == "am" { return Rendered(text: text + " " + next.uppercased(), consumesNext: true) }
         return Rendered(text: text)

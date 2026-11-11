@@ -230,12 +230,12 @@ case "pill-demo":
     }
     NSApplication.shared.run()
 case "rewrite":
-    // Text in, tidied and (if triggered) rewritten text out; the decision goes to stderr.
+    // Text in, through tidy, numbers and (if triggered) the rewrite, as in the pipeline; the decision goes to stderr.
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .correspondence
     let input = args.last ?? ""
     Task {
         let started = Date()
-        let outcome = await Cleaner.rewrite(Tidy.apply(input, mode: mode), mode: mode, force: wantsClean)
+        let outcome = await Cleaner.rewrite(Numbers.apply(Tidy.apply(input, mode: mode)), mode: mode, force: wantsClean)
         log("\(outcome.used ? "rewrote" : "kept") in \(ms(since: started)) ms: \(outcome.note)")
         print(outcome.text); exit(0)
     }

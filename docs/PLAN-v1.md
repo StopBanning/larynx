@@ -316,8 +316,14 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | Task | State | Notes / evidence |
 |---|---|---|
 | A (switch to Ultra) | done Nov 11 | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
-| A1 | started | Watch began with the first dictation after the Nov 11 restart. Finding 1: "when we uh w when we want" left "w when we" behind; fixed with the cut-off-restart rule (Tidy step 1e), replayed over 149 real dictations: 1 change, correct. |
-| A2-A7 | not started | |
+| A1 | started | Watch began with the first dictation after the Nov 11 restart. Finding 1: "when we uh w when we want" left "w when we" behind; fixed with the cut-off-restart rule (Tidy step 1e), replayed over 149 real dictations: 1 change, correct. 41 Ultra dictations by Nov 11 02:47: key-up to text p50 101 ms, p90 154 ms (inside invariant 2), no lost words. |
+| A1 real-voice check | tool ready | `python3 bench/realvoice.py [--show]`. First run, 25 recordings (111 s): Ultra odd one out 0 times, Bark Clean 1, Unified 2, Parakeet 0; all four agree on 10/25. Rerun at 200. |
+| A2 | not started | Suite after A3-A6 (`bench/results/suite3-ultra.log`): text 67/67, rewrite 26/26, spoken 272/300 (unchanged). |
+| A3 | done | On/in keep their comma unless a determiner, number or capitalized name follows; be-verbs keep it before a new clause's subject. 10 must-not-change cases. Replay (`tests/replay.py`) over 188 real dictations: 5 changes, all right (commas back in "come in, whip up", "looking in, write up", "Take it all in, brother", "if we are, it's"; trailing commas gone). |
+| A4 | done | Final comma/semicolon becomes the mode's ending (period; nothing in AI apps, as step 2e). |
+| A5 | done | `numberCues` and rule 3 gone; `larynx rewrite` and the rewrite's output now go through the numbers stage. Rewrite benchmark through tidy -> numbers -> rewrite: 26/26 (two expectations changed to house style: "eight chairs", "three pizzas"). Numbers learned "to eleven fifteen" -> 11:15 (quarter/half hours only); numbers replay over 98 dictations: 0 changes. |
+| A6 | done (menu path not tried live) | `make-app.sh` warms the configured model with the app binary (first install after this change: 73 s, so every rebuild needs it, not just new models). Menu pick loads the new model in a background Transcriber, keeps dictating on the old one, saves and restarts after 3 s with no recording. |
+| A7 | not started | |
 | B1-B9 | not started | B3 unblocked: Q2 = yes, audio kept since Nov 11 (FLAC). Clips collect while A runs. |
 | C1-C7 | not started | |
 | D1-D8 | not started | D5: no-cost path (Q1 = not yet) |

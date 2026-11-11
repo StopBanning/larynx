@@ -10,6 +10,17 @@
   model (about 500 MB) if it isn't on disk.
 - Kept audio (`keepAudio`, off by default) is stored as 16-bit FLAC instead of float WAV: about a quarter of the size.
 - A word cut off as you restart a phrase is dropped: "when we w when we want" → "when we want".
+- Commas after "on" and "in" are kept where they end a phrase: "come in, whip up a plan", "Hold on, I'll check",
+  "Log in, then click save". Leftover commas are still removed where a filler was ("meet on, Thursday" → "meet on
+  Thursday"), and "The thing is, we need more time" keeps its comma.
+- A dictation no longer ends on a comma or semicolon.
+- Numbers no longer wake the AI rewrite in Mail and Messages (the numbers stage does it instantly; the rewrite took
+  about 1.6 s). When the rewrite does run for a correction, the numbers stage formats its result ("at two, no wait,
+  three thirty" → "at 3:30"). "Move it to eleven fifteen" → "to 11:15" (quarter and half hours after "to").
+- **Changing the speech model never leaves you without dictation.** Picking a model in the menu loads it in the
+  background (the first load of a model can take a minute or two while the Neural Engine compiles it) and keeps using
+  the current one; Larynx restarts on the new model once you've been idle for a few seconds. `make-app.sh` warms the
+  configured model after installing, so a rebuild doesn't either.
 - **Numbers as digits, in every app:** "Opus five point five" → "Opus 5.5", "Fable at ninety-four" → "94", "three
   percent" → "3%", "two hundred K" → "200K", "Max twenty X" → "20x", "seven thirty tonight" → "7:30", "twenty
   twenty-six" → "2026". Rules, not an AI model, so it's instant and works in Claude and terminals too. Small numbers

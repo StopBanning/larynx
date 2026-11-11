@@ -35,7 +35,11 @@ public enum Tidy {
     static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
     /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
     static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
-    static let joiners = "to|on|at|in|of|for|with|from|about|the|a|an|and|but|or|is|was|are|were|be|my|your|our|their"
+    static let joiners = "to|at|of|for|with|from|about|the|a|an|and|but|or|my|your|our|their"
+    /// What may follow "on," / "in," when the comma is a leftover: a determiner, a number, or a capitalized name.
+    static let clauseFollowers = "(?:(?i:the|a|an|my|your|our|their|his|her|its)\\b|\\d|(?i:one|two|three|four|five|six|seven|eight|nine|ten)\\b|(?!I\\b|I')[A-Z])"
+    /// The subject of a new clause, after which "is," keeps its comma.
+    static let clauseStarts = "(?i:i|i'm|i'll|i've|i'd|we|we're|we'll|you|you're|they|they're|he|she|it|it's|there|there's|that's|this)\\b"
 
     public static func apply(_ text: String, mode: CleanupMode) -> String {
         var s = text
@@ -75,7 +79,13 @@ public enum Tidy {
         // 2f. Spoken code: case commands, file names, acronyms.
         s = CodeWords.apply(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
+        // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, whip up"),
+        // so they lose the comma only before a determiner, a number or a capitalized name.
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .regularExpression)
+        // "The thing is, we need more time": a be-verb keeps its comma before a new clause's subject.
+        s = s.replacingOccurrences(of: "\\b([Ii]s|[Ww]as|[Aa]re|[Ww]ere|[Bb]e),\\s+(?!\(clauseStarts))(?=\\w)", with: "$1 ",
+                                   options: .regularExpression)
         // 3b. "if, Opus did it": a comma after "if" is a pause, not punctuation, unless it opens an aside ("if, say, it rains").
         s = s.replacingOccurrences(of: "(?i)\\bif,\\s+(?!(?:\(ifAsides))\\b)", with: "if ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
@@ -84,6 +94,12 @@ public enum Tidy {
         s = s.replacingOccurrences(of: "^[\\s,.;:]+", with: "", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 4b. A dictation never ends on a comma or semicolon ("...the best in the biz,"): end it the way the mode ends
+        // a trailed-off sentence (step 2e).
+        if let last = s.last, last == "," || last == ";" {
+            let cut = String(s.dropLast()).trimmingCharacters(in: .whitespaces)
+            if !cut.isEmpty { s = cut + (mode == .ai ? "" : ".") }
+        }
         guard !s.isEmpty else { return s }
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)

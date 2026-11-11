@@ -137,3 +137,10 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
     #expect(shadow.text == "It was ninety-four")
     #expect(shadow.steps.first { $0.stage == "numbers" }?.after == "It was 94")
 }
+
+@Test func numbersAloneNeverWakeTheRewrite() {
+    // The numbers stage turns them into digits in 0 ms; the rewrite would cost over a second in Mail and Messages.
+    #expect(Cleaner.reason(for: "The invoice comes to four hundred dollars.", mode: .correspondence) == nil)
+    #expect(Cleaner.reason(for: "Sales went up fifteen percent.", mode: .correspondence) == nil)
+    #expect(Cleaner.reason(for: "Get two pizzas, make that three.", mode: .correspondence) == "correction")
+}

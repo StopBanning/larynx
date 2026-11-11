@@ -1,0 +1,50 @@
+
+TEXT RULES  67/67 exact
+
+AI REWRITE (Apple on-device, correspondence mode)
+  26/26 match
+
+SPOKEN (ultra, rewrite off, 5 voices x 2 speeds)  272/300 pass, excluding known gaps
+  false starts         5/10
+  fillers             71/80
+  must not change    111/120
+  real-world          30/30
+  repeats             55/60
+  known gaps (need the AI rewrite layer):
+    false starts      10/20
+    numbers           10/10
+    self-corrections   0/40
+    trailing off       8/10
+    verbal tics       20/30
+  of the failures, 9 are the speech model mishearing (not cleanup)
+
+FAILURES (case: voice/speed -> output)
+  filler-er  (2 of 10)  want: The total is about $400.
+     Moira/175: The total is are about $400.   [WER 0.20]   raw: The total is, are, about $400.
+     Moira/230: The total is are about $400.   [WER 0.20]   raw: The total is, are, about $400.
+  filler-every-word  (6 of 10)  want: I need the keys.
+     Samantha/230: Ah, I need the keys.   [WER 0.25]   raw: Ah, I ah, need, ah, the ah, keys.
+     Daniel/175: Ah, I need the please   [WER 0.50]   raw: Ah, I uh need uh the uh please
+     Daniel/230: Ah, I need the please.   [WER 0.50]   raw: Ah, I uh need uh the uh please.
+  filler-uhm  (1 of 10)  want: Yeah, that works for me.
+     Karen/175: You that works for me.   [WER 0.20]   raw: Um, you eh, that works for me.
+  repeat-word  (3 of 10)  want: Can you send the invoice today?
+     Daniel/230: Can you send her the invoice today?   [WER 0.17]   raw: Can you send her the invoice today?
+     Karen/230: Can you send her the invoice today?   [WER 0.17]   raw: Can you send her the invoice today?
+     Rishi/175: Can you send the D invoice today?   [WER 0.17]   raw: Can you send the D invoice today?
+  repeat-pronoun  (2 of 10)  want: I really appreciate it.
+     Moira/175: I really appreciate this.   [WER 0.25]   raw: Aye, I, I really appreciate this.
+     Moira/230: I really appreciate this.   [WER 0.25]   raw: Aye, I, I really appreciate this.
+  false-start-1  (5 of 10)  want: I drove to the store after work.
+     Karen/230: I went to the I drove to the store after work.   [WER 0.57]   raw: I went to the I drove to the store after work.
+     Rishi/175: I went to the I drove to the store after work.   [WER 0.57]   raw: I went to the I drove to the store after work.
+     Rishi/230: I went to the I drove to the store after work.   [WER 0.57]   raw: I went to the I drove to the store after work.
+  keep-hummus  (2 of 10)  want: We ordered hummus and humble pie.
+     Samantha/230: We ordered homice and humble pie.   [speech model misheard: ['hummus']]   raw: We ordered homice and humble pie.
+     Moira/230: We order Thomas and tumble pie.   [speech model misheard: ['hummus', 'humble']]   raw: We order Thomas and tumble pie.
+  keep-uh-huh  (6 of 10)  want: Uh-huh, I agree with that.
+     Samantha/175: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+     Samantha/230: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+     Daniel/175: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+  keep-names  (1 of 10)  want: Ask Priya and Mateo to join the call.
+     Moira/175: Ask Priya and Matteo to join the call.   [speech model misheard: ['mateo']]   raw: Ask Priya and Matteo to join the call.
