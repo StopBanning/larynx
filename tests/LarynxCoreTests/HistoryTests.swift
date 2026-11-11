@@ -116,4 +116,7 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(!Learner.stillHolds(pasted, in: ""))  // sent
     #expect(!Learner.stillHolds(pasted, in: "Something else entirely"))
     #expect(Learner.fixes(pasted: pasted, now: "Tell Govee to dim the lights").map(\.fixed) == ["Govee"])
+    // Capitalisation tidy-ups of ordinary words teach nothing; a name's spelling does.
+    #expect(Learner.fixes(pasted: "You know what I mean", now: "you know what I mean").isEmpty)
+    #expect(Learner.fixes(pasted: "we moved to prisma today", now: "we moved to Prisma today").map(\.fixed) == ["Prisma"])
 }

@@ -75,8 +75,12 @@ public enum Learner {
         var out: [(String, String)] = []
         for k in 0..<p.count {
             let heard = p[k], fixed = v[best.start + k]
-            guard heard != fixed, fixed.count >= 3, fixed.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }),
-                  heard.lowercased() == fixed.lowercased() || Transcriber.soundsAlike(heard, fixed) else { continue }
+            guard heard != fixed, fixed.count >= 3, fixed.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }) else { continue }
+            if heard.lowercased() == fixed.lowercased() {
+                // A capital-letter fix only teaches a name or term ("prisma" -> "Prisma"), never an ordinary word
+                // ("You" -> "you" is just tidying the sentence).
+                guard !Vocabulary.isEnglish(fixed) else { continue }
+            } else if !Transcriber.soundsAlike(heard, fixed) { continue }
             out.append((heard, fixed))
         }
         return out
