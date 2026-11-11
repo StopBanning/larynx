@@ -181,7 +181,7 @@ case "pill-demo":
     NSApplication.shared.setActivationPolicy(.accessory)
     Task { @MainActor in
         // LARYNX_DEMO_BACKDROP=1: colour stripes behind the pill, to see (and screenshot) what the glass does.
-        if ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] == "1", let area = NSScreen.main?.visibleFrame {
+        if ["1", "dark"].contains(ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] ?? ""), let area = NSScreen.main?.visibleFrame {
             let frame = NSRect(x: area.midX - 380, y: area.minY + 20, width: 760, height: 200)
             let backdrop = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             backdrop.level = .floating
@@ -192,6 +192,10 @@ case "pill-demo":
             stripes.frame = view.bounds
             stripes.startPoint = CGPoint(x: 0, y: 0.5); stripes.endPoint = CGPoint(x: 1, y: 0.5)
             stripes.colors = [NSColor.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple].map(\.cgColor)
+            // LARYNX_DEMO_BACKDROP=dark: a near-black window like a dark-mode chat app instead.
+            if ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] == "dark" {
+                stripes.colors = [NSColor(white: 0.13, alpha: 1).cgColor, NSColor(white: 0.13, alpha: 1).cgColor]
+            }
             view.layer?.addSublayer(stripes)
             let text = NSTextField(labelWithString: "Larynx Larynx Larynx Larynx Larynx Larynx")
             text.font = .systemFont(ofSize: 44, weight: .heavy)

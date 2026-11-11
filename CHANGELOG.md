@@ -16,6 +16,12 @@
 - A dictation no longer ends on a comma or semicolon.
 - A phrase restarted after an "uh" keeps only the restart: "from your uh from our workstation" → "from our
   workstation", "the cat, um, the dog" → "the dog".
+- **Pill Glass slider goes all the way to see-through.** Apple's clear glass still blurs what's behind it, so on a
+  dark window the pill looked dark at every setting and the slider only went from black to gray. Now 0 is no glass at
+  all, 25 is clear glass (the new default), 50 frosted, 100 solid. `LARYNX_DEMO_BACKDROP=dark larynx pill-demo` shows
+  it over a dark window.
+- App icons with a dark tile (Claude, Terminal, and dark-mode Mail, Safari, Messages) show just their mark in the
+  pill instead of a black square.
 - More of what Parakeet Ultra writes out is tidied: "I went to the I drove" (a false start with no comma), "er" heard
   as ", are," after "is", "a the keys", and a leading "Ah," when the speaker keeps hesitating ("Ah, I see" stays).
 - Numbers no longer wake the AI rewrite in Mail and Messages (the numbers stage does it instantly; the rewrite took

@@ -13,7 +13,7 @@ final class Pill {
     static let shared = Pill()
     /// `preview: off` in settings.json (or `defaults write com.automatedworkflow.larynx preview off`) turns it off.
     nonisolated static var enabled: Bool { Settings.shared.string(.preview) != "off" }
-    /// 0 = clear glass ... 100 = solid (`pillGlass`, the menu's Glass slider).
+    /// 0 = see-through ... 100 = solid (`pillGlass`, the menu's Glass slider).
     nonisolated static var glassLevel: Double { Double(Settings.shared.string(.pillGlass)) .map { $0 / 100 } ?? 0 }
 
     /// Shows the pill as a sample while the Glass slider moves, then hides it.
@@ -63,7 +63,7 @@ final class Pill {
         words = ""
         anchor = Settings.shared.string(.pillPosition) == "auto" ? field : nil
         content.applyGlass(Pill.glassLevel)
-        content.setApp(app?.icon, name: app?.localizedName, privateField: privateField)
+        content.setApp(AppIcon.forPill(app), name: app?.localizedName, privateField: privateField)
         content.setSymbol(nil)
         content.wave.mode = .live
         content.wave.reset()
@@ -281,6 +281,11 @@ final class PillContent {
     private var showsSymbol = false
     /// Darkens (or lightens, in light mode) the material: the "solid" end of the Glass slider.
     private let shade = NSView()
+    /// The glass behind the content (macOS 26). It is a sibling under the content, not its container, so it can fade
+    /// out completely at the clear end of the slider while the icon, waveform and words stay.
+    private var glassView: NSView?
+    /// Holds the shade, icon, waveform and words on top of the glass.
+    private let canvas = NSView()
     /// Size of the text inside the bubble; zero hides the bubble.
     var text: NSSize = .zero
 
@@ -318,15 +323,18 @@ final class PillContent {
             let glass = NSGlassEffectView()
             glass.style = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? .regular : .clear
             glass.cornerRadius = PillContent.height / 2
-            let canvas = NSView()
             orb = orbContent
             bubble = bubbleContent
             shade.wantsLayer = true
+            shade.layer?.masksToBounds = true
             canvas.addSubview(shade)
             canvas.addSubview(bubble)
             canvas.addSubview(orb)
-            glass.contentView = canvas
-            root = glass
+            let container = NSView()
+            container.addSubview(glass)
+            container.addSubview(canvas)
+            glassView = glass
+            root = container
         } else {
             let blur = NSVisualEffectView()
             blur.material = .hudWindow
@@ -343,16 +351,26 @@ final class PillContent {
         }
     }
 
-    /// 0 = clear glass, 0.5 = frosted, 1 = solid. Clear glass below a third, Apple's regular (frosted) glass above,
-    /// with a shade in the window's own colour on top that grows evenly to fully opaque at 1.
+    /// 0 = see-through, 1 = solid, in four even stretches: 0-25 the clear glass fades in from nothing (Apple's clear
+    /// glass still blurs and bends what's behind it, so on a dark window it looks dark, never see-through), 25-50 clear
+    /// glass, 50-100 frosted glass with a shade in the window's own colour growing to fully opaque.
     func applyGlass(_ level: Double) {
         let level = min(1, max(0, level))
-        if #available(macOS 26.0, *), let glass = root as? NSGlassEffectView {
-            glass.style = level < 0.34 && !NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? .clear : .regular
+        let contrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+        if #available(macOS 26.0, *), let glass = glassView as? NSGlassEffectView {
+            glass.style = level < 0.5 && !contrast ? .clear : .regular
+            glass.alphaValue = contrast ? 1 : min(1, level / 0.25)
         }
-        let alpha = level  // even steps: halfway is half shaded, the far right is fully solid
+        let alpha = max(0, (level - 0.5) / 0.5)
         root.effectiveAppearance.performAsCurrentDrawingAppearance {
             shade.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(alpha).cgColor
+            // With little or no glass behind them, the words and waveform get a soft halo so they stay readable.
+            let halo = NSShadow()
+            halo.shadowBlurRadius = 3
+            halo.shadowOffset = .zero
+            halo.shadowColor = NSColor.windowBackgroundColor.withAlphaComponent(0.9)
+            let bare = (glassView?.alphaValue ?? 1) < 0.6
+            for v in [label, wave, symbol] as [NSView] { v.shadow = bare ? halo : nil }
         }
     }
 
@@ -380,9 +398,12 @@ final class PillContent {
         let bubbleFrame = b == .zero
             ? NSRect(x: orbWidth - pad.width, y: 0, width: 0, height: h)
             : NSRect(x: bubbleX, y: 0, width: b.width, height: h)
-        if #available(macOS 26.0, *), let glass = root as? NSGlassEffectView {
+        if #available(macOS 26.0, *), let glass = glassView as? NSGlassEffectView {
             glass.cornerRadius = min(h / 2, 22)
-            glass.contentView?.frame = NSRect(origin: .zero, size: total)
+            let setFrame: (NSView, NSRect) -> Void = { v, r in if animated { v.animator().frame = r } else { v.frame = r } }
+            setFrame(glass, NSRect(origin: .zero, size: total))
+            setFrame(canvas, NSRect(origin: .zero, size: total))
+            shade.layer?.cornerRadius = min(h / 2, 22)
         } else {
             root.layer?.cornerRadius = min(h / 2, 22)
         }

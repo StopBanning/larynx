@@ -158,11 +158,11 @@ final class MenuController: NSObject, NSMenuDelegate {
         for label in [left, right] { label.font = .systemFont(ofSize: 10); label.textColor = .secondaryLabelColor }
         left.frame = NSRect(x: 20, y: 7, width: 34, height: 14)
         right.frame = NSRect(x: 214, y: 7, width: 34, height: 14)
-        let slider = NSSlider(value: Double(Settings.shared.string(.pillGlass)) ?? 0, minValue: 0, maxValue: 100,
+        let slider = NSSlider(value: Double(Settings.shared.string(.pillGlass)) ?? 25, minValue: 0, maxValue: 100,
                               target: self, action: #selector(glassChanged(_:)))
         slider.isContinuous = true
         slider.frame = NSRect(x: 54, y: 5, width: 156, height: 20)
-        slider.setAccessibilityLabel("Pill glass, from clear to solid")
+        slider.setAccessibilityLabel("Pill glass, from see-through to solid")
         for v in [title, left, slider, right] { view.addSubview(v) }
         item.view = view
         return item

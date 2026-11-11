@@ -31,7 +31,7 @@ public final class Settings: @unchecked Sendable {
             case .historyDays: return "30"
             case .keepAudio, .debugText: return "off"
             case .pillPosition: return "auto"
-            case .pillGlass: return "0"
+            case .pillGlass: return "25"
             default: return "on"
             }
         }
