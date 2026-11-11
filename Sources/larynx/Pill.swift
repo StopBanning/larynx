@@ -172,7 +172,7 @@ final class Pill {
                                                  options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
             return NSSize(width: ceil(r.width), height: ceil(r.height))
         }
-        let maxText = Pill.maxWidth - content.orbWidth - PillContent.gap - Pill.pad.width * 2 - 6
+        let maxText = Pill.maxWidth - content.orbWidth - 10 - 6
         let lineHeight = ceil(font.ascender - font.descender + font.leading)
         var shown = text
         while measure(shown, maxText).height > lineHeight * 3 + 2, shown.count > 20 {  // keep the newest words
@@ -184,7 +184,6 @@ final class Pill {
         content.label.stringValue = shown
         content.label.textColor = dim ? .secondaryLabelColor : .labelColor
         content.text = shown.isEmpty ? .zero : NSSize(width: min(maxText, measured.width) + 6, height: measured.height)
-        content.fused = phase == .transcribing
         let size = content.size
         let frame = place(width: ceil(size.width), height: ceil(size.height))
         let animate = panel.isVisible && panel.alphaValue > 0 && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -239,13 +238,10 @@ final class Pill {
     }
 }
 
-/// The views inside the pill. Two pieces of glass: the orb (app icon and waveform, or a status symbol) and the bubble
-/// (the words). On macOS 26 they sit in a glass container, so when words arrive the bubble grows out of the orb with a
-/// liquid bridge between them, and when the key is released they fuse into one shape while the transcript is made.
-/// Before macOS 26 both live in one blurred capsule.
+/// The views inside the pill: one capsule of glass (a blurred HUD before macOS 26) holding the app icon and waveform
+/// (or a status symbol) on the left and the words on the right. It grows smoothly as words arrive.
 @MainActor
 final class PillContent {
-    static let gap: CGFloat = 6
     static let height: CGFloat = 44
     let root: NSView
     let icon = NSImageView()
@@ -262,8 +258,6 @@ final class PillContent {
     private var showsSymbol = false
     /// Size of the text inside the bubble; zero hides the bubble.
     var text: NSSize = .zero
-    /// True while transcribing: the bubble closes the gap and the two shapes become one.
-    var fused = false
 
     var orbWidth: CGFloat { pad.width * 2 + max(20, leadingWidth) }
     var leadingWidth: CGFloat {
@@ -279,7 +273,7 @@ final class PillContent {
     var size: NSSize {
         let b = bubbleSize
         guard b != .zero else { return NSSize(width: orbWidth, height: PillContent.height) }
-        return NSSize(width: orbWidth + (fused ? 0 : PillContent.gap) + b.width, height: max(PillContent.height, b.height))
+        return NSSize(width: orbWidth - pad.width + 10 + b.width - pad.width, height: max(PillContent.height, b.height))
     }
 
     init(pad: NSSize) {
@@ -295,22 +289,17 @@ final class PillContent {
         label.lineBreakMode = .byWordWrapping
         bubbleContent.addSubview(label)
         if #available(macOS 26.0, *) {
-            func glass(_ inner: NSView) -> NSGlassEffectView {
-                let g = NSGlassEffectView()
-                g.contentView = inner
-                g.style = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? .regular : .clear
-                g.cornerRadius = PillContent.height / 2
-                return g
-            }
-            orb = glass(orbContent)
-            bubble = glass(bubbleContent)
+            // One piece of glass: the icon, the waveform and the words share a single continuous shape.
+            let glass = NSGlassEffectView()
+            glass.style = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? .regular : .clear
+            glass.cornerRadius = PillContent.height / 2
             let canvas = NSView()
+            orb = orbContent
+            bubble = bubbleContent
             canvas.addSubview(bubble)
             canvas.addSubview(orb)
-            let container = NSGlassEffectContainerView()
-            container.spacing = 14  // shapes closer than this melt together
-            container.contentView = canvas
-            root = container
+            glass.contentView = canvas
+            root = glass
         } else {
             let blur = NSVisualEffectView()
             blur.material = .hudWindow
@@ -341,25 +330,24 @@ final class PillContent {
 
     /// Manual layout: the pill changes size several times a second; Auto Layout would only add work.
     func arrange(in total: NSSize, animated: Bool) {
-        let h = PillContent.height
+        // The icon and waveform sit on the left, centred on the whole capsule; the words fill the rest.
+        let h = total.height
         let orbFrame = NSRect(x: 0, y: 0, width: orbWidth, height: h)
         let b = bubbleSize
-        // A hidden bubble collapses into the orb's right edge, so it visibly grows out of it.
+        let bubbleX = orbWidth - pad.width + 10 - pad.width
         let bubbleFrame = b == .zero
-            ? NSRect(x: orbWidth - h, y: 0, width: h, height: h)
-            : NSRect(x: orbWidth + (fused ? 0 : PillContent.gap), y: 0, width: b.width, height: b.height)
-        if #available(macOS 26.0, *) {
-            (bubble as? NSGlassEffectView)?.cornerRadius = min(bubbleFrame.height / 2, 22)
-            if let canvas = (root as? NSGlassEffectContainerView)?.contentView { canvas.frame = NSRect(origin: .zero, size: total) }
+            ? NSRect(x: orbWidth - pad.width, y: 0, width: 0, height: h)
+            : NSRect(x: bubbleX, y: 0, width: b.width, height: h)
+        if #available(macOS 26.0, *), let glass = root as? NSGlassEffectView {
+            glass.cornerRadius = min(h / 2, 22)
+            glass.contentView?.frame = NSRect(origin: .zero, size: total)
         } else {
-            root.layer?.cornerRadius = min(total.height / 2, 22)
+            root.layer?.cornerRadius = min(h / 2, 22)
         }
         let setFrame: (NSView, NSRect) -> Void = { v, r in if animated { v.animator().frame = r } else { v.frame = r } }
         setFrame(orb, orbFrame)
         setFrame(bubble, bubbleFrame)
         bubble.alphaValue = b == .zero ? 0 : 1
-        orbContent.frame = NSRect(origin: .zero, size: orbFrame.size)
-        bubbleContent.frame = NSRect(origin: .zero, size: bubbleFrame.size)
 
         // Inside the orb: [icon][waveform][symbol], vertically centred.
         let midY = h / 2
