@@ -41,8 +41,18 @@ public enum Tidy {
         var s = text
         // 1. Leftover fillers, with the comma that came with them.
         s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .regularExpression)
+        // 1b. "er", "ah", "eh" in the middle of a sentence are hesitations ("the total is, er, about"). Lowercase only,
+        // so "the ER was packed" stays, and never at the start ("Ah, I see").
+        s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])(?:,?\\s+(?:er|ah|eh)(?=[,.\\s]|$))+[,]?", with: "", options: .regularExpression)
+        // 1c. "Aye, I, I": a stuttered "I" written as "Aye".
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .regularExpression)
+        // 1d. A false start: an unfinished clause ending on a small word, then the same speaker starts again.
+        // "I went to the, I drove to the store" -> "I drove to the store". "I went to the store, I bought milk" stays.
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)(i|we|you|he|she|they|it)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|to|of|for|with|in|on|at|and|my|your|our|their),\\s+(?=\\2\\b)",
+                                   with: "$1", options: .regularExpression)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place".
         s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
+        s = repeatedPhrases(s)
         var previous = ""
         while previous != s {  // "I, I, I think" needs two passes
             previous = s
@@ -76,6 +86,24 @@ public enum Tidy {
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
         if mode == .correspondence, let last = s.last, !".!?:)\"'".contains(last) { s += "." }
+        return s
+    }
+
+    /// "we could we could push", "I want to I want to thank": a 2-3 word phrase said twice in a row. Counting
+    /// ("one two one two"), numbers ("one to one to") and repeated single words ("wow wow wow wow") are left alone.
+    static func repeatedPhrases(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){1,2})\\s+\\1\\b") else { return text }
+        let numberWords: Set<String> = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "zero"]
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(m.range, in: s), let phrase = Range(m.range(at: 1), in: s) else { continue }
+            let words = s[phrase].lowercased().split(whereSeparator: \.isWhitespace)
+            // Numbers ("one to one to the app" is "one-to-one") and one word said over and over ("wow wow wow wow")
+            // are meant, not stumbles.
+            if words.contains(where: { numberWords.contains(String($0)) || $0.allSatisfy(\.isNumber) }) { continue }
+            if Set(words).count == 1 { continue }
+            s.replaceSubrange(whole, with: String(s[phrase]))
+        }
         return s
     }
 

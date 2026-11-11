@@ -612,6 +612,54 @@
       "mode": "ai",
       "in": "Is there r. G. B. on the pad?",
       "expect": "Is there RGB on the pad?"
+    },
+    {
+      "id": "t-er-commas",
+      "mode": "correspondence",
+      "in": "The total is, er, about $400.",
+      "expect": "The total is about $400."
+    },
+    {
+      "id": "t-ah-midsentence",
+      "mode": "standard",
+      "in": "I need, ah, the keys.",
+      "expect": "I need the keys."
+    },
+    {
+      "id": "t-aye-stutter",
+      "mode": "standard",
+      "in": "Aye, I, I really appreciate it.",
+      "expect": "I really appreciate it."
+    },
+    {
+      "id": "t-repeat-nocomma-2",
+      "mode": "standard",
+      "in": "We could we could push it to next week.",
+      "expect": "We could push it to next week."
+    },
+    {
+      "id": "t-repeat-nocomma-3",
+      "mode": "standard",
+      "in": "I want to I want to thank everyone for coming.",
+      "expect": "I want to thank everyone for coming."
+    },
+    {
+      "id": "t-false-start-restart",
+      "mode": "standard",
+      "in": "I went to the, I drove to the store after work.",
+      "expect": "I drove to the store after work."
+    },
+    {
+      "id": "t-false-start-mid",
+      "mode": "standard",
+      "in": "Okay. We talked about the, we never finished the plan.",
+      "expect": "Okay. We never finished the plan."
+    },
+    {
+      "id": "t-and-then-and-then",
+      "mode": "standard",
+      "in": "And then and then we left.",
+      "expect": "And then we left."
     }
   ],
   "rewrite": [
@@ -1335,6 +1383,76 @@
       "id": "keep-grade",
       "in": "She got a B in math and I got a C.",
       "expect": "She got a B in math and I got a C."
+    },
+    {
+      "id": "keep-store-restart",
+      "in": "I went to the store, I bought milk.",
+      "expect": "I went to the store, I bought milk."
+    },
+    {
+      "id": "keep-could-should",
+      "in": "We could, we should, and we will.",
+      "expect": "We could, we should, and we will."
+    },
+    {
+      "id": "keep-er-hospital",
+      "in": "The ER was packed last night.",
+      "expect": "The ER was packed last night."
+    },
+    {
+      "id": "keep-ah-start",
+      "in": "Ah, I see what you mean.",
+      "expect": "Ah, I see what you mean."
+    },
+    {
+      "id": "keep-eh-start",
+      "in": "Eh, maybe next time.",
+      "expect": "Eh, maybe next time."
+    },
+    {
+      "id": "keep-aye-captain",
+      "in": "Aye aye, captain.",
+      "expect": "Aye aye, captain."
+    },
+    {
+      "id": "keep-count-repeat",
+      "in": "Testing one two one two.",
+      "expect": "Testing one two one two."
+    },
+    {
+      "id": "keep-bye-bye",
+      "in": "Bye bye for now.",
+      "expect": "Bye bye for now."
+    },
+    {
+      "id": "keep-unfinished-no-restart",
+      "in": "I tried to fix it, well, never mind.",
+      "expect": "I tried to fix it, well, never mind."
+    },
+    {
+      "id": "keep-she-he",
+      "in": "She went to the gym, he went home.",
+      "expect": "She went to the gym, he went home."
+    },
+    {
+      "id": "keep-yeah",
+      "in": "Yeah, that sounds right.",
+      "expect": "Yeah, that sounds right."
+    },
+    {
+      "id": "keep-one-to-one",
+      "in": "I want it to be a one to one to the TypeScript app.",
+      "expect": "I want it to be a one to one to the TypeScript app."
+    },
+    {
+      "id": "keep-wow-wow",
+      "in": "Wow wow wow wow wow.",
+      "expect": "Wow wow wow wow wow."
+    },
+    {
+      "id": "keep-blah",
+      "in": "Analytics, blah blah blah blah.",
+      "expect": "Analytics, blah blah blah blah."
     }
   ],
   "numbers": {
