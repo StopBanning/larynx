@@ -52,6 +52,8 @@ lines pasted into his Safari. Use `LARYNX_FORCE_COPY=1` (clipboard only, restore
 - Windows helper.
 
 ## Rules learned the hard way
+- Restart the app only with `./scripts/restart-app.sh` (waits until Colin is not dictating). A rebuild can make CoreML
+  recompile the model, about 2 minutes of "Loading speech model...".
 - Don't spawn subagents; do the work inline.
 - Switching privacy permissions is Colin's job; minimize the asks. Rebuilds no longer need them.
 - Restart Larynx after a permission change; macOS applies Input Monitoring only on relaunch.
