@@ -109,19 +109,26 @@ public final class History: @unchecked Sendable {
     }
 
     /// Copies a recording into a 16-bit FLAC file, a piece at a time so a long dictation never sits in memory twice.
+    /// The samples are handed over as 16-bit integers: given floats, the encoder stores 24 bits and saves little.
     static func writeFLAC(from wav: URL, to flac: URL) throws {
         let input = try AVAudioFile(forReading: wav)
-        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatFLAC, AVSampleRateKey: input.fileFormat.sampleRate,
-                                       AVNumberOfChannelsKey: input.fileFormat.channelCount, AVLinearPCMBitDepthKey: 16]
-        let output = try AVAudioFile(forWriting: flac, settings: settings, commonFormat: input.processingFormat.commonFormat,
-                                     interleaved: input.processingFormat.isInterleaved)
-        guard let chunk = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 32_768) else { throw LarynxError.unreadableAudio }
+        let rate = input.fileFormat.sampleRate
+        guard input.processingFormat.channelCount == 1, input.processingFormat.commonFormat == .pcmFormatFloat32,
+              let ints = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: rate, channels: 1, interleaved: false),
+              let chunk = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 32_768),
+              let out = AVAudioPCMBuffer(pcmFormat: ints, frameCapacity: 32_768) else { throw LarynxError.unreadableAudio }
+        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatFLAC, AVSampleRateKey: rate, AVNumberOfChannelsKey: 1,
+                                       AVEncoderBitDepthHintKey: 16]
+        let output = try AVAudioFile(forWriting: flac, settings: settings, commonFormat: .pcmFormatInt16, interleaved: false)
         var written: AVAudioFramePosition = 0
         while input.framePosition < input.length {
             try input.read(into: chunk)
-            if chunk.frameLength == 0 { break }
-            try output.write(from: chunk)
-            written += AVAudioFramePosition(chunk.frameLength)
+            let count = Int(chunk.frameLength)
+            guard count > 0, let source = chunk.floatChannelData?[0], let target = out.int16ChannelData?[0] else { break }
+            for i in 0..<count { target[i] = Int16((max(-1, min(1, source[i])) * 32_767).rounded()) }
+            out.frameLength = chunk.frameLength
+            try output.write(from: out)
+            written += AVAudioFramePosition(count)
         }
         guard written == input.length else { throw LarynxError.unreadableAudio }
     }
