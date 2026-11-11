@@ -621,7 +621,8 @@ developer program (C1).
 | 6.1 - 6.10 | not started | |
 | 5.1 - 5.4 | not started | |
 | 9.x | not chosen | Colin picks three |
-| 7.x, 8.x | not started | |
+| 8.1 | started | Windows plan in docs/WINDOWS.md. W0 feasibility: LarynxText builds and passes its tests on Windows and Linux in CI (`portable.yml`); Parakeet v3 int8 transcribes the fixture exactly on a Windows CPU via sherpa-onnx in CI (RTF 0.147 on a 4-core VM). |
+| 7.x, 8.0, 8.2-8.4 | not started | |
 
 Baseline before any work (Nov 10, commit 8927727): rules 43/43, rewrite 26/26, spoken 264/300; real use p50
 111 ms, p90 336 ms, 447 dictations.
