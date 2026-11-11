@@ -750,6 +750,30 @@
       "mode": "ai",
       "in": "I, uh, hit that, um, what's it called? Capture.",
       "expect": "I hit that, what's it called? Capture."
+    },
+    {
+      "id": "t-email-layout",
+      "mode": "email",
+      "in": "Hi Sam, thanks for sending the deck. I'll review it tomorrow. Thanks, Colin.",
+      "expect": "Hi Sam,\n\nThanks for sending the deck. I'll review it tomorrow.\n\nThanks,\nColin"
+    },
+    {
+      "id": "t-email-thanks-sentence",
+      "mode": "email",
+      "in": "Thanks for the help.",
+      "expect": "Thanks for the help."
+    },
+    {
+      "id": "t-new-paragraph",
+      "mode": "correspondence",
+      "in": "See you tomorrow. New paragraph. Also, bring the charger.",
+      "expect": "See you tomorrow.\n\nAlso, bring the charger."
+    },
+    {
+      "id": "t-new-line-list",
+      "mode": "standard",
+      "in": "Groceries, new line, eggs, new line, milk",
+      "expect": "Groceries\nEggs\nMilk"
     }
   ],
   "rewrite": [
@@ -1713,6 +1737,26 @@
       "id": "keep-pronoun-comma-03",
       "in": "You, Sam, should go first.",
       "expect": "You, Sam, should go first."
+    },
+    {
+      "id": "keep-layout-01",
+      "in": "Start a new paragraph after the intro.",
+      "expect": "Start a new paragraph after the intro."
+    },
+    {
+      "id": "keep-layout-02",
+      "in": "I came in first, second was Sam.",
+      "expect": "I came in first, second was Sam."
+    },
+    {
+      "id": "keep-layout-03",
+      "in": "One thing I wanted to ask. Two people said no.",
+      "expect": "One thing I wanted to ask. Two people said no."
+    },
+    {
+      "id": "keep-layout-04",
+      "in": "We need a new line manager by Friday.",
+      "expect": "We need a new line manager by Friday."
     }
   ],
   "numbers": {

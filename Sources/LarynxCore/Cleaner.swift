@@ -19,6 +19,7 @@ public enum Cleaner {
     /// Why a rewrite is worth it, or nil when the tidy rules are enough.
     public static func reason(for text: String, mode: CleanupMode) -> String? {
         guard mode != .ai else { return nil }  // models reading it don't care
+        guard !text.contains("\n") else { return nil }  // spoken line breaks and email layout: the model would flatten them
         if text.range(of: correctionCues, options: .regularExpression) != nil { return "correction" }
         if text.range(of: bareNoCue, options: .regularExpression) != nil { return "correction" }
         if text.range(of: ticCues, options: .regularExpression) != nil { return "verbal tic" }

@@ -8,14 +8,21 @@ public enum CleanupMode: String, Codable, Sendable {
     case correspondence
     /// Everything else: tidy and capitalize.
     case standard
+    /// Mail apps: like correspondence, plus email layout (greeting and sign-off on their own lines).
+    case email
+
+    /// Text a person reads: ends like a sentence.
+    public var isForPeople: Bool { self == .correspondence || self == .email }
 
     static let aiApps: Set<String> = [
         "com.anthropic.claudefordesktop", "com.openai.chat", "com.automatedworkflow.locust",
         "com.todesktop.230313mzl4w4u92", "com.microsoft.VSCode", "dev.zed.Zed", "com.apple.dt.Xcode",
         "com.apple.Terminal", "com.googlecode.iterm2", "dev.warp.Warp-Stable", "com.mitchellh.ghostty",
     ]
+    static let emailApps: Set<String> = ["com.apple.mail", "com.microsoft.Outlook", "com.readdle.smartemail-Mac",
+                                         "com.superhuman.electron", "it.bloop.airmail2"]
     static let correspondenceApps: Set<String> = [
-        "com.apple.mail", "com.microsoft.Outlook", "com.tinyspeck.slackmacgap", "com.apple.MobileSMS",
+        "com.tinyspeck.slackmacgap", "com.apple.MobileSMS",
         "net.whatsapp.WhatsApp", "ru.keepcoding.Telegram", "com.hnc.Discord", "com.apple.Notes",
         "com.microsoft.teams2", "notion.id", "com.apple.iWork.Pages", "com.microsoft.Word",
     ]
@@ -23,6 +30,7 @@ public enum CleanupMode: String, Codable, Sendable {
     public static func forApp(bundleID: String?) -> CleanupMode {
         guard let id = bundleID else { return .standard }
         if aiApps.contains(id) { return .ai }
+        if emailApps.contains(id) { return .email }
         if correspondenceApps.contains(id) { return .correspondence }
         return .standard
     }
@@ -35,6 +43,27 @@ public enum Tidy {
     static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
     /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
     static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
+    // MARK: Email layout
+
+    static let greetings = "Hi|Hey|Hello|Dear|Good morning|Good afternoon|Good evening|Morning|Afternoon"
+    static let signOffs = "Thanks|Thank you|Thanks so much|Many thanks|Best|Best regards|Kind regards|Regards|Cheers|Talk soon|Sincerely|All the best|Warmly"
+
+    /// Mail layout: "Hi Sam, thanks for…" → "Hi Sam,\n\nThanks for…"; "…tomorrow. Thanks, Colin." →
+    /// "…tomorrow.\n\nThanks,\nColin". A greeting needs more text after it; a sign-off needs a name after it, so
+    /// "Thanks for the help." stays a sentence.
+    static func emailLayout(_ text: String) -> String {
+        var s = text
+        s = s.replacingOccurrences(of: "^((?:\(greetings))(?:\\s+[A-Z][\\w'-]*){0,3})[,.!]?\\s+(?=\\S)", with: "$1,\n\n", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<=[.!?])\\s+((?:\(signOffs))(?: [a-z]+)?)[,.!]?\\s+([A-Z][\\w'-]*(?:\\s+[A-Z][\\w'-]*)?)[.!]?$",
+                                   with: "\n\n$1,\n$2", options: .regularExpression)
+        return s
+    }
+
+    /// Ends in a sign-off and a name on its own line: no full stop after the name.
+    static func emailSignedOff(_ text: String) -> Bool {
+        text.range(of: "\n(?:\(signOffs))(?: [a-z]+)?,\n[^\n]+$", options: .regularExpression) != nil
+    }
+
     // MARK: Shadow rules
 
     /// Experimental rules that run on every dictation but change nothing: each proposal is recorded in history as a
@@ -42,7 +71,29 @@ public enum Tidy {
     /// real dictations have been read and are right (PLAN-v1 B1: every risky rule goes through here first).
     public static let shadowRules: [(name: String, apply: (String) -> String)] = [
         ("lone-letter", loneLetterRestarts),
+        ("spoken-list", spokenList),
     ]
+
+    /// "Number one, flights. Number two, hotels." / "First, flights, second, hotels" → a numbered list, one item per
+    /// line. Needs at least two items in order starting at one; otherwise nothing changes.
+    static func spokenList(_ text: String) -> String {
+        let ordinals = ["one|first", "two|second", "three|third", "four|fourth", "five|fifth", "six|sixth"]
+        var items: [String] = []
+        var rest = Substring(text)
+        var lead = ""
+        for (n, words) in ordinals.enumerated() {
+            guard let r = rest.range(of: "(?i)(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:number\\s+)?(?:\(words))[,.:]\\s+", options: .regularExpression) else { break }
+            if n == 0 { lead = String(rest[..<r.lowerBound]) } else { items.append(String(rest[..<r.lowerBound])) }
+            rest = rest[r.upperBound...]
+        }
+        guard !items.isEmpty else { return text }
+        items.append(String(rest))
+        let clean = items.map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " ,;.")) }
+        guard clean.allSatisfy({ !$0.isEmpty }) else { return text }
+        let list = clean.enumerated().map { "\($0.offset + 1). " + $0.element.prefix(1).uppercased() + $0.element.dropFirst() }.joined(separator: "\n")
+        let intro = lead.trimmingCharacters(in: .whitespaces)
+        return intro.isEmpty ? list : intro + "\n" + list
+    }
 
     /// A lone lowercase letter that starts a word said a little later: "someone who f will actually fucking do it"
     /// drops the "f". Not when it labels something ("plan b", "vitamin d", "the letter s") or the word follows at once
@@ -75,8 +126,15 @@ public enum Tidy {
     /// Words after a comma that close or tag a phrase ("a lot with, okay?"); the comma before them is real.
     static let tagWords = "(?i:okay|ok|right|yeah|yes|though|too|honestly|man|dude|bro|then|please|lol)\\b"
 
+    /// Placeholders for spoken "new line" / "new paragraph" while the rules run (not letters, not whitespace).
+    static let lineMark = "\u{E000}", paragraphMark = "\u{E001}"
+
     public static func apply(_ text: String, mode: CleanupMode) -> String {
         var s = text
+        // 0a. "New paragraph." / "new line," said as its own phrase between sentence boundaries ("A new line of
+        // shoes" stays). Marked now, turned into line breaks after the spacing rules.
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new paragraph[.,!?:;]*(?=\\s|$)", with: "$1 \(paragraphMark) ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new line[.,!?:;]*(?=\\s|$)", with: "$1 \(lineMark) ", options: .regularExpression)
         // 0. A phrase restarted after a filler: "from your uh from our workstation" -> "from our workstation". The small
         // word said again right after the "uh" marks where the speaker started over; only one word is dropped with it.
         s = s.replacingOccurrences(of: "(?i)\\b(\(restartWords))\\s+[\\w']+,?\\s+(?:\(fillers)|er|ah)[,.]?\\s+(?=\\1\\s+\\w)", with: "",
@@ -145,8 +203,17 @@ public enum Tidy {
         s = s.replacingOccurrences(of: "\\s*,\\s*,+", with: ",", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\s+([,!?;:]|\\.(?![A-Za-z]))", with: "$1", options: .regularExpression)  // but not ".env"
         s = s.replacingOccurrences(of: "^[\\s,.;:]+", with: "", options: .regularExpression)
-        s = s.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "[ \\t]{2,}", with: " ", options: .regularExpression)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 4c. Spoken breaks become real ones. A paragraph after a sentence that didn't end gets its full stop.
+        if s.contains(lineMark) || s.contains(paragraphMark) {
+            let endsSentence = mode == .ai ? "" : "."
+            s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])[,;:]?\\s*\(paragraphMark)", with: endsSentence + paragraphMark, options: .regularExpression)
+            s = s.replacingOccurrences(of: "[,;:]?\\s*\(paragraphMark)\\s*", with: "\n\n", options: .regularExpression)
+            s = s.replacingOccurrences(of: "[,;:]?\\s*\(lineMark)\\s*", with: "\n", options: .regularExpression)
+            s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if mode == .email { s = emailLayout(s) }
         // 4b. A dictation never ends on a comma or semicolon ("...the best in the biz,"): end it the way the mode ends
         // a trailed-off sentence (step 2e).
         if let last = s.last, last == "," || last == ";" {
@@ -157,7 +224,7 @@ public enum Tidy {
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
-        if mode == .correspondence, let last = s.last, !".!?:)\"'".contains(last) { s += "." }
+        if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
         return s
     }
 
@@ -240,6 +307,7 @@ public enum Tidy {
                 if !codeLike { out += ch.uppercased(); continue }
             }
             if capNext, !ch.isWhitespace { capNext = false }
+            if ch == "\n" { capNext = true }
             if ".!?".contains(ch) {
                 let next = i + 1 < chars.count ? chars[i + 1] : " "
                 let ellipsis = ch == "." && ((i > 0 && chars[i - 1] == ".") || next == ".")

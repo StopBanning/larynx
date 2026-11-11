@@ -337,7 +337,8 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | C4 | done (done early, as planned) | `Fit.adjust` (LarynxText) from the text before the cursor (AXValue + AXSelectedTextRange): missing space after the previous text, lowercase first word mid-sentence when it is an ordinary English word (not I, acronyms, camelCase, vocabulary terms, names), capitals kept after an opening bracket/quote, nothing for empty/newline/selection/unreadable. `fitToField` setting. Unit tests; live capture-window cases ("Okay." + text, "Hey Sam," + text) in tests/live.py. Fixes the "time.Are we" slips. |
 | C1-C3, C5-C7 | not started | |
 | D1-D8 | not started | D5: no-cost path (Q1 = not yet) |
-| E1-E8 | not started | |
+| E3 (part) | started Nov 11, at Colin's ask | "new line" / "new paragraph" as standalone phrases → real breaks (all modes). Email mode for mail apps (`CleanupMode.email`): greeting and sign-off+name on their own lines. Spoken lists as shadow rule `spoken-list`. Rewrite skipped for multi-line text. Replay: 0 of 231 change; golden unchanged. Prompt mode (rewrite a dictation into a structured prompt) judged low value for him (Claude reads natural speech) and skipped unless asked. |
+| E1, E2, E4-E8 | not started | |
 | F1-F5 | not started | |
 | G | not chosen | Q5 |
 | W1-W7 | not started | W0 done (docs/WINDOWS.md) |

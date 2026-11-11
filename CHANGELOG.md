@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Email layout in Mail and Outlook.** "Hi Sam, thanks for… Thanks, Colin." comes out with the greeting on its own
+  line, a blank line, the body, and the sign-off and name on their own lines. "Thanks for the help." stays a
+  sentence (a sign-off needs a name after it).
+- **"New paragraph" and "new line"** said as their own phrase make real line breaks, in every app. "A new line of
+  shoes" is left alone.
+- Spoken lists ("Number one, flights. Number two, hotels.") are being tried in shadow: proposals are recorded
+  (`larynx mine --shadow spoken-list`), your text isn't changed yet.
 - **Dictations fit what's already in the field.** Several dictations into one message no longer run together
   ("time.Are we" → "time. Are we"), and a dictation that continues a sentence starts lowercase ("Hey Sam, can
   you…"). Names, "I", acronyms and your vocabulary keep their capitals; empty fields, new lines and a selection

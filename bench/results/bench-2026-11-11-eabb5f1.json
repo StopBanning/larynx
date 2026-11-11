@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-11",
+  "commit": "eabb5f1",
+  "machine": "Apple M6, 16 GB, macOS 27.2",
+  "results": {
+    "ultra": {
+      "golden": {
+        "clips": 48,
+        "wer": 0.58,
+        "punctF1": 99.3,
+        "names": 76.2,
+        "p50ms": 96,
+        "p90ms": 242,
+        "rtfx": 43.0,
+        "examples": []
+      }
+    }
+  }
+}
