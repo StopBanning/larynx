@@ -1,10 +1,46 @@
 # Larynx
 
-Local, offline dictation for macOS. Hold a key, speak, release: the text lands wherever your cursor is.
-Speech runs on the Neural Engine with NVIDIA's Parakeet TDT v3 (25 European languages) through
-[FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing leaves your Mac.
+[![portable](https://github.com/StopBanning/larynx/actions/workflows/portable.yml/badge.svg)](https://github.com/StopBanning/larynx/actions/workflows/portable.yml)
+[![macOS](https://github.com/StopBanning/larynx/actions/workflows/macos.yml/badge.svg)](https://github.com/StopBanning/larynx/actions/workflows/macos.yml)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black)
+![Swift 6.1](https://img.shields.io/badge/Swift-6.1-orange)
 
-Built to stand alone and to be embedded: apps such as Locust drive it over JSON lines (see
+**Free, open-source, fully offline dictation for the Mac.** Hold a key, speak, let go: clean, punctuated text lands
+wherever your cursor is, in about a tenth of a second. Speech runs on the Neural Engine with NVIDIA's Parakeet
+models through [FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing you say ever leaves your Mac.
+No account, no subscription, no word limits.
+
+<p align="center">
+  <img src="docs/images/pill-listening.png" alt="Larynx listening: the target app's icon and a waveform" height="44">
+  &nbsp;
+  <img src="docs/images/pill-words.png" alt="Larynx showing the words as you speak" height="54">
+  &nbsp;
+  <img src="docs/images/pill-transcribing.png" alt="Larynx finishing the transcript" height="71">
+</p>
+<p align="center"><sub>The Liquid Glass pill: where your words are going, a waveform that moves with your voice, and the words
+as you say them.</sub></p>
+
+## Why it exists
+
+Cloud dictation apps are excellent, and they send your voice to a server. Larynx sets out to match them feature for
+feature while staying local and free. Where it stands (measured from daily use and the test suite in this repo):
+
+| | Larynx | Typical cloud dictation app |
+| --- | --- | --- |
+| Where your audio goes | Stays on your Mac ([PRIVACY.md](docs/PRIVACY.md)) | Its servers |
+| Works offline | Yes | No |
+| Price, limits | Free, unlimited, MIT | Free tier with weekly limits, paid plans |
+| Key-up to text | 0.11 s median, 0.34 s p90 (447 real dictations) | Network round trip |
+| Cleanup | Fillers, stutters, self-corrections ("Tuesday, no Wednesday"), spoken numbers, code by voice | Similar |
+| Learns your words | From repeats and from your edits, with Undo | From your edits |
+| Never loses a dictation | Crash spool + clipboard fallback + target-app lock | Varies |
+| Scriptable | CLI, JSON-lines API, MCP server | Limited |
+
+The full roadmap, with a row-by-row scoreboard and the evidence for each row, is [docs/MASTER-PLAN.md](docs/MASTER-PLAN.md).
+Windows is in progress: the text engine and the speech model already run on Windows in CI ([docs/WINDOWS.md](docs/WINDOWS.md)).
+
+Built to stand alone and to be embedded: apps such as [Locust](https://locust.lol) drive it over JSON lines (see
 [docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
 ## Status
@@ -103,14 +139,18 @@ a sentence for Mail, Slack, Messages and Notes.
 
 ## Testing
 
-`python3 tests/suite.py --rewrite auto` speaks about 40 messy sentences in five voices at two speeds, transcribes
-them and scores the result. It also runs 36 exact tidy-rule checks and a 26-case rewrite benchmark that includes
-questions, requests and "actually"/"sorry"/"I mean" sentences the rewrite must leave alone. Latest run (Nov 8, 2026):
+| Suite | What it checks | Latest (Nov 11, 2026) |
+| --- | --- | --- |
+| `swift test` | 29 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, the rewrite guard, the pipeline, settings, history, crash spool, privacy rules, self-learning | all pass |
+| `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | rules 43/43, rewrite 26/26, spoken 264/300 (nearly every miss is the speech model mishearing a synthetic voice) |
+| `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
+| `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
+| CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
+
+Spoken-suite detail:
 
 | Area | Pass |
 | --- | --- |
-| Tidy rules (exact) | 36/36 |
-| AI rewrite benchmark | 26/26 on 4 of 4 runs |
 | Fillers | 72/80 |
 | Repeats | 57/60 |
 | False starts | 10/10 |
@@ -121,8 +161,9 @@ questions, requests and "actually"/"sorry"/"I mean" sentences the rewrite must l
 | Real-world messages | 30/30 |
 
 Nearly every remaining miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio",
-"uh-huh" as "aha"). Still open: dropping a spoken preamble ("The thing is, what I mean is, ...") is left alone on purpose. NeMo inverse text normalization was
-tried for numbers and rejected: it turned "two thirty and it costs" into "32 it costs".
+"uh-huh" as "aha"). Still open: dropping a spoken preamble ("The thing is, what I mean is, ...") is left alone on
+purpose. NeMo inverse text normalization was tried for numbers and rejected: it turned "two thirty and it costs"
+into "32 it costs".
 
 ## How it works
 
@@ -147,10 +188,11 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 
 ## Roadmap
 
-The full plan, with a scoreboard against Wispr Flow and a task list, is in [docs/MASTER-PLAN.md](docs/MASTER-PLAN.md).
-In short: measure first (benchmarks, history), fix what real use shows (numbers, clipped words, doubtful results),
-read the screen locally for names and context, hands-free and microphone handling, spoken formatting, styles and
-voice edits with a local model, a proper settings app, 100+ languages, then meeting notes and other platforms.
+[docs/MASTER-PLAN.md](docs/MASTER-PLAN.md) has the whole plan as tasks with acceptance tests, and a status table.
+Done so far: tests and package split, typed pipeline with shadow mode, settings, history and crash recovery,
+self-learning, the Liquid Glass pill. Next: benchmarks against public speech sets, spoken numbers without the AI
+model, context from the screen for names, hands-free mode, spoken formatting and lists, voice edits on selected
+text, a settings window, 100+ languages, then Windows ([docs/WINDOWS.md](docs/WINDOWS.md)) and meeting notes.
 
 ## License
 

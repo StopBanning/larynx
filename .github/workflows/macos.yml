@@ -1,0 +1,17 @@
+name: macOS
+# Builds Larynx and runs the Swift test suite on macOS 26 (the Liquid Glass pill needs the macOS 26 SDK).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift build -c release
+      - run: swift test
