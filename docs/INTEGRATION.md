@@ -35,6 +35,9 @@ Events:
 {"event":"error","id":7,"message":"microphone access was refused"}
 ```
 
+Each result carries `steps`: one entry per cleanup stage (`snippet`, `dictionary`, `vocabularyCase`, `tidy`,
+`numbers`, `rewrite`) with `before`, `after` and `applied`.
+
 `result.delivered` (`inserted` or `copied`), `result.pasted` and `result.pasteError` appear only when `paste` was
 requested. If pasting is impossible (no Accessibility permission, a password field, any error) the text is left on
 the clipboard and `delivered` is `copied`, so a transcript is never lost. `result.engine` says which speech model

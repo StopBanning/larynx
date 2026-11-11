@@ -10,6 +10,8 @@
 - A comma after "if" before a word is dropped ("if, Opus did it" → "if Opus did it"); asides keep theirs
   ("if, say, it rains").
 - Claude and other AI model names (Opus, Sonnet, Haiku, Gemini...) are in the built-in vocabulary.
+- **Fixed:** "next" turning into "Nuxt". Built-in developer names can no longer replace a real English word; only
+  words you chose (your vocabulary, dictionary, project folders, and what Larynx learned from you) can.
 
 - **Hands-free:** double-tap the talk key to keep recording with no key held; the next press finishes, Esc cancels.
   A Hands-Free Key (menu) starts and stops with one press each, for a second macro-pad button.

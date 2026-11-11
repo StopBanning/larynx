@@ -47,6 +47,19 @@ public enum Vocabulary {
         try? kept.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 
+    /// The terms the user chose: vocabulary.txt, the written side of the dictionary (including what was learned) and
+    /// their own project folders. Not the built-in developer list.
+    public static func personalTerms() -> Set<String> {
+        var out = Set<String>()
+        ((try? String(contentsOf: url, encoding: .utf8)) ?? "").split(separator: "\n").forEach {
+            let t = $0.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty, !t.hasPrefix("#") { out.insert(t.lowercased()) }
+        }
+        Dictionary.load().values.forEach { out.insert($0.lowercased()) }
+        projectNames().forEach { out.insert($0.lowercased()) }
+        return out
+    }
+
     /// Every term, deduplicated case-insensitively, user entries first.
     public static func terms() -> [String] {
         var seen = Set<String>(), out: [String] = []

@@ -33,7 +33,7 @@ def check_transcript(actual):
         else:
             assert type(actual[key]) is type(value), (key, actual[key], value)
             assert actual[key] == value, (key, actual[key], value)
-    assert [s['stage'] for s in actual['steps']] == ['snippet', 'dictionary', 'vocabularyCase', 'tidy', 'rewrite']
+    assert [s['stage'] for s in actual['steps']] == ['snippet', 'dictionary', 'vocabularyCase', 'tidy', 'numbers', 'rewrite']
     assert actual['steps'][-1]['applied'] is False  # --rewrite off
 
 

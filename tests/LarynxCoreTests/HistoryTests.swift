@@ -120,3 +120,15 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(Learner.fixes(pasted: "You know what I mean", now: "you know what I mean").isEmpty)
     #expect(Learner.fixes(pasted: "we moved to prisma today", now: "we moved to Prisma today").map(\.fixed) == ["Prisma"])
 }
+
+@Test func builtInTermsNeverReplaceRealEnglishWords() {
+    // "next" and the built-in "Nuxt" share every consonant: only a term the user chose may replace a real word.
+    #expect(Transcriber.swap("next", for: "Nuxt", in: "What next?") == "What next?")
+    #expect(Transcriber.swap("going", for: "Golang", in: "How are things going?") == "How are things going?")
+    #expect(Transcriber.swap("next", for: "Nuxt", in: "What next?", personal: ["nuxt"]) == "What Nuxt?")
+    // Made-up words the model produced still get fixed by any term.
+    #expect(Transcriber.swap("Gavy", for: "Govee", in: "Ask Gavy to dim it") == "Ask Govee to dim it")
+    // "macropod" is a real word (a kangaroo's family), so it takes the user's own project name to replace it.
+    #expect(Transcriber.swap("macropod", for: "Macropad", in: "my macropod key") == "my macropod key")
+    #expect(Transcriber.swap("macropod", for: "Macropad", in: "my macropod key", personal: ["macropad"]) == "my Macropad key")
+}

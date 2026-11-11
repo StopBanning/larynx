@@ -41,6 +41,9 @@ public actor Transcriber {
     private var manager: AsrManager?
     private var boosting: VocabularyBoostingSession?
     public private(set) var vocabularySize = 0
+    /// Terms the user chose (vocabulary.txt, the dictionary, things learned, their project folders). Only these may
+    /// replace a real English word; built-in developer names may only replace words the model made up.
+    private var personal: Set<String> = []
 
     public init() {}
 
@@ -59,7 +62,8 @@ public actor Transcriber {
 
     /// Loads the small keyword model (Parakeet CTC 110M, downloaded once into `modelsDir`) and the terms to listen for.
     /// Afterwards each transcript is rescored against the audio, and close-sounding words are swapped for your terms.
-    public func loadVocabulary(_ terms: [String], modelsDir: URL?) async throws {
+    public func loadVocabulary(_ terms: [String], personal: Set<String> = [], modelsDir: URL?) async throws {
+        self.personal = Set(personal.map { $0.lowercased() })
         guard !terms.isEmpty else { boosting = nil; vocabularySize = 0; return }
         let ctc = try await CtcModels.downloadAndLoad(to: modelsDir?.appendingPathComponent("parakeet-ctc-110m-coreml", isDirectory: true))
         let context = CustomVocabularyContext(terms: terms.map { CustomVocabularyTerm(text: $0) })
@@ -80,19 +84,24 @@ public actor Transcriber {
             // so take only its one-word swaps where the heard word looks like the term ("Gavy" -> "Govee").
             for r in out.replacements where r.shouldReplace {
                 guard let term = r.replacementWord else { continue }
-                text = Transcriber.swap(r.originalWord, for: term, in: text)
+                text = Transcriber.swap(r.originalWord, for: term, in: text, personal: personal)
             }
         }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Replaces one word with a vocabulary term when they sound alike: same first letter and nearly the same consonants
-    /// ("macropod"/"Macropad", "Gavie"/"Govee", "locus"/"Locust"). Anything else is left as heard.
-    static func swap(_ heard: String, for term: String, in text: String) -> String {
+    /// ("macropod"/"Macropad", "Gavie"/"Govee"). A real English word the model heard ("next", "going") is only replaced
+    /// by a term the user chose, and only when the consonants match exactly: "next" never becomes the built-in "Nuxt".
+    static func swap(_ heard: String, for term: String, in text: String, personal: Set<String> = []) -> String {
         // A suggestion can cover a few words ("Gavy app"); swap only the one that sounds like the term.
         let words = heard.split(separator: " ").map { $0.trimmingCharacters(in: .punctuationCharacters) }
-        guard !term.contains(" "), let h = words.first(where: { $0.lowercased() != term.lowercased() && soundsAlike($0, term, strict: Vocabulary.isEnglish($0)) })
-        else { return text }
+        let chosen = personal.contains(term.lowercased())
+        guard !term.contains(" "), let h = words.first(where: { word in
+            guard word.lowercased() != term.lowercased() else { return false }
+            if Vocabulary.isEnglish(word) { return chosen && soundsAlike(word, term, strict: true) }
+            return soundsAlike(word, term)
+        }) else { return text }
         let pattern = "(?i)\\b" + NSRegularExpression.escapedPattern(for: h) + "\\b"
         guard let range = text.range(of: pattern, options: .regularExpression) else { return text }
         return text.replacingCharacters(in: range, with: term)

@@ -38,7 +38,7 @@ func reloadVocabulary() async {
         let started = Date()
         let terms = vocabularyEnabled ? Vocabulary.terms() : []
         vocabularyCache.terms = Vocabulary.caseTerms(terms)
-        try await transcriber.loadVocabulary(terms, modelsDir: modelsDir)
+        try await transcriber.loadVocabulary(terms, personal: vocabularyEnabled ? Vocabulary.personalTerms() : [], modelsDir: modelsDir)
         if !terms.isEmpty { log("vocabulary: \(await transcriber.vocabularySize) words in \(ms(since: started)) ms") }
     } catch {
         log("vocabulary failed to load: \(error)")
