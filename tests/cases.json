@@ -576,6 +576,42 @@
       "mode": "ai",
       "in": "How funny would it be if, Opus 5.5, did it.",
       "expect": "How funny would it be if Opus 5.5, did it."
+    },
+    {
+      "id": "t-letters-api",
+      "mode": "ai",
+      "in": "I do not wanna top up A P I credits.",
+      "expect": "I do not wanna top up API credits."
+    },
+    {
+      "id": "t-letters-dots",
+      "mode": "ai",
+      "in": "What's T. S. M. doing today",
+      "expect": "What's TSM doing today"
+    },
+    {
+      "id": "t-letters-pair",
+      "mode": "ai",
+      "in": "The U I looks great",
+      "expect": "The UI looks great"
+    },
+    {
+      "id": "t-letters-qr",
+      "mode": "ai",
+      "in": "We got accused of using a Q R code as a reel.",
+      "expect": "We got accused of using a QR code as a reel."
+    },
+    {
+      "id": "t-letters-md",
+      "mode": "ai",
+      "in": "Is there something in your M D files?",
+      "expect": "Is there something in your MD files?"
+    },
+    {
+      "id": "t-letters-lower-start",
+      "mode": "ai",
+      "in": "Is there r. G. B. on the pad?",
+      "expect": "Is there RGB on the pad?"
     }
   ],
   "rewrite": [
@@ -1284,6 +1320,21 @@
       "id": "keep-if-honestly",
       "in": "Even if, honestly, it fails, we learned something.",
       "expect": "Even if, honestly, it fails, we learned something."
+    },
+    {
+      "id": "keep-plan-a",
+      "in": "We'll go with plan A I think.",
+      "expect": "We'll go with plan A I think."
+    },
+    {
+      "id": "keep-i-a",
+      "in": "Can I get an A on this?",
+      "expect": "Can I get an A on this?"
+    },
+    {
+      "id": "keep-grade",
+      "in": "She got a B in math and I got a C.",
+      "expect": "She got a B in math and I got a C."
     }
   ],
   "numbers": {

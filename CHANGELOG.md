@@ -10,6 +10,8 @@
 - A comma after "if" before a word is dropped ("if, Opus did it" → "if Opus did it"); asides keep theirs
   ("if, say, it rains").
 - Claude and other AI model names (Opus, Sonnet, Haiku, Gemini...) are in the built-in vocabulary.
+- Spelled-out acronyms are joined: "A P I" → API, "Q R code" → QR code, "M D files" → MD files, "T. S. M." → TSM.
+  Single letters elsewhere stay ("plan A I think").
 - **Fixed:** "next" turning into "Nuxt". Built-in developer names can no longer replace a real English word; only
   words you chose (your vocabulary, dictionary, project folders, and what Larynx learned from you) can.
 

@@ -27,7 +27,7 @@ public enum CodeWords {
     ]
 
     public static func apply(_ text: String) -> String {
-        var s = applyCaseCommands(text)
+        var s = joinSpelledLetters(applyCaseCommands(text))
         // "main dot swift" -> main.swift, "example dot com" -> example.com, "dot env" -> .env
         s = s.replacingOccurrences(of: "(?i)\\b(?!(?:the|a|an|and|or|to|of|in|on|at|for|with|is|my|your|our)\\b)([A-Za-z0-9_\\-]+)\\s+dot\\s+(\(extensions))\\b", with: "$1.$2", options: .regularExpression)
         s = s.replacingOccurrences(of: "(?i)(^|\\s)dot\\s+(env|gitignore|zshrc|bashrc)\\b", with: "$1.$2", options: .regularExpression)
@@ -36,6 +36,24 @@ public enum CodeWords {
             s = s.replacingOccurrences(of: "(?i)(?<![\\w.])\(spoken)(?![\\w])", with: written, options: .regularExpression)
         }
         return s
+    }
+
+    /// Two-letter acronyms the speech model spells out ("U I" -> UI). "A I" is left alone: "plan A I think" is common.
+    static let letterPairs: Set<String> = ["UI", "UX", "ML", "PR", "OS", "ID", "QA", "CI", "CD", "DM", "TV", "VM", "DB", "PC",
+                                           "MD", "QR", "PE", "AR", "VR", "HR"]
+
+    /// Spelled-out capitals become one acronym: "A P I" -> API, "T. S. M." -> TSM, "U R L" -> URL.
+    /// Three letters or more, or a known pair; single letters elsewhere ("plan A", "I think") are untouched.
+    static func joinSpelledLetters(_ s: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?<![\\w.])(?:[a-z]\\. (?=[A-Z]\\.))?(?:[A-Z]\\.? ){1,5}[A-Z](?:\\.(?=\\s+[a-z]))?(?![\\w])") else { return s }
+        var out = s
+        for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
+            guard let r = Range(m.range, in: out) else { continue }
+            let letters = out[r].filter(\.isLetter).uppercased()
+            guard letters.count >= 3 || letterPairs.contains(String(letters)) else { continue }
+            out.replaceSubrange(r, with: String(letters))
+        }
+        return out
     }
 
     static func applyCaseCommands(_ text: String) -> String {
