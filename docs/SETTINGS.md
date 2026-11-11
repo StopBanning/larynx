@@ -38,7 +38,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `loginItemSet` | `false` | Internal boolean: first-run login-item setup has been attempted. Actual login-item status comes from macOS. |
 | `history` | `on` | `on` or `off`; keep dictations in `history.sqlite` on this Mac and spool audio until each is transcribed (crash recovery). `off` keeps Recent in memory only and writes nothing. See [PRIVACY.md](PRIVACY.md). |
 | `historyDays` | `30` | Whole days (1-3650) of dictation text to keep; older rows are deleted at launch and after each dictation. A JSON number or string. |
-| `keepAudio` | `off` | `off` or whole days (1-365) to keep each dictation's audio in `history/audio/` after it is transcribed. |
+| `keepAudio` | `off` | `off` or whole days (1-365) to keep each dictation's audio in `history/audio/` after it is transcribed (16-bit FLAC, about 1 MB per minute of speech). |
 | `debugText` | `off` | `on` or `off`; write transcript text into `~/Library/Logs/Larynx.log` (for debugging only). Off logs timing, app, delivery and word counts. |
 | `stages.snippet` | `on` | `off`, `shadow`, `on`; whole-utterance snippet matching. |
 | `stages.dictionary` | `on` | `off`, `shadow`, `on`; personal dictionary replacements. |

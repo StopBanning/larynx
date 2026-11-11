@@ -8,6 +8,7 @@
   to the, I drove" → "I drove"), repeated phrases, and mid-sentence "er/ah/eh". On the 300-clip cleanup suite Ultra
   now scores 272 against Bark Clean's 264. Bark Clean is still in the Speech Model menu. First launch downloads the
   model (about 500 MB) if it isn't on disk.
+- Kept audio (`keepAudio`, off by default) is stored as 16-bit FLAC instead of float WAV: about a quarter of the size.
 - A word cut off as you restart a phrase is dropped: "when we w when we want" → "when we want".
 - **Numbers as digits, in every app:** "Opus five point five" → "Opus 5.5", "Fable at ninety-four" → "94", "three
   percent" → "3%", "two hundred K" → "200K", "Max twenty X" → "20x", "seven thirty tonight" → "7:30", "twenty

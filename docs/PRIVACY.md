@@ -13,7 +13,7 @@ user account only.
 | --- | --- | --- | --- |
 | Dictation text, with the app it went to, timings and the cleanup steps | `history.sqlite` | 30 days (`historyDays`) | `history: off` |
 | Audio of a dictation while it is being transcribed (crash spool) | `history/spool/<id>.wav` | Until the transcript is saved, normally well under a second | `history: off` |
-| Audio after transcription | `history/audio/<id>.wav` | Not kept unless you set `keepAudio` to a number of days | `keepAudio: off` (default) |
+| Audio after transcription | `history/audio/<id>.flac` | Not kept unless you set `keepAudio` to a number of days | `keepAudio: off` (default) |
 | Your words | `dictionary.json`, `vocabulary.txt`, `snippets.json` | Until you edit them | - |
 | Settings | `settings.json` (and the `com.automatedworkflow.larynx` defaults) | - | - |
 | Log | `~/Library/Logs/Larynx.log` | Grows until you delete it | Transcript text is not logged unless `debugText: on` |

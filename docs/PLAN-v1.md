@@ -117,8 +117,9 @@ milestone builds the instruments every later milestone is judged by.
 **B2. Live test rig** (master 0.9 without the head-to-head part): `larynx capture-window`, `scripts/when-idle.sh`,
 and `tests/live.py` that drives `listen --feed` into the capture window only. This is the only place tests paste.
 
-**B3. The golden set: Colin's real voice as the benchmark.** Needs decision Q2 (keep audio, on this Mac only).
-- `keepAudio: 30`. `larynx golden add <id> [--text "what was said"]` copies that dictation's audio and the correct
+**B3. The golden set: Colin's real voice as the benchmark.** Q2 answered yes on Nov 11: `keepAudio` is `30` in
+his settings and audio is kept as 16-bit FLAC in `history/audio/` (password fields and private apps never).
+- `larynx golden add <id> [--text "what was said"]` copies that dictation's audio and the correct
   text into `~/Library/Application Support/Larynx/golden/` (never in git, never uploaded).
 - Candidates are offered automatically: dictations he repeated or edited (the fix is the reference), rows flagged
   doubtful (B4), and any the agent can verify from the conversation. Nothing is added without a reference text.
@@ -293,7 +294,7 @@ W7 (real-hardware numbers) needs decision Q3. Everything before it runs in CI.
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
 | Q1 | Apple Developer Program, $99/year (master C1) | **Yes** | The only way strangers get a download that opens, keeps its permissions across updates and updates itself. Also required for an iPhone app later. He re-grants three permissions once. |
-| Q2 | Keep audio of his own dictations for 30 days, on this Mac only (master C2) | **Yes** | Turns his real voice into the benchmark (B3). Without it every number is from robot voices. |
+| Q2 | Keep audio of his own dictations for 30 days, on this Mac only (master C2) | **Answered Nov 11: yes** | Turns his real voice into the benchmark (B3). Without it every number is from robot voices. |
 | Q3 | A real Windows machine for the final Windows tests | The old PC's C: drive, when W6 is reached | CI covers everything earlier. |
 | Q4 | Sign in to Wispr Flow for a measured head-to-head (master C3) | Decide at F2 | Not needed before then. |
 | Q5 | Which "beyond" features first | G1, G2, G3 | G1 fits how he works; G3 is nearly free. |
@@ -309,7 +310,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | A (switch to Ultra) | done Nov 11 | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
 | A1 | started | Watch began with the first dictation after the Nov 11 restart. Finding 1: "when we uh w when we want" left "w when we" behind; fixed with the cut-off-restart rule (Tidy step 1e), replayed over 149 real dictations: 1 change, correct. |
 | A2-A7 | not started | |
-| B1-B9 | not started | B3 waits on Q2 |
+| B1-B9 | not started | B3 unblocked: Q2 = yes, audio kept since Nov 11 (FLAC). Clips collect while A runs. |
 | C1-C7 | not started | |
 | D1-D8 | not started | D5 waits on Q1 |
 | E1-E8 | not started | |

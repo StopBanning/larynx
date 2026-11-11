@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import SQLite3
 
@@ -87,8 +88,16 @@ public final class History: @unchecked Sendable {
         guard !transcript.text.isEmpty else { return nil }
         var audioPath: String?
         if settings.snapshot().days(.keepAudio) != nil, (try? Self.makePrivateDirectory(audioDir)) != nil {
+            // Kept as 16-bit FLAC, about a quarter of the spool's float WAV. If that fails, keep the WAV itself.
+            let flac = audioDir.appendingPathComponent(pending.id + ".flac")
             let kept = audioDir.appendingPathComponent(spool.lastPathComponent)
-            if (try? FileManager.default.moveItem(at: spool, to: kept)) != nil { audioPath = kept.path }
+            if (try? Self.writeFLAC(from: spool, to: flac)) != nil {
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: flac.path)
+                audioPath = flac.path
+            } else {
+                try? FileManager.default.removeItem(at: flac)
+                if (try? FileManager.default.moveItem(at: spool, to: kept)) != nil { audioPath = kept.path }
+            }
         }
         let row = Row(id: pending.id, time: pending.time, app: pending.app, mode: transcript.mode.rawValue,
                       engine: transcript.engine, raw: transcript.raw, text: transcript.text, steps: transcript.steps,
@@ -97,6 +106,24 @@ public final class History: @unchecked Sendable {
         do { try insert(row) } catch { return nil }
         prune()
         return row
+    }
+
+    /// Copies a recording into a 16-bit FLAC file, a piece at a time so a long dictation never sits in memory twice.
+    static func writeFLAC(from wav: URL, to flac: URL) throws {
+        let input = try AVAudioFile(forReading: wav)
+        let settings: [String: Any] = [AVFormatIDKey: kAudioFormatFLAC, AVSampleRateKey: input.fileFormat.sampleRate,
+                                       AVNumberOfChannelsKey: input.fileFormat.channelCount, AVLinearPCMBitDepthKey: 16]
+        let output = try AVAudioFile(forWriting: flac, settings: settings, commonFormat: input.processingFormat.commonFormat,
+                                     interleaved: input.processingFormat.isInterleaved)
+        guard let chunk = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 32_768) else { throw LarynxError.unreadableAudio }
+        var written: AVAudioFramePosition = 0
+        while input.framePosition < input.length {
+            try input.read(into: chunk)
+            if chunk.frameLength == 0 { break }
+            try output.write(from: chunk)
+            written += AVAudioFramePosition(chunk.frameLength)
+        }
+        guard written == input.length else { throw LarynxError.unreadableAudio }
     }
 
     /// Recordings a crash left behind, oldest first. `olderThan` skips files a running dictation is still using.

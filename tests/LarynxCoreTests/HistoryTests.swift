@@ -92,6 +92,13 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     let kept = f.history.complete(old, transcript: f.transcript("Old words."), delivery: "inserted")
     #expect(kept?.audioPath != nil)
     #expect(FileManager.default.fileExists(atPath: kept?.audioPath ?? ""))
+    // Kept audio is FLAC: every sample comes back (to 16 bits), in far fewer bytes than the float WAV.
+    #expect(kept?.audioPath?.hasSuffix(".flac") == true)
+    let restored = try loadAudioFile(URL(fileURLWithPath: kept!.audioPath!))
+    #expect(restored.count == tone.count)
+    #expect(zip(restored, tone).allSatisfy { abs($0 - $1) < 0.001 })
+    let bytes = (try FileManager.default.attributesOfItem(atPath: kept!.audioPath!)[.size] as? Int) ?? .max
+    #expect(bytes < tone.count * 4 / 2)
     let fresh = f.history.begin(samples: tone, app: nil, mode: .ai, privateField: false)
     f.history.complete(fresh, transcript: f.transcript("New words."), delivery: "inserted")
     #expect(f.history.recent().map(\.text) == ["New words."])  // complete() prunes the 10-day-old row
