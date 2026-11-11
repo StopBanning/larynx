@@ -75,6 +75,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         recentItem.submenu = recentMenu
         menu.addItem(recentItem)
 
+        if let last = Undo.last, Date().timeIntervalSince(last.time) <= Undo.window {
+            let item = NSMenuItem(title: "Undo Last Dictation", action: #selector(undoDictation), keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+        }
+
         if !Relearn.lastApplied.isEmpty {
             let undo = NSMenuItem(title: "Undo Learned: " + Relearn.describe(Relearn.lastApplied), action: #selector(undoLearned), keyEquivalent: "")
             undo.target = self
@@ -194,6 +200,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         guard save(raw, for: .toggleKeys) else { return }
         activeHotkey?.toggleKeys = Hotkey.Key(rawValue: raw).map { [$0] } ?? []
         log("hands-free key: " + (raw.isEmpty ? "none" : raw))
+    }
+
+    /// ⌘Z once in the app the last dictation went to, if it is still in front (the menu doesn't take focus).
+    @objc func undoDictation() {
+        guard let last = Undo.last, last.matches(NSWorkspace.shared.frontmostApplication) else { NSSound.beep(); return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { Undo.perform(last) }  // let the menu close first
     }
 
     @objc func undoLearned() { Task { @MainActor in Relearn.undoLast() } }

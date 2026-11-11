@@ -744,6 +744,12 @@
       "mode": "standard",
       "in": "Feed the cat, um, the dog before you leave.",
       "expect": "Feed the dog before you leave."
+    },
+    {
+      "id": "t-pronoun-comma-filler",
+      "mode": "ai",
+      "in": "I, uh, hit that, um, what's it called? Capture.",
+      "expect": "I hit that, what's it called? Capture."
     }
   ],
   "rewrite": [
@@ -1692,6 +1698,21 @@
       "id": "keep-comma-tag-04",
       "in": "The plan is, so far, working.",
       "expect": "The plan is, so far, working."
+    },
+    {
+      "id": "keep-pronoun-comma-01",
+      "in": "I, for one, think it's fine.",
+      "expect": "I, for one, think it's fine."
+    },
+    {
+      "id": "keep-pronoun-comma-02",
+      "in": "We, the people, agree.",
+      "expect": "We, the people, agree."
+    },
+    {
+      "id": "keep-pronoun-comma-03",
+      "in": "You, Sam, should go first.",
+      "expect": "You, Sam, should go first."
     }
   ],
   "numbers": {

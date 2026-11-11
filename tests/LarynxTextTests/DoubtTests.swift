@@ -25,3 +25,8 @@ private func known(_ w: String) -> Bool { english.contains(w) }
     let words: [(word: String, confidence: Float)] = [("pass", 1), ("off", 1), ("Robus", 0.34)]
     #expect(Doubt.words(words, finalText: "pass off to Opus", isKnown: known).isEmpty)
 }
+
+@Test func scratchThatAloneIsAnUndoButNotInsideASentence() {
+    for t in ["Scratch that.", "scratch that", "Undo that!", "Delete that."] { #expect(VoiceCommand.isUndo(t), "\(t)") }
+    for t in ["Scratch that idea and start over.", "I said scratch that", "Scratch the last part."] { #expect(!VoiceCommand.isUndo(t), "\(t)") }
+}

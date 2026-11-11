@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import Foundation
 import LarynxCore
+import LarynxText
 
 // Talk keys: --key, else `defaults write com.automatedworkflow.larynx keys fn,rightCommand`, else Fn, Right Option or Right Command.
 let savedKeys = (Settings.shared.string(.keys)).split(separator: ",").compactMap { Hotkey.Key(rawValue: String($0)) }
@@ -62,6 +63,9 @@ extension Hotkey.Key {
 
     // Each press is one utterance with its own target app, captured at key-down, so switching apps mid-sentence
     // (or a slow result) never sends text to the wrong place.
+    // The menu bar app keeps the microphone open for `micWarm` seconds after a dictation, so the next press starts
+    // instantly (a cold start loses the first 150-300 ms). Command-line tools and serve close it at once.
+    if inApp { recorder.warmSeconds = { Double(Settings.shared.string(.micWarm)) ?? 30 } }
     let hotkey = Hotkey(keys: keys, onDown: {
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
         let micStart = Date()
@@ -118,8 +122,16 @@ extension Hotkey.Key {
                     return
                 }
                 guard session.state.deliver() else { return }
+                // "Scratch that" on its own, soon after a dictation into the same app: undo that dictation instead.
+                if Undo.isCommand(text), let last = Undo.last, last.matches(app) {
+                    History.shared.discard(pending)
+                    Undo.perform(last)
+                    if session.shouldPresent { Pill.shared.message("Undid the last dictation", symbol: "arrow.uturn.backward", seconds: 1.5); setStatus("Ready") }
+                    return
+                }
                 let delivery = await Inserter.deliver(text, to: app)
                 let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label)
+                if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }
                 if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }
                 MenuController.shared.remember(text)
                 // Said it again with a word fixed? Learn the fix (never from password fields or snippets).
@@ -140,9 +152,9 @@ extension Hotkey.Key {
                 } else {
                     if session.shouldPresent {
                         Pill.shared.hide()
-                        setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
+                        setStatus(delivery.isInserted ? "Ready" : "Ready (also on the clipboard)")
                     }
-                    if delivery == .inserted { watchForFixes(text, in: app, id: saved?.id) }
+                    if delivery.isInserted { watchForFixes(text, in: app, id: saved?.id) }
                     if !learned.isEmpty {
                         log("learned from a repeat: " + Relearn.describe(learned))
                         Task { await reloadVocabulary() }
@@ -262,3 +274,28 @@ func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? 
     }
 }
 
+
+
+/// "Scratch that": undo the last dictation (⌘Z once in the app it went to) when it is said on its own within 30 s,
+/// into the same app. Otherwise the words are typed like any others. Also the menu's Undo Last Dictation.
+enum Undo {
+    struct Entry {
+        let id: String?
+        let pid: pid_t?
+        let time: Date
+        func matches(_ app: NSRunningApplication?) -> Bool {
+            Date().timeIntervalSince(time) <= Undo.window && pid != nil && app?.processIdentifier == pid
+        }
+    }
+    static let window: TimeInterval = 30
+    nonisolated(unsafe) static var last: Entry?
+
+    static func isCommand(_ text: String) -> Bool { VoiceCommand.isUndo(text) }
+
+    static func perform(_ entry: Entry) {
+        Inserter.sendUndo()
+        if let id = entry.id { History.shared.addFlag("undone", to: id) }
+        last = nil
+        log("undid the last dictation (scratch that)")
+    }
+}

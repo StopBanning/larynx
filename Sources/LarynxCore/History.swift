@@ -158,6 +158,14 @@ public final class History: @unchecked Sendable {
 
     public func recent(limit: Int = 10) -> [Row] { (try? query(nil, limit: limit)) ?? [] }
 
+    /// Adds a flag to a saved dictation ("undone" after "scratch that").
+    public func addFlag(_ flag: String, to id: String) {
+        try? withDB { db in
+            try exec(db, "UPDATE dictations SET flags = CASE WHEN flags IS NULL OR flags = '' THEN ? ELSE flags || ',' || ? END WHERE id = ? AND (',' || COALESCE(flags, '') || ',') NOT LIKE ?",
+                     [flag, flag, id, "%," + flag + ",%"])
+        }
+    }
+
     /// Records what dictation `id` should have said (`source`: "edit" or "repeat"). Kept only as long as the dictation.
     public func recordCorrection(id: String, text: String, source: String, now: Date = Date()) {
         try? withDB { db in

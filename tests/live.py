@@ -5,7 +5,8 @@ scripts/when-idle.sh (keyboard and mouse idle; stops the moment you touch them):
 
     scripts/when-idle.sh python3 tests/live.py
 
-Checks the words arrive in the capture window exactly once, reports the time from transcript to text on screen,
+Checks the words arrive in the capture window exactly once, both by paste and (with the paste dropped on purpose) by
+the verify-and-fall-back path, reports the time from transcript to text on screen,
 then gives the front back to the app that had it. Your history and clipboard are untouched (LARYNX_DATA_DIR is a
 temporary folder; the clipboard is restored).
 """
@@ -47,10 +48,7 @@ def capture_app(work):
     return app
 
 
-def main():
-    if os.environ.get("LARYNX_LIVE_OK") != "1":
-        sys.exit("live.py pastes into a window it brings to the front: run it as  scripts/when-idle.sh python3 tests/live.py")
-    previous = front_bundle()
+def run_case(name, extra_env, want_delivery):
     work = tempfile.mkdtemp(dir=os.path.expanduser("~/work/scratch"), prefix="larynx-live-")
     out = Path(work) / "capture.jsonl"
     out.touch()
@@ -64,7 +62,7 @@ def main():
                               capture_output=True).returncode == 0: break
             time.sleep(1)
         else:
-            sys.exit("FAIL: could not launch the capture window")
+            return False, f"{name}: could not launch the capture window"
         lines, deadline = [], time.time() + 15
         while time.time() < deadline and not lines:
             lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
@@ -72,30 +70,49 @@ def main():
         ready = lines[0] if lines else {}
         cap_pid = ready.get("pid")
         if ready.get("event") != "ready" or not ready.get("front"):
-            sys.exit(f"FAIL: capture window did not come to the front: {ready}")
+            return False, f"{name}: capture window did not come to the front: {ready}"
         with tempfile.TemporaryDirectory(dir=os.path.expanduser("~/work/scratch")) as data:
-            env = dict(os.environ, LARYNX_CAPTURE_PID=str(ready["pid"]), LARYNX_DATA_DIR=data)
+            env = dict(os.environ, LARYNX_CAPTURE_PID=str(cap_pid), LARYNX_DATA_DIR=data, **extra_env)
             feed = subprocess.run([BIN, "listen", "--feed", str(ROOT / "tests/fixtures/report.wav"), "--deliver",
                                    "--mode", "standard", "--models-dir", MODELS], capture_output=True, text=True, env=env, timeout=300)
         result = next((json.loads(l) for l in feed.stdout.splitlines() if '"event":"result"' in l.replace(" ", "")), None)
         if not result:
-            sys.exit(f"FAIL: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]}")
+            return False, f"{name}: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]}"
         expected, seen, deadline = result["text"], "", time.time() + 3
         while time.time() < deadline and expected not in seen:
             texts = [m["text"] for m in map(json.loads, filter(str.strip, out.read_text().splitlines())) if m.get("event") == "text"]
             seen = texts[-1] if texts else ""
             time.sleep(0.05)
-        ok = seen.strip() == expected.strip()
-        print(f"{'PASS' if ok else 'FAIL'}: delivery {result.get('delivery')}, {result.get('deliverMs')} ms to paste; "
-              f"window shows {seen!r}" + ("" if ok else f", expected {expected!r}"))
-        sys.exit(0 if ok else 1)
+        time.sleep(0.8)  # a late duplicate would show up here
+        texts = [m["text"] for m in map(json.loads, filter(str.strip, out.read_text().splitlines())) if m.get("event") == "text"]
+        seen = texts[-1] if texts else ""
+        delivery = result.get("delivery", "")
+        ok = seen.strip() == expected.strip() and delivery.startswith(want_delivery)
+        return ok, (f"{name}: delivery {delivery!r}, {result.get('deliverMs')} ms; window shows {seen!r}"
+                    + ("" if ok else f" (expected {expected!r} once, delivery {want_delivery!r})"))
     finally:
         if cap_pid:
             try: os.kill(cap_pid, 15)
             except ProcessLookupError: pass
-        if previous: subprocess.run(["open", "-b", previous])
         subprocess.run([LSREGISTER, "-u", str(Path(work) / "LarynxCaptureTest.app")], capture_output=True)
         shutil.rmtree(work, ignore_errors=True)
+
+
+def main():
+    if os.environ.get("LARYNX_LIVE_OK") != "1":
+        sys.exit("live.py pastes into a window it brings to the front: run it as  scripts/when-idle.sh python3 tests/live.py")
+    previous = front_bundle()
+    cases = [("paste, verified", {}, "inserted"),
+             ("paste never arrives -> fallback inserts once", {"LARYNX_TEST_DROP_PASTE": "1"}, "inserted by")]
+    failed = 0
+    try:
+        for name, env, want in cases:
+            ok, line = run_case(name, env, want)
+            print(("PASS " if ok else "FAIL ") + line, flush=True)
+            failed += not ok
+    finally:
+        if previous: subprocess.run(["open", "-b", previous])
+    sys.exit(1 if failed else 0)
 
 
 if __name__ == "__main__":

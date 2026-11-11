@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **The first word isn't lost either.** The microphone took 150-300 ms to start on every press, enough to swallow
+  a first syllable. It now stays open for 30 s after a dictation (`micWarm`), so the next press starts instantly and
+  includes the 0.15 s before it. Audio while waiting only passes through a 0.15 s buffer in memory and is never
+  kept; macOS shows its microphone indicator meanwhile. `micWarm: 0` closes it after every dictation.
+- **A paste can't silently fail.** Where the text field can be read, Larynx checks the words arrived; if the field
+  is unchanged, it inserts them through Accessibility, then by typing, then leaves them on the clipboard and says
+  so. A field that changed or can't be read is left alone, so nothing is ever inserted twice (`verifyPaste`).
+- **"Scratch that"** (or "undo that") said on its own within 30 seconds of a dictation, in the same app, undoes it.
+  Also in the menu: Undo Last Dictation.
+- Dictations put on the clipboard for pasting are marked transient, so clipboard managers don't keep them.
+- "I, uh, hit that" → "I hit that" (the comma was only the pause before the "uh").
 - **The last word is no longer cut off** when you let go of the key while still saying it: Larynx keeps listening
   until the word ends (at most 0.3 s). Dictations that end in a pause stop at once, as before, so there's no added
   delay; on the author's recordings the tail would run for 1 in 53. A new press during the tail starts the next

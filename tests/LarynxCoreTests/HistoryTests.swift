@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import LarynxCore
@@ -170,4 +171,21 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(Golden.isWordFix("Send it to Mike tomorrow morning.", "Send it to Mike tomorrow evening."))
     #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Send it to Mike tomorrow."))
     #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Actually, let's wait until next week to decide."))
+}
+
+@Test func pastesAreMarkedTransientForClipboardManagers() {
+    let board = NSPasteboard(name: NSPasteboard.Name("larynx-test-\(UUID())"))
+    defer { board.releaseGlobally() }
+    Inserter.writeTransient("Ship it on Friday.", to: board)
+    #expect(board.string(forType: .string) == "Ship it on Friday.")
+    for type in Inserter.transientTypes { #expect(board.types?.contains(type) == true) }
+}
+
+@Test func undoneDictationsAreFlaggedOnce() throws {
+    let f = try HistoryFixture()
+    let pending = f.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
+    let row = try #require(f.history.complete(pending, transcript: f.transcript("Send the deck."), delivery: "inserted"))
+    f.history.addFlag("undone", to: row.id)
+    f.history.addFlag("undone", to: row.id)
+    #expect(f.history.recent(limit: 1).first?.flags == ["undone"])
 }

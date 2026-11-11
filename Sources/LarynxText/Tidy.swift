@@ -81,6 +81,9 @@ public enum Tidy {
         // word said again right after the "uh" marks where the speaker started over; only one word is dropped with it.
         s = s.replacingOccurrences(of: "(?i)\\b(\(restartWords))\\s+[\\w']+,?\\s+(?:\(fillers)|er|ah)[,.]?\\s+(?=\\1\\s+\\w)", with: "",
                                    options: .regularExpression)
+        // 0b. "I, uh, hit that": the comma after a subject pronoun was only the pause before the filler.
+        s = s.replacingOccurrences(of: "\\b(I|[Ww]e|[Yy]ou|[Tt]hey|[Hh]e|[Ss]he),\\s*(?i:\(fillers))[,.]?\\s+(?=[a-z])", with: "$1 ",
+                                   options: .regularExpression)
         // 1. Leftover fillers, with the comma that came with them.
         s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .regularExpression)
         // 1b. "er", "ah", "eh" in the middle of a sentence are hesitations ("the total is, er, about"). Lowercase only,

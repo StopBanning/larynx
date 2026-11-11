@@ -13,6 +13,13 @@ public final class Recorder: @unchecked Sendable {
 
     public private(set) var isRecording = false
     private var lastLevel: Float = 0
+    /// How long the microphone stays open after a dictation (seconds; 0 closes it at once). A warm microphone starts
+    /// instantly and includes `preRoll` from just before the press; a cold one takes 150-300 ms, enough to lose the
+    /// first syllable. While warm, audio only passes through a `preRoll`-long ring in memory and is never kept.
+    public var warmSeconds: () -> Double = { 0 }
+    public static let preRoll: Double = 0.15
+    private var ring: [Float] = []
+    private var cooling: DispatchWorkItem?
     /// True while `stopAfterTail` is still listening past key-up; a `start()` then takes over instead.
     private var tailing = false
     private var handedOver: [Float]?
@@ -33,29 +40,50 @@ public final class Recorder: @unchecked Sendable {
             if tailing { handedOver = samples; samples.removeAll(keepingCapacity: true); tailing = false }
             return
         }
-        lock.lock(); samples.removeAll(keepingCapacity: true); lock.unlock()
+        cooling?.cancel(); cooling = nil
+        if engine.isRunning {
+            // Still warm from the last dictation: start at once, with the moment just before the press.
+            lock.withLock { samples = ring; ring.removeAll(keepingCapacity: true); isRecording = true }
+            return
+        }
+        lock.lock(); samples.removeAll(keepingCapacity: true); ring.removeAll(); lock.unlock()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0 else { throw LarynxError.noMicrophone }
         converter = AVAudioConverter(from: format, to: target)
+        input.removeTap(onBus: 0)  // a warm engine the system stopped (device change) may still hold the old tap
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             self?.append(buffer)
         }
         engine.prepare()
         try engine.start()
-        isRecording = true
+        lock.withLock { isRecording = true }
     }
 
     /// Stops capture and returns everything recorded since `start()`.
     @discardableResult
     public func stop() -> [Float] {
         if isRecording {
-            engine.inputNode.removeTap(onBus: 0)
-            engine.stop()
-            isRecording = false
+            lock.withLock { isRecording = false }
+            let warm = warmSeconds()
+            if warm > 0 {
+                let work = DispatchWorkItem { [weak self] in self?.coolDown() }
+                cooling = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + warm, execute: work)
+            } else {
+                coolDown()
+            }
         }
         lock.lock(); defer { lock.unlock() }
         return samples
+    }
+
+    /// Closes the microphone now (unless a dictation started meanwhile).
+    public func coolDown() {
+        guard !isRecording, engine.isRunning else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        lock.withLock { ring.removeAll() }
     }
 
     /// Stops at key-up, unless the last word is still being spoken: then keeps recording until it goes quiet, for at
@@ -129,7 +157,17 @@ public final class Recorder: @unchecked Sendable {
         var sum: Float = 0
         for x in chunk { sum += x * x }
         let rms = chunk.isEmpty ? 0 : (sum / Float(chunk.count)).squareRoot()
-        lock.lock(); samples.append(contentsOf: chunk); lastLevel = rms; lock.unlock()
+        lock.lock()
+        if isRecording {
+            samples.append(contentsOf: chunk)
+        } else {
+            // Warm but not recording: keep only the last `preRoll` seconds, to put in front of the next press.
+            ring.append(contentsOf: chunk)
+            let keep = Int(Recorder.sampleRate * Recorder.preRoll)
+            if ring.count > keep { ring.removeFirst(ring.count - keep) }
+        }
+        lastLevel = rms
+        lock.unlock()
     }
 }
 

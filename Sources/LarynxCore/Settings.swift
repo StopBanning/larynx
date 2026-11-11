@@ -13,7 +13,7 @@ public final class Settings: @unchecked Sendable {
 
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
-        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint
+        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -32,6 +32,7 @@ public final class Settings: @unchecked Sendable {
             case .keepAudio, .debugText: return "off"
             case .pillPosition: return "auto"
             case .pillGlass: return "25"
+            case .micWarm: return "30"
             default: return "on"
             }
         }
@@ -40,9 +41,10 @@ public final class Settings: @unchecked Sendable {
             switch self {
             case .engine: return ["clean", "parakeet", "bark3", "ultra", "unified"].contains(value)
             case .rewrite: return ["auto", "off"].contains(value)
-            case .vocabulary, .devTerms, .preview, .learn, .history, .debugText, .handsFree, .doubtHint: return ["on", "off"].contains(value)
+            case .vocabulary, .devTerms, .preview, .learn, .history, .debugText, .handsFree, .doubtHint, .verifyPaste: return ["on", "off"].contains(value)
             case .pillPosition: return ["auto", "bottom"].contains(value)
             case .pillGlass: return Int(value).map { (0...100).contains($0) } ?? false
+            case .micWarm: return Int(value).map { (0...300).contains($0) } ?? false
             case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
             case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet: return ["true", "false"].contains(value)
