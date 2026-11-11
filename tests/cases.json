@@ -708,6 +708,42 @@
       "mode": "correspondence",
       "in": "Thanks for the update,",
       "expect": "Thanks for the update."
+    },
+    {
+      "id": "t-false-start-no-comma",
+      "mode": "standard",
+      "in": "I went to the I drove to the store after work.",
+      "expect": "I drove to the store after work."
+    },
+    {
+      "id": "t-er-as-are",
+      "mode": "standard",
+      "in": "The total is, are, about $400.",
+      "expect": "The total is about $400."
+    },
+    {
+      "id": "t-a-the",
+      "mode": "standard",
+      "in": "I need a the keys.",
+      "expect": "I need the keys."
+    },
+    {
+      "id": "t-leading-ah-hesitating",
+      "mode": "standard",
+      "in": "Ah, I ah, need, ah, the ah, keys.",
+      "expect": "I need the keys."
+    },
+    {
+      "id": "t-restart-after-filler",
+      "mode": "ai",
+      "in": "So you can just make the reels from your uh from our workstation now.",
+      "expect": "So you can just make the reels from our workstation now."
+    },
+    {
+      "id": "t-restart-after-filler-noun",
+      "mode": "standard",
+      "in": "Feed the cat, um, the dog before you leave.",
+      "expect": "Feed the dog before you leave."
     }
   ],
   "rewrite": [
@@ -1576,6 +1612,66 @@
       "id": "keep-comma-10",
       "in": "The answer is, there is no answer.",
       "expect": "The answer is, there is no answer."
+    },
+    {
+      "id": "keep-hesitate-01",
+      "in": "I think the I phone is great.",
+      "expect": "I think the I phone is great."
+    },
+    {
+      "id": "keep-hesitate-02",
+      "in": "I saw the I beam they installed.",
+      "expect": "I saw the I beam they installed."
+    },
+    {
+      "id": "keep-hesitate-03",
+      "in": "Ah, I see it now.",
+      "expect": "Ah, I see it now."
+    },
+    {
+      "id": "keep-hesitate-04",
+      "in": "It's a theory.",
+      "expect": "It's a theory."
+    },
+    {
+      "id": "keep-hesitate-05",
+      "in": "Give me a theater ticket.",
+      "expect": "Give me a theater ticket."
+    },
+    {
+      "id": "keep-hesitate-06",
+      "in": "I went to the store I bought milk.",
+      "expect": "I went to the store I bought milk."
+    },
+    {
+      "id": "keep-hesitate-07",
+      "in": "Is it, though, are you sure?",
+      "expect": "Is it, though, are you sure?"
+    },
+    {
+      "id": "keep-hesitate-08",
+      "in": "Ah, that makes sense.",
+      "expect": "Ah, that makes sense."
+    },
+    {
+      "id": "keep-restart-01",
+      "in": "Send it from your phone or from our office.",
+      "expect": "Send it from your phone or from our office."
+    },
+    {
+      "id": "keep-restart-02",
+      "in": "Put the cat in the car and the dog in the yard.",
+      "expect": "Put the cat in the car and the dog in the yard."
+    },
+    {
+      "id": "keep-restart-03",
+      "in": "It's in the drawer, in the kitchen.",
+      "expect": "It's in the drawer, in the kitchen."
+    },
+    {
+      "id": "keep-restart-04",
+      "in": "I talked to her about it, to be honest.",
+      "expect": "I talked to her about it, to be honest."
     }
   ],
   "numbers": {

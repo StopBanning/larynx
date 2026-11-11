@@ -35,6 +35,10 @@ public enum Tidy {
     static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
     /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
     static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
+    /// Verbs a speaker restarts a sentence with ("I went to the, I drove"); "I phone", "I beam" are not restarts.
+    static let restartVerbs = "[a-z]+ed|drove|went|was|think|thought|want|need|have|had|got|get|said|say|mean|guess|told|saw|see|did|do|don't|didn't|put|took|take|made|make|can|could|will|would|just|really|also|bought|came|come|left|ran|found|know|knew|love|like|wanna|gotta|gonna"
+    /// Small words a speaker goes back to when correcting the next word ("from your uh from our", "the cat um the dog").
+    static let restartWords = "from|to|in|on|at|for|with|of|about|into|the|a|an|my|your|our|their|his|her|this|that"
     static let joiners = "to|at|of|for|with|from|about|the|a|an|and|but|or|my|your|our|their"
     /// What may follow "on," / "in," when the comma is a leftover: a determiner, a number, or a capitalized name.
     static let clauseFollowers = "(?:(?i:the|a|an|my|your|our|their|his|her|its)\\b|\\d|(?i:one|two|three|four|five|six|seven|eight|nine|ten)\\b|(?!I\\b|I')[A-Z])"
@@ -43,16 +47,32 @@ public enum Tidy {
 
     public static func apply(_ text: String, mode: CleanupMode) -> String {
         var s = text
+        // 0. A phrase restarted after a filler: "from your uh from our workstation" -> "from our workstation". The small
+        // word said again right after the "uh" marks where the speaker started over; only one word is dropped with it.
+        s = s.replacingOccurrences(of: "(?i)\\b(\(restartWords))\\s+[\\w']+,?\\s+(?:\(fillers)|er|ah)[,.]?\\s+(?=\\1\\s+\\w)", with: "",
+                                   options: .regularExpression)
         // 1. Leftover fillers, with the comma that came with them.
         s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .regularExpression)
         // 1b. "er", "ah", "eh" in the middle of a sentence are hesitations ("the total is, er, about"). Lowercase only,
         // so "the ER was packed" stays, and never at the start ("Ah, I see").
         s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])(?:,?\\s+(?:er|ah|eh)(?=[,.\\s]|$))+[,]?", with: "", options: .regularExpression)
+        // 1b2. "The total is, are, about": "er" heard as "are" between commas after "is"/"was", which is never grammar.
+        s = s.replacingOccurrences(of: "(?<=\\b(?:is|was|Is|Was)),\\s+are,(?=\\s)", with: ",", options: .regularExpression)
+        // "a the keys": a hesitation heard as "a" before "the".
+        s = s.replacingOccurrences(of: "\\b[Aa]n?\\s+(?=the\\b)", with: "", options: .regularExpression)
+        // A leading "Ah," is a hesitation too when the speaker keeps hesitating ("Ah, I uh need uh the keys");
+        // on its own it is a reaction and stays ("Ah, I see").
+        if text.range(of: "(?i)\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b", options: .regularExpression) != nil {
+            s = s.replacingOccurrences(of: "^(?:Ah|Eh),?\\s+", with: "", options: .regularExpression)
+        }
         // 1c. "Aye, I, I": a stuttered "I" written as "Aye".
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .regularExpression)
         // 1d. A false start: an unfinished clause ending on a small word, then the same speaker starts again.
         // "I went to the, I drove to the store" -> "I drove to the store". "I went to the store, I bought milk" stays.
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)(i|we|you|he|she|they|it)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|to|of|for|with|in|on|at|and|my|your|our|their),\\s+(?=\\2\\b)",
+                                   with: "$1", options: .regularExpression)
+        // Without the comma only after "the/a/my...": "I went to the I drove" (a determiner never comes before "I").
+        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(I)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|my|your|our|their)\\s+(?=I(?:'m|'ll|'ve|'d|\\s+(?:\(restartVerbs))\\b))",
                                    with: "$1", options: .regularExpression)
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we want" -> "when we when we want"
         // (the repeat is removed next).

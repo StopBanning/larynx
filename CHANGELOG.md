@@ -14,6 +14,10 @@
   "Log in, then click save". Leftover commas are still removed where a filler was ("meet on, Thursday" → "meet on
   Thursday"), and "The thing is, we need more time" keeps its comma.
 - A dictation no longer ends on a comma or semicolon.
+- A phrase restarted after an "uh" keeps only the restart: "from your uh from our workstation" → "from our
+  workstation", "the cat, um, the dog" → "the dog".
+- More of what Parakeet Ultra writes out is tidied: "I went to the I drove" (a false start with no comma), "er" heard
+  as ", are," after "is", "a the keys", and a leading "Ah," when the speaker keeps hesitating ("Ah, I see" stays).
 - Numbers no longer wake the AI rewrite in Mail and Messages (the numbers stage does it instantly; the rewrite took
   about 1.6 s). When the rewrite does run for a correction, the numbers stage formats its result ("at two, no wait,
   three thirty" → "at 3:30"). "Move it to eleven fifteen" → "to 11:15" (quarter and half hours after "to").
