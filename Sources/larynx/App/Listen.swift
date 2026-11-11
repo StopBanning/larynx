@@ -64,12 +64,14 @@ extension Hotkey.Key {
     // (or a slow result) never sends text to the wrong place.
     let hotkey = Hotkey(keys: keys, onDown: {
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
+        let micStart = Date()
         do { try recorder.start() } catch { session.reset(); log("\(error)"); return }
+        let micMs = ms(since: micStart)
         ListenSession.current = session
         session.privateField = Privacy.isPrivate(app: session.target)
         NSSound(named: "Tink")?.play()
         setStatus("Listening...", recording: true)
-        log("recording... [\(session.target?.bundleIdentifier ?? "?")]")
+        log("recording... [\(session.target?.bundleIdentifier ?? "?")] mic \(micMs) ms")
         guard inApp, Pill.enabled else { return }
         Pill.shared.listen(app: session.target, privateField: session.privateField,
                            field: Inserter.focusedFieldFrame(in: session.target), level: { recorder.level })
@@ -91,7 +93,9 @@ extension Hotkey.Key {
     }, onUp: {
         guard let session = ListenSession.current, session.state.finish() else { return }
         session.stopPreview()
-        let samples = recorder.stop()
+        Task { @MainActor in
+        let (samples, tailMs) = await recorder.stopAfterTail()
+        if tailMs > 0 { log("kept listening \(tailMs) ms after the key: a word was still being said") }
         let app = session.target
         guard Double(samples.count) / Recorder.sampleRate >= 0.3 else {  // a tap, not dictation
             session.reset(); setStatus("Ready"); Pill.shared.hide(); return
@@ -157,6 +161,7 @@ extension Hotkey.Key {
                 log("\(error)\(pending.persists ? " (audio kept for recovery: \(pending.id))" : "")")
             }
         }
+        }  // tail task
     }, onCancel: {
         if ListenSession.current?.locked == true { NSSound(named: "Bottle")?.play() }
         ListenSession.current?.reset()

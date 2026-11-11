@@ -13,6 +13,9 @@ public final class Recorder: @unchecked Sendable {
 
     public private(set) var isRecording = false
     private var lastLevel: Float = 0
+    /// True while `stopAfterTail` is still listening past key-up; a `start()` then takes over instead.
+    private var tailing = false
+    private var handedOver: [Float]?
 
     /// Loudness of the most recent buffer (RMS, 0...1; speech is usually 0.01-0.3). Drives the pill's waveform.
     public var level: Float {
@@ -23,7 +26,13 @@ public final class Recorder: @unchecked Sendable {
     public init() {}
 
     public func start() throws {
-        guard !isRecording else { return }
+        if isRecording {
+            // A new press while the last dictation's tail is still recording: hand that recording over and keep the
+            // microphone running for the new one.
+            lock.lock(); defer { lock.unlock() }
+            if tailing { handedOver = samples; samples.removeAll(keepingCapacity: true); tailing = false }
+            return
+        }
         lock.lock(); samples.removeAll(keepingCapacity: true); lock.unlock()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
@@ -47,6 +56,40 @@ public final class Recorder: @unchecked Sendable {
         }
         lock.lock(); defer { lock.unlock() }
         return samples
+    }
+
+    /// Stops at key-up, unless the last word is still being spoken: then keeps recording until it goes quiet, for at
+    /// most `maxTail` seconds, so the end of a word said as the key comes up isn't cut off. Most dictations end in a
+    /// pause and stop at once, so this adds no delay to them. Returns the samples and how long the tail ran.
+    public func stopAfterTail(maxTail: TimeInterval = 0.3) async -> (samples: [Float], tailMs: Int) {
+        guard isRecording, maxTail > 0, Recorder.speechAtEnd(snapshot()) else { return (stop(), 0) }
+        lock.withLock { tailing = true }
+        let started = Date()
+        while Date().timeIntervalSince(started) < maxTail {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            if !lock.withLock({ tailing }) { break }
+            if !Recorder.speechAtEnd(snapshot()) { break }
+        }
+        let ms = Int(Date().timeIntervalSince(started) * 1000)
+        // A new press took over during the tail: it already set this recording aside.
+        let taken: [Float]? = lock.withLock {
+            defer { handedOver = nil; tailing = false }
+            return handedOver
+        }
+        if let taken { return (taken, ms) }
+        return (stop(), ms)
+    }
+
+    /// Is someone still talking at the end of `samples`? The last 100 ms is well above the clip's own noise floor.
+    public static func speechAtEnd(_ samples: [Float]) -> Bool {
+        let frame = Int(sampleRate * 0.05)
+        guard samples.count >= frame * 4 else { return false }
+        var frames: [Float] = []
+        var i = max(0, samples.count - Int(sampleRate * 10))  // the last 10 s is plenty for the noise floor
+        while i + frame <= samples.count { frames.append(rms(Array(samples[i..<(i + frame)]))); i += frame }
+        let floor = frames.sorted()[frames.count / 10]
+        let end = rms(Array(samples.suffix(frame * 2)))
+        return end > max(0.012, floor * 4)
     }
 
     /// Everything recorded so far, without stopping (for the live preview).

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The last word is no longer cut off** when you let go of the key while still saying it: Larynx keeps listening
+  until the word ends (at most 0.3 s). Dictations that end in a pause stop at once, as before, so there's no added
+  delay; on the author's recordings the tail would run for 1 in 53. A new press during the tail starts the next
+  dictation without losing either. The microphone's start time is logged on each press.
 - **Live test rig.** `larynx capture-window` (a test window that logs every text change), `larynx listen --feed
   <file> --deliver` (the real paste path, but only into that window: it refuses any other app and puts your
   clipboard back), `scripts/when-idle.sh` (runs a command only when you've been idle 5 minutes, the screen is
