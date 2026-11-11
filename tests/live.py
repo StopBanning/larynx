@@ -49,7 +49,9 @@ def capture_app(work):
 
 
 def run_case(name, extra_env, want_delivery, prefill="", expect=lambda text: text):
-    work = tempfile.mkdtemp(dir=os.path.expanduser("~/work/scratch"), prefix="larynx-live-")
+    # The test app must be on the startup disk: macOS won't launch a bundle from a volume mounted with ownership
+    # ignored (this Mac's ~/work/scratch is on such a drive). It is deleted at the end of the case.
+    work = tempfile.mkdtemp(prefix="larynx-live-")
     out = Path(work) / "capture.jsonl"
     out.touch()
     cap_pid = None

@@ -443,10 +443,16 @@ func runFeed(_ path: String) async {
         var delivery = "none"
         var deliveredMs: Int?
         if args.contains("--deliver"), !result.text.isEmpty {
-            guard let pid = Int32(ProcessInfo.processInfo.environment["LARYNX_CAPTURE_PID"] ?? ""),
-                  let target = NSRunningApplication(processIdentifier: pid),
-                  target.executableURL?.lastPathComponent == "larynx" else {
+            guard let pid = Int32(ProcessInfo.processInfo.environment["LARYNX_CAPTURE_PID"] ?? "") else {
                 emit(["event": "error", "message": "--deliver needs LARYNX_CAPTURE_PID of a running larynx capture-window"]); exit(2)
+            }
+            // The process must be a larynx binary (the capture window), never another app. Its path comes from the
+            // kernel, so this works even before the window has registered with the window server.
+            var buffer = [CChar](repeating: 0, count: 4096)
+            let path = proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 ? String(cString: buffer) : ""
+            guard URL(fileURLWithPath: path).lastPathComponent == "larynx",
+                  let target = NSRunningApplication(processIdentifier: pid) else {
+                emit(["event": "error", "message": "--deliver refused: pid \(pid) is \(path.isEmpty ? "not running" : path)\(NSRunningApplication(processIdentifier: pid) == nil ? " (not an app)" : "")"]); exit(2)
             }
             let board = NSPasteboard.general
             let saved: [[(NSPasteboard.PasteboardType, Data)]] = (board.pasteboardItems ?? []).map { item in
