@@ -1,0 +1,8 @@
+{
+  "engine": "ultra",
+  "clips": 50,
+  "p50ms": 64,
+  "p90ms": 99,
+  "maxms": 130,
+  "pass": true
+}

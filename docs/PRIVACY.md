@@ -15,6 +15,7 @@ user account only.
 | Audio of a dictation while it is being transcribed (crash spool) | `history/spool/<id>.wav` | Until the transcript is saved, normally well under a second | `history: off` |
 | Audio after transcription | `history/audio/<id>.flac` | Not kept unless you set `keepAudio` to a number of days | `keepAudio: off` (default) |
 | Your fix to a dictation (a word you edited after the paste, or said again) | `history.sqlite`, table `corrections` | As long as the dictation | `learn: off` |
+| Text on screen at each press (around the cursor, the visible window text) to spell names | Memory only, for that one dictation | Never kept or logged | `context: off` |
 | Golden set: recordings you chose with what you meant (`larynx golden add`) | `golden/` | Until you remove them (`larynx golden remove <id>`); not affected by `keepAudio` | Don't add any |
 | Your words | `dictionary.json`, `vocabulary.txt`, `snippets.json` | Until you edit them | - |
 | Settings | `settings.json` (and the `com.automatedworkflow.larynx` defaults) | - | - |

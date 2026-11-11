@@ -73,7 +73,8 @@ func requestMicrophone() async -> Bool {
 }
 
 /// Transcribes, optionally cleans, and reports timing for one utterance.
-func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> Transcript {
+func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim,
+            screen: [String]? = nil) async throws -> Transcript {
     let started = Date()
     try await Loader.shared.task.value
     if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
@@ -89,6 +90,10 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
                                    snippets: tidy ? Snippets.load() : [:], dictionary: tidy ? Dictionary.load() : [:],
                                    caseTerms: vocabularyCache.terms, settings: settings)
     var result = await Pipeline().run(input, context: context)
+    // Homophones settled by the names on screen ("doc" -> "Dock"), in shadow: recorded, not applied yet.
+    if let terms = screen, let proposal = ContextWords.proposal(result.text, screenTerms: terms) {
+        result.steps.append(Step(stage: "shadow:context", before: result.text, after: proposal, applied: false))
+    }
     result.confidence = (Double(heard.confidence) * 1000).rounded() / 1000
     let doubtful = Doubt.words(heard.words.map { ($0.word, $0.confidence) }, finalText: result.text,
                                isKnown: { word in Vocabulary.isEnglish(word) || vocabularyCache.terms.contains { $0.lowercased() == word } })

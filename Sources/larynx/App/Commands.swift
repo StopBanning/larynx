@@ -68,6 +68,21 @@ func runTranscribe() async {
         try await Loader.shared.task.value
         log("model ready in \(ms(since: loadStart)) ms")
         // --words: what the model heard with its confidence per word (for calibrating doubt), then exit.
+        // --context-text "...": what the context pass (names from the screen) would propose, given that screen text.
+        if let screenText = option("--context-text") {
+            await Loader.shared.vocabulary.value
+            let heard = try await transcriber.transcribeDetailed(samples)
+            let terms = ContextTerms.extract([screenText], isEnglish: { Vocabulary.isEnglish($0) })
+            print("heard:   \(heard.text)\nterms:   \(terms.joined(separator: ", "))")
+            guard let models = await transcriber.contextModels() else { print("no keyword model loaded"); exit(1) }
+            let t = Date()
+            guard let vocabulary = await Transcriber.makeContextVocabulary(extra: terms, models: models) else { print("no new terms"); exit(0) }
+            let built = ms(since: t)
+            let t2 = Date()
+            let proposal = await transcriber.contextProposal(heard, samples: samples, vocabulary: vocabulary)
+            print("context: \(proposal ?? "(no change)")  [vocabulary \(built) ms, rescoring \(ms(since: t2)) ms]")
+            exit(0)
+        }
         // Several files: every audio path among the arguments, one line each ("path<TAB>confidence<TAB>words").
         if args.contains("--words") {
             let files = args.dropFirst().filter { ["wav", "flac", "m4a", "aiff", "mp3"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) && FileManager.default.fileExists(atPath: $0) }
@@ -329,6 +344,16 @@ case "review":
         for (a, b) in repeats { print("\n[said again] \(a.id)\n   first:  \(a.text)\n   second: \(b.text)") }
         for r in undone { print("\n[undone] \(r.id)  \(r.text)") }
     }
+    exit(0)
+case "context":
+    // What Larynx would read around the cursor: sizes, timing and the names found, never the raw text.
+    // larynx context [--app <bundle id>] (default: the front app)
+    let target = option("--app").flatMap { id in NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == id } }
+        ?? NSWorkspace.shared.frontmostApplication
+    guard let ctx = ScreenContext.gather(app: target) else { print("no context (setting off, private app, or no Accessibility permission)"); exit(0) }
+    let terms = ContextTerms.extract([String(ctx.before.suffix(600)), ctx.windowTitle, ctx.after, ctx.visible], isEnglish: { Vocabulary.isEnglish($0) })
+    print("\(target?.bundleIdentifier ?? "?"): \(ctx.ms) ms, window title \(ctx.windowTitle.count) chars, before cursor \(ctx.before.count), after \(ctx.after.count), visible \(ctx.visible.count) chars from \(ctx.elements) elements\(ctx.complete ? "" : " (stopped at the limit)")")
+    print("names and terms (\(terms.count)): " + terms.joined(separator: ", "))
     exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).

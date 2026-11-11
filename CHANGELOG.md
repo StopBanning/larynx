@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Larynx reads what's on screen** (memory only, never kept): at each press it collects the names around the
+  cursor and in the window (about 25 ms in Claude, in the background) to settle words that sound the same, like
+  "doc" vs "Dock" when the Dock is on screen. Only a noun that sounds exactly like a name on screen is considered;
+  "make it so" never becomes "Mac". In shadow for now: suggestions are recorded (`larynx mine --shadow context`),
+  your text isn't changed until they've been checked. `context: off` turns it off; `larynx context` shows what it
+  finds without showing any text.
 - **Email layout in Mail and Outlook.** "Hi Sam, thanks for… Thanks, Colin." comes out with the greeting on its own
   line, a blank line, the body, and the sign-off and name on their own lines. "Thanks for the help." stays a
   sentence (a sign-off needs a name after it).

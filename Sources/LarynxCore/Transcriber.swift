@@ -63,7 +63,16 @@ public struct Heard: Sendable {
     public var text: String
     public var confidence: Float
     public var words: [WordConfidence]
+    /// The model's own output and token timings, for rescoring the same audio again with other terms.
+    var modelText = ""
+    var timings: [TokenTiming] = []
     public init(text: String, confidence: Float, words: [WordConfidence]) { self.text = text; self.confidence = confidence; self.words = words }
+}
+
+/// A vocabulary built for one dictation from what's on screen (PLAN-v1 C2): the standing terms plus context terms.
+public struct ContextVocabulary: @unchecked Sendable {
+    let session: VocabularyBoostingSession
+    public let terms: [String]
 }
 
 public struct WordConfidence: Sendable, Codable, Equatable {
@@ -81,6 +90,8 @@ public actor Transcriber {
     /// Terms the user chose (vocabulary.txt, the dictionary, things learned, their project folders). Only these may
     /// replace a real English word; built-in developer names may only replace words the model made up.
     private var personal: Set<String> = []
+    private var standingTerms: [String] = []
+    private var ctcModels: CtcModels?
 
     public init() {}
 
@@ -109,6 +120,8 @@ public actor Transcriber {
         self.personal = Set(personal.map { $0.lowercased() })
         guard !terms.isEmpty else { boosting = nil; vocabularySize = 0; return }
         let ctc = try await CtcModels.downloadAndLoad(to: modelsDir?.appendingPathComponent("parakeet-ctc-110m-coreml", isDirectory: true))
+        ctcModels = ctc
+        standingTerms = terms
         let context = CustomVocabularyContext(terms: terms.map { CustomVocabularyTerm(text: $0) })
         boosting = try await VocabularyBoostingSession(vocabulary: context, ctcModels: ctc)
         vocabularySize = boosting?.vocabulary.terms.count ?? 0
@@ -139,8 +152,40 @@ public actor Transcriber {
                 text = Transcriber.swap(r.originalWord, for: term, in: text, personal: personal)
             }
         }
-        return Heard(text: text.trimmingCharacters(in: .whitespacesAndNewlines), confidence: result.confidence,
-                     words: Transcriber.words(from: result.tokenTimings ?? []))
+        var heard = Heard(text: text.trimmingCharacters(in: .whitespacesAndNewlines), confidence: result.confidence,
+                          words: Transcriber.words(from: result.tokenTimings ?? []))
+        heard.modelText = result.text
+        heard.timings = result.tokenTimings ?? []
+        return heard
+    }
+
+    /// The standing terms plus `extra` (names from the screen), ready to rescore with. Built outside the actor's
+    /// queue so transcription never waits for it; nil when the keyword model isn't loaded.
+    public func contextModels() -> (ctc: CtcModels, standing: [String])? { ctcModels.map { ($0, standingTerms) } }
+
+    public nonisolated static func makeContextVocabulary(extra: [String], models: (ctc: CtcModels, standing: [String])) async -> ContextVocabulary? {
+        let known = Set(models.standing.map { $0.lowercased() })
+        let added = extra.filter { !known.contains($0.lowercased()) }
+        guard !added.isEmpty else { return nil }
+        let terms = models.standing + added
+        let context = CustomVocabularyContext(terms: terms.map { CustomVocabularyTerm(text: $0) })
+        guard let session = try? await VocabularyBoostingSession(vocabulary: context, ctcModels: models.ctc) else { return nil }
+        return ContextVocabulary(session: session, terms: added)
+    }
+
+    /// What the same audio would say with the context terms too: the heard text with the extra one-word swaps the
+    /// context vocabulary suggests (same sound-alike gate; a real English word only with an exact consonant match).
+    public func contextProposal(_ heard: Heard, samples: [Float], vocabulary: ContextVocabulary) async -> String? {
+        guard !heard.timings.isEmpty,
+              let out = await vocabulary.session.rescore(text: heard.modelText, tokenTimings: heard.timings, audioSamples: samples),
+              out.wasModified else { return nil }
+        let extra = Set(vocabulary.terms.map { $0.lowercased() })
+        var text = heard.text
+        for r in out.replacements where r.shouldReplace {
+            guard let term = r.replacementWord, extra.contains(term.lowercased()) else { continue }
+            text = Transcriber.swap(r.originalWord, for: term, in: text, personal: personal.union(extra))
+        }
+        return text == heard.text ? nil : text
     }
 
     /// Joins sentencepiece tokens into words ("▁Com" "paq" -> "Compaq"), keeping each word's lowest confidence.

@@ -76,6 +76,8 @@ extension Hotkey.Key {
         NSSound(named: "Tink")?.play()
         setStatus("Listening...", recording: true)
         log("recording... [\(session.target?.bundleIdentifier ?? "?")] mic \(micMs) ms")
+        // Names on screen for this dictation, gathered and turned into a vocabulary while you speak (never waited for).
+        if inApp, !session.privateField { startContext(for: session) }
         guard inApp, Pill.enabled else { return }
         Pill.shared.listen(app: session.target, privateField: session.privateField,
                            field: Inserter.focusedFieldFrame(in: session.target), level: { recorder.level })
@@ -113,7 +115,7 @@ extension Hotkey.Key {
         Task {
             defer { session.reset() }
             do {
-                let result = try await finish(samples, clean: wantsClean, mode: mode)
+                let result = try await finish(samples, clean: wantsClean, mode: mode, screen: session.contextTerms)
                 let text = result.text
                 guard !text.isEmpty else {
                     History.shared.discard(pending)
@@ -300,5 +302,26 @@ enum Undo {
         if let id = entry.id { History.shared.addFlag("undone", to: id) }
         last = nil
         log("undid the last dictation (scratch that)")
+    }
+}
+
+
+/// Starts gathering screen context for `session` in the background: the field and window (`ScreenContext`), plus
+/// recent dictations into the same app, turned into names and terms. Logged as counts and times only, never text.
+@MainActor func startContext(for session: ListenSession) {
+    let app = session.target
+    let recent = History.shared.recent(limit: 20)
+        .filter { $0.app == app?.bundleIdentifier && Date().timeIntervalSince($0.time) < 1800 }.map(\.text)
+    Task.detached {
+        let started = Date()
+        guard let ctx = ScreenContext.gather(app: app) else { return }
+        let terms = ContextTerms.extract([String(ctx.before.suffix(600))] + recent + [ctx.windowTitle, ctx.after, ctx.visible],
+                                         isEnglish: { Vocabulary.isEnglish($0) })
+        let took = ms(since: started)
+        await MainActor.run {
+            guard session.isCurrentRecording else { log("context: \(terms.count) terms in \(took) ms: too late, not used"); return }
+            session.contextTerms = terms
+            log("context: \(terms.count) terms from \(ctx.elements) elements in \(took) ms")
+        }
     }
 }

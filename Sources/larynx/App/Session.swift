@@ -11,6 +11,8 @@ import LarynxCore
     var previewTimer: Timer?
     /// A password field or an app on the privacy list: the words never touch the disk.
     var privateField = false
+    /// Names and terms on screen for this dictation, if they were gathered in time (PLAN-v1 C1-C3; shadow for now).
+    var contextTerms: [String]?
     /// Hands-free: recording with no key held.
     var locked = false
 
