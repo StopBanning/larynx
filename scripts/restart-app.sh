@@ -5,7 +5,8 @@ LOG=~/Library/Logs/Larynx.log
 while true; do
   last=$(tail -1 "$LOG")
   age=$(( $(date +%s) - $(stat -f %m "$LOG") ))
-  [[ "$last" != *"recording..."* && $age -ge 30 ]] && break
+  # "recording..." starts a dictation; "hands-free" means it continues with no key held.
+  [[ "$last" != *"recording..."* && "$last" != *"hands-free"* && $age -ge 30 ]] && break
   sleep 3
 done
 pkill -x larynx; sleep 1

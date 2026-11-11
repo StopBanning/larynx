@@ -13,7 +13,7 @@ public final class Settings: @unchecked Sendable {
 
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
-        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass
+        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -25,7 +25,7 @@ public final class Settings: @unchecked Sendable {
             case .engine: return "clean"
             case .rewrite: return "auto"
             case .vocabularyRoots: return "~/work"
-            case .keys: return ""
+            case .keys, .toggleKeys: return ""
             case .loginItemSet: return "false"
             case .historyDays: return "30"
             case .keepAudio, .debugText: return "off"
@@ -39,13 +39,13 @@ public final class Settings: @unchecked Sendable {
             switch self {
             case .engine: return ["clean", "parakeet"].contains(value)
             case .rewrite: return ["auto", "off"].contains(value)
-            case .vocabulary, .devTerms, .preview, .learn, .history, .debugText: return ["on", "off"].contains(value)
+            case .vocabulary, .devTerms, .preview, .learn, .history, .debugText, .handsFree: return ["on", "off"].contains(value)
             case .pillPosition: return ["auto", "bottom"].contains(value)
             case .pillGlass: return Int(value).map { (0...100).contains($0) } ?? false
             case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
             case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet: return ["true", "false"].contains(value)
-            case .keys, .vocabularyRoots: return true
+            case .keys, .vocabularyRoots, .toggleKeys: return true
             default: return StageMode(rawValue: value) != nil
             }
         }

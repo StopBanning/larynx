@@ -48,7 +48,11 @@ Built to stand alone and to be embedded: apps such as [Locust](https://locust.lo
 Daily-driver quality on Apple Silicon, macOS 15+ (the AI rewrite needs macOS 26). Measured on an M6 Mac mini:
 about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite runs.
 
-- **Hold to talk** with Fn, Right Option or Right Command; pressing another key while holding cancels, so shortcuts still work.
+- **Hold to talk** with Fn, Right Option or Right Command (or a macro-pad button that sends one); pressing another key
+  while holding cancels, so shortcuts still work.
+- **Hands-free**: double-tap the talk key and keep talking with nothing held (a lock shows in the pill); press it
+  again to finish, Esc to cancel. Or pick a Hands-Free Key in the menu (a second macro-pad button, say): one press
+  starts, the next finishes. Stops by itself after 30 minutes.
 - **Live preview in Liquid Glass**: while you talk, a small glass orb shows the icon of the app your words are going
   to and a waveform that moves with your voice; your words appear in a bubble that grows out of it. When you let go
   the two melt into one shape while the transcript is made. It sits just above the text box you're dictating into

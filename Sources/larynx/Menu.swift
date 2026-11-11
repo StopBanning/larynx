@@ -96,6 +96,25 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
         keyItem.submenu = keyMenu
         menu.addItem(keyItem)
+        menu.addItem(toggle("Double-Tap for Hands-Free", on: activeHotkey?.doubleTapLocks ?? (settings.string(.handsFree) != "off"),
+                            #selector(toggleHandsFree)))
+        let toggleItem = NSMenuItem(title: "Hands-Free Key", action: nil, keyEquivalent: "")
+        let toggleMenu = NSMenu()
+        let current = activeHotkey?.toggleKeys ?? []
+        let none = NSMenuItem(title: "None", action: #selector(chooseToggleKey(_:)), keyEquivalent: "")
+        none.target = self
+        none.representedObject = ""
+        none.state = current.isEmpty ? .on : .off
+        toggleMenu.addItem(none)
+        for key in Hotkey.Key.allCases where !keys.contains(key) {
+            let item = NSMenuItem(title: key.label, action: #selector(chooseToggleKey(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = key.rawValue
+            item.state = current.contains(key) ? .on : .off
+            toggleMenu.addItem(item)
+        }
+        toggleItem.submenu = toggleMenu
+        menu.addItem(toggleItem)
         let modelItem = NSMenuItem(title: "Speech Model", action: nil, keyEquivalent: "")
         let modelMenu = NSMenu()
         for (choice, title) in [(Engine.clean, "English, drops ums as it listens"), (Engine.parakeet, "25 languages (Parakeet v3)")] {
@@ -159,6 +178,20 @@ final class MenuController: NSObject, NSMenuDelegate {
         item.target = self
         item.state = on ? .on : .off
         return item
+    }
+
+    @objc func toggleHandsFree() {
+        let on = !(activeHotkey?.doubleTapLocks ?? true)
+        guard save(on ? "on" : "off", for: .handsFree) else { return }
+        activeHotkey?.doubleTapLocks = on
+    }
+
+    /// One press starts hands-free, the next finishes: for a second macro-pad button.
+    @objc func chooseToggleKey(_ sender: NSMenuItem) {
+        let raw = sender.representedObject as? String ?? ""
+        guard save(raw, for: .toggleKeys) else { return }
+        activeHotkey?.toggleKeys = Hotkey.Key(rawValue: raw).map { [$0] } ?? []
+        log("hands-free key: " + (raw.isEmpty ? "none" : raw))
     }
 
     @objc func undoLearned() { Task { @MainActor in Relearn.undoLast() } }

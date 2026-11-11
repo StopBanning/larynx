@@ -40,6 +40,8 @@ final class Pill {
     private var listenStarted = Date()
     private var loudest: Float = 0
     private var warnedSilence = false
+    /// Hands-free: recording continues with no key held; a lock shows in the pill.
+    private var isLocked = false
     private var words = ""
     private var hideWork: DispatchWorkItem?
     /// The focused text field's frame for this dictation; the pill sits just above it.
@@ -57,6 +59,7 @@ final class Pill {
         listenStarted = Date()
         loudest = 0
         warnedSilence = false
+        isLocked = false
         words = ""
         anchor = Settings.shared.string(.pillPosition) == "auto" ? field : nil
         content.applyGlass(Pill.glassLevel)
@@ -67,6 +70,14 @@ final class Pill {
         layout(text: "", dim: false)
         startTimer()
         appear()
+    }
+
+    /// Hands-free started: a lock joins the waveform until the recording ends.
+    func lock() {
+        guard Pill.enabled, phase == .listening, let content else { return }
+        isLocked = true
+        content.setSymbol("lock.fill", tint: .secondaryLabelColor)
+        layout(text: words, dim: false)
     }
 
     /// The live transcript so far.
@@ -149,7 +160,8 @@ final class Pill {
                 content.setSymbol("mic.slash", tint: .systemOrange)
                 layout(text: "No sound from \(mic)", dim: false)
             } else if warnedSilence, loudest >= 0.002, words.isEmpty {
-                content.setSymbol(nil)
+                warnedSilence = false
+                content.setSymbol(isLocked ? "lock.fill" : nil, tint: .secondaryLabelColor)
                 layout(text: "", dim: false)
             }
         }

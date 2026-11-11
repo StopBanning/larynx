@@ -11,6 +11,8 @@ import LarynxCore
     var previewTimer: Timer?
     /// A password field or an app on the privacy list: the words never touch the disk.
     var privateField = false
+    /// Hands-free: recording with no key held.
+    var locked = false
 
     init(target: NSRunningApplication?) {
         self.target = target

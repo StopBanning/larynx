@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Hands-free:** double-tap the talk key to keep recording with no key held; the next press finishes, Esc cancels.
+  A Hands-Free Key (menu) starts and stops with one press each, for a second macro-pad button.
+- Learning from edits no longer learns capital-letter tidy-ups of ordinary words.
+
 ## 0.4.0 (Nov 11, 2026)
 
 - **Liquid Glass pill:** one glass capsule with the icon of the app your words are going to, a waveform driven by

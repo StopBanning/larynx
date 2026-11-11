@@ -33,6 +33,8 @@ override allows a later `defaults write` for that key to take effect again.
 | `pillGlass` | `0` | 0-100: how see-through the pill is. 0 is clear Liquid Glass, around 50 is frosted, 100 is solid. The Glass slider in the menu sets it and shows the pill while you drag. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
+| `handsFree` | `on` | `on` or `off`; double-tap a talk key to keep recording with no key held. The next press of a talk key finishes, Esc cancels, and it stops by itself after 30 minutes. |
+| `toggleKeys` | `""` | Comma-separated keys (same names as `keys`) that start hands-free with one press and finish it with the next: map a second macro-pad button to one, for example `rightControl`. |
 | `loginItemSet` | `false` | Internal boolean: first-run login-item setup has been attempted. Actual login-item status comes from macOS. |
 | `history` | `on` | `on` or `off`; keep dictations in `history.sqlite` on this Mac and spool audio until each is transcribed (crash recovery). `off` keeps Recent in memory only and writes nothing. See [PRIVACY.md](PRIVACY.md). |
 | `historyDays` | `30` | Whole days (1-3650) of dictation text to keep; older rows are deleted at launch and after each dictation. A JSON number or string. |

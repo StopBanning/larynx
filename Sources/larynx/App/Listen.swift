@@ -147,17 +147,36 @@ extension Hotkey.Key {
             }
         }
     }, onCancel: {
+        if ListenSession.current?.locked == true { NSSound(named: "Bottle")?.play() }
         ListenSession.current?.reset()
         recorder.stop()
         Task { @MainActor in Pill.shared.hide() }
         setStatus("Ready")
-        log("cancelled: another key was pressed (a shortcut)")
+        log("cancelled: another key was pressed (a shortcut, or Esc in hands-free)")
+    }, onLock: {
+        // Double-tap (or a toggle key): keep recording with no key held until the next press.
+        guard let session = ListenSession.current, session.isCurrentRecording else { return }
+        session.locked = true
+        Pill.shared.lock()
+        setStatus("Hands-free: press the key to finish, Esc to cancel", recording: true)
+        log("hands-free")
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 30 * 60 * 1_000_000_000)  // a forgotten recording stops after 30 minutes
+            if ListenSession.current === session, session.state.phase == .recording { activeHotkey?.finishLocked() }
+        }
     })
+    hotkey.doubleTapLocks = Settings.shared.string(.handsFree) != "off"
+    hotkey.toggleKeys = Settings.shared.string(.toggleKeys).split(separator: ",")
+        .compactMap { Hotkey.Key(rawValue: $0.trimmingCharacters(in: .whitespaces)) }
     let started = await MainActor.run { hotkey.start() }
     guard started else { setStatus("macOS refused the key listener"); log("macOS refused the key listener"); return }
     activeHotkey = hotkey
     setStatus(Inserter.isTrusted ? "Ready" : "Ready (needs Accessibility to paste)")
-    log("ready: hold " + keys.map(\.label).joined(separator: " or ") + ", speak, release")
+    var ready = "ready: hold " + keys.map(\.label).joined(separator: " or ") + ", speak, release"
+    if hotkey.doubleTapLocks { ready += "; double-tap for hands-free" }
+    let toggles: [String] = hotkey.toggleKeys.map(\.label)
+    if !toggles.isEmpty { ready += "; " + toggles.joined(separator: " or ") + " toggles hands-free" }
+    log(ready)
     let recovered = await recoverAbandoned(before: launchedAt)
     if !recovered.isEmpty {
         if ListenSession.current == nil {
