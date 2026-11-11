@@ -282,6 +282,9 @@ case "numbers":
         if out != line { print("- \(line)\n+ \(out)\n") }
     }
     exit(0)
+case "capture-window":
+    // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
+    MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60) }
 case "golden":
     // Your own recordings with what you really said: the benchmark that matters most (bench/run.py --sets golden).
     //   larynx golden add <id> [--text "what was said"] [--source user|agent|edit|repeat]   (no --text: the typed text was right)
@@ -357,11 +360,42 @@ func runFeed(_ path: String) async {
             try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000)
         }
         let result = try await finish(samples, clean: wantsClean, mode: mode)
+        // --deliver: paste through the real delivery path, but only into the test capture window
+        // (LARYNX_CAPTURE_PID), never into another app. The clipboard is put back afterwards whatever happens.
+        var delivery = "none"
+        var deliveredMs: Int?
+        if args.contains("--deliver"), !result.text.isEmpty {
+            guard let pid = Int32(ProcessInfo.processInfo.environment["LARYNX_CAPTURE_PID"] ?? ""),
+                  let target = NSRunningApplication(processIdentifier: pid),
+                  target.executableURL?.lastPathComponent == "larynx" else {
+                emit(["event": "error", "message": "--deliver needs LARYNX_CAPTURE_PID of a running larynx capture-window"]); exit(2)
+            }
+            let board = NSPasteboard.general
+            let saved: [[(NSPasteboard.PasteboardType, Data)]] = (board.pasteboardItems ?? []).map { item in
+                item.types.compactMap { type in item.data(forType: type).map { (type, $0) } }
+            }
+            let started = Date()
+            delivery = await Inserter.deliver(result.text, to: target).label
+            deliveredMs = ms(since: started)
+            // A paste restores the clipboard itself after 0.5 s; the copy fallback leaves the words there. Either way,
+            // if the test's words are still on the clipboard after that, put back what was there before.
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            if board.string(forType: .string) == result.text {
+                board.clearContents()
+                board.writeObjects(saved.map { pairs -> NSPasteboardItem in
+                    let item = NSPasteboardItem()
+                    for (type, data) in pairs { item.setData(data, forType: type) }
+                    return item
+                })
+            }
+        }
         if result.text.isEmpty { History.shared.discard(pending) }
-        else { History.shared.complete(pending, transcript: result, delivery: "none") }
+        else { History.shared.complete(pending, transcript: result, delivery: delivery) }
         var body = try result.jsonObject()
         body["event"] = "result"
         body["id"] = pending.id
+        body["delivery"] = delivery
+        if let deliveredMs { body["deliverMs"] = deliveredMs }
         emit(body)
         exit(0)
     } catch {

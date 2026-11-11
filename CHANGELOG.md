@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Live test rig.** `larynx capture-window` (a test window that logs every text change), `larynx listen --feed
+  <file> --deliver` (the real paste path, but only into that window: it refuses any other app and puts your
+  clipboard back), `scripts/when-idle.sh` (runs a command only when you've been idle 5 minutes, the screen is
+  unlocked and Larynx isn't recording, and stops it the moment you touch the keyboard or mouse) and `tests/live.py`.
 - **"Not sure about …"** When the speech model was very unsure of a word, the pill names it for 2 seconds after the
   paste (so a glance catches "Robus" before you send), and the dictation is flagged in history. Nothing in your text
   is changed. Calibrated on real recordings; `doubtHint: off` turns it off. Each result now carries the model's own

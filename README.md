@@ -159,6 +159,7 @@ a sentence for Mail, Slack, Messages and Notes.
 | `swift test` | 39 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, the rewrite guard, the pipeline, settings, history, crash spool, privacy rules, self-learning | all pass |
 | `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
+| `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | not yet run live (screen was locked); safety checks pass |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
 
