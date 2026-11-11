@@ -1,4 +1,5 @@
 import AppKit
+import LarynxText
 import ApplicationServices
 import Carbon.HIToolbox
 
@@ -88,7 +89,9 @@ public enum Inserter {
     /// first if they switched away. Anything that stops the paste falls back to leaving the text on the clipboard.
     /// `LARYNX_FORCE_COPY=1` forces the fallback, for testing.
     @MainActor
-    public static func deliver(_ text: String, to target: NSRunningApplication? = nil) async -> Delivery {
+    public static func deliver(_ text: String, to target: NSRunningApplication? = nil,
+                               keepsCapital: ((String) -> Bool)? = nil) async -> Delivery {
+        var text = text
         if ProcessInfo.processInfo.environment["LARYNX_FORCE_COPY"] == "1" {
             copyOnly(text); return .copied("LARYNX_FORCE_COPY is set")
         }
@@ -111,6 +114,11 @@ public enum Inserter {
         // Where the field's text can be read, note it now so we can tell whether the paste arrived.
         let element = focus.editable == true ? focusedElement(in: target ?? NSWorkspace.shared.frontmostApplication) : nil
         let before = element.flatMap(value(of:))
+        // Fit the words to what's already there: a missing space, or a capital that only meant "new sentence".
+        if let keepsCapital, let element, Settings.shared.string(.fitToField) != "off", let cursor = textBeforeCursor(element) {
+            text = Fit.adjust(text, before: cursor.before, replacingSelection: cursor.selected > 0,
+                              keepsCapital: keepsCapital, isEnglish: { Vocabulary.isEnglish($0) })
+        }
         do {
             // When macOS can't say whether a text field has focus, paste anyway but keep the words on the clipboard.
             try paste(text, restore: focus.editable == true)
@@ -139,6 +147,19 @@ public enum Inserter {
                                             kAXFocusedUIElementAttribute as CFString, &value) == .success,
               let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
         return (value as! AXUIElement)
+    }
+
+    /// The field's text before the cursor and how many characters are selected (nil when it can't be read).
+    static func textBeforeCursor(_ element: AXUIElement) -> (before: String, selected: Int)? {
+        guard let text = value(of: element) else { return nil }
+        var raw: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &raw) == .success,
+              let raw, CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
+        var range = CFRange()
+        guard AXValueGetValue(raw as! AXValue, .cfRange, &range) else { return nil }
+        let utf16 = Array(text.utf16)
+        guard range.location >= 0, range.location <= utf16.count else { return nil }
+        return (String(decoding: utf16[..<range.location], as: UTF16.self), range.length)
     }
 
     static func value(of element: AXUIElement) -> String? {

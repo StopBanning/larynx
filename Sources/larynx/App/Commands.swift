@@ -332,7 +332,7 @@ case "review":
     exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
-    MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60) }
+    MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60, prefill: option("--prefill") ?? "") }
 case "golden":
     // Your own recordings with what you really said: the benchmark that matters most (bench/run.py --sets golden).
     //   larynx golden add <id> [--text "what was said"] [--source user|agent|edit|repeat]   (no --text: the typed text was right)

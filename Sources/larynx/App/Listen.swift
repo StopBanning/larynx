@@ -129,7 +129,8 @@ extension Hotkey.Key {
                     if session.shouldPresent { Pill.shared.message("Undid the last dictation", symbol: "arrow.uturn.backward", seconds: 1.5); setStatus("Ready") }
                     return
                 }
-                let delivery = await Inserter.deliver(text, to: app)
+                let terms = Set(vocabularyCache.terms)
+                let delivery = await Inserter.deliver(text, to: app, keepsCapital: { terms.contains($0) })
                 let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label)
                 if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }
                 if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }

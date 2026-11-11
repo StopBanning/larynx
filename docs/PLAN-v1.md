@@ -334,7 +334,8 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | B8 | done | `larynx review [--hours 24] [--text]`: speed per engine against the 150/350 budget, deliveries, stages that changed text, doubtful / undone / fixed / said-again counts, shadow proposals, mic start and tails and edit watches from the log. First run: Ultra p50 106 ms, p90 160 ms over 75. |
 | B9 | done | `bench/latency.py`: 50 clips (jargon, noise10, ls-other) through `serve` with the full pipeline in AI mode; exits 1 over budget. First run: Ultra p50 66 ms, p90 87 ms, max 115 ms: PASS. Run before every release (A7-style checklist). |
 | B3 | started: 48 of 100 clips | `larynx golden` (add/list/remove/candidates), corrections table (edits and repeats recorded live), `bench/run.py --sets golden` (full pipeline, numbers only). 48 clips from the first 53 recordings, references checked by the agent (5 left out as unsure), so biased toward Ultra: Ultra 0.58% WER, Unified/Parakeet 2.67%, Bark Clean 3.48% (docs/BENCHMARKS.md). Next: `larynx golden candidates --apply` as edits and repeats come in; agent-check new recordings each session; standing gate from now: no change may raise Ultra's golden WER. |
-| C1-C7 | not started | |
+| C4 | done (done early, as planned) | `Fit.adjust` (LarynxText) from the text before the cursor (AXValue + AXSelectedTextRange): missing space after the previous text, lowercase first word mid-sentence when it is an ordinary English word (not I, acronyms, camelCase, vocabulary terms, names), capitals kept after an opening bracket/quote, nothing for empty/newline/selection/unreadable. `fitToField` setting. Unit tests; live capture-window cases ("Okay." + text, "Hey Sam," + text) in tests/live.py. Fixes the "time.Are we" slips. |
+| C1-C3, C5-C7 | not started | |
 | D1-D8 | not started | D5: no-cost path (Q1 = not yet) |
 | E1-E8 | not started | |
 | F1-F5 | not started | |

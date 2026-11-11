@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Dictations fit what's already in the field.** Several dictations into one message no longer run together
+  ("time.Are we" → "time. Are we"), and a dictation that continues a sentence starts lowercase ("Hey Sam, can
+  you…"). Names, "I", acronyms and your vocabulary keep their capitals; empty fields, new lines and a selection
+  being replaced are left alone; unreadable fields behave as before. `fitToField: off` turns it off.
 - `larynx review`: the daily read in one command: speed per model against the budget, how dictations were
   delivered, which cleanup stages changed text, doubtful, undone and fixed dictations, shadow proposals, microphone
   start times. Counts only; `--text` shows the words.

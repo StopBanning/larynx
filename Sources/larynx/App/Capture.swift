@@ -11,7 +11,7 @@ final class CaptureWindow: NSObject, NSTextViewDelegate {
     private var window: NSWindow?
     private var ready = Date()
 
-    func run(seconds: Double) {
+    func run(seconds: Double, prefill: String = "") {
         let app = NSApplication.shared
         app.setActivationPolicy(.regular)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 160), styleMask: [.titled, .closable],
@@ -22,6 +22,8 @@ final class CaptureWindow: NSObject, NSTextViewDelegate {
         let text = NSTextView(frame: scroll.bounds)
         text.isRichText = false
         text.font = .systemFont(ofSize: 13)
+        text.string = prefill  // --prefill: text already in the field, cursor at its end (for fit-to-field tests)
+        text.setSelectedRange(NSRange(location: (prefill as NSString).length, length: 0))
         text.delegate = self
         text.setAccessibilityIdentifier("larynx-capture")
         scroll.documentView = text

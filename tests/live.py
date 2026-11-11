@@ -48,7 +48,7 @@ def capture_app(work):
     return app
 
 
-def run_case(name, extra_env, want_delivery):
+def run_case(name, extra_env, want_delivery, prefill="", expect=lambda text: text):
     work = tempfile.mkdtemp(dir=os.path.expanduser("~/work/scratch"), prefix="larynx-live-")
     out = Path(work) / "capture.jsonl"
     out.touch()
@@ -58,7 +58,8 @@ def run_case(name, extra_env, want_delivery):
         # A bundle macOS has never seen can fail its first launch (-10810) until LaunchServices registers it.
         subprocess.run([LSREGISTER, "-f", str(app)], capture_output=True)
         for attempt in range(4):
-            if subprocess.run(["open", "-n", str(app), "--stdout", str(out), "--args", "capture-window", "--seconds", "40"],
+            if subprocess.run(["open", "-n", str(app), "--stdout", str(out), "--args", "capture-window", "--seconds", "40",
+                               "--prefill", prefill],
                               capture_output=True).returncode == 0: break
             time.sleep(1)
         else:
@@ -78,7 +79,7 @@ def run_case(name, extra_env, want_delivery):
         result = next((json.loads(l) for l in feed.stdout.splitlines() if '"event":"result"' in l.replace(" ", "")), None)
         if not result:
             return False, f"{name}: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]}"
-        expected, seen, deadline = result["text"], "", time.time() + 3
+        expected, seen, deadline = expect(result["text"]), "", time.time() + 3
         while time.time() < deadline and expected not in seen:
             texts = [m["text"] for m in map(json.loads, filter(str.strip, out.read_text().splitlines())) if m.get("event") == "text"]
             seen = texts[-1] if texts else ""
@@ -102,12 +103,15 @@ def main():
     if os.environ.get("LARYNX_LIVE_OK") != "1":
         sys.exit("live.py pastes into a window it brings to the front: run it as  scripts/when-idle.sh python3 tests/live.py")
     previous = front_bundle()
-    cases = [("paste, verified", {}, "inserted"),
-             ("paste never arrives -> fallback inserts once", {"LARYNX_TEST_DROP_PASTE": "1"}, "inserted by")]
+    lower = lambda t: t[0].lower() + t[1:]
+    cases = [("paste, verified", {}, "inserted", "", lambda t: t),
+             ("paste never arrives -> fallback inserts once", {"LARYNX_TEST_DROP_PASTE": "1"}, "inserted by", "", lambda t: t),
+             ("after a finished sentence: space added", {}, "inserted", "Okay.", lambda t: "Okay. " + t),
+             ("mid-sentence: space and lowercase", {}, "inserted", "Hey Sam,", lambda t: "Hey Sam, " + lower(t))]
     failed = 0
     try:
-        for name, env, want in cases:
-            ok, line = run_case(name, env, want)
+        for name, env, want, prefill, expect in cases:
+            ok, line = run_case(name, env, want, prefill, expect)
             print(("PASS " if ok else "FAIL ") + line, flush=True)
             failed += not ok
     finally:
