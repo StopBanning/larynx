@@ -1,0 +1,71 @@
+Another instance of SwiftPM (PID: 83276) is already running using '/Users/locust/work/larynx/.build', waiting until that process has finished execution...Building for debugging...
+[Pre-planning 1 / 214]
+[Planning deferred tasks]
+[10 / 39]
+[15 / 26] LarynxTextTests-product
+[16 / 31]
+error: SwiftCompile normal arm64 failed with a nonzero exit code. Command line:     cd /Users/locust/work
+    
+/Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift:32:12: error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+30 | }
+31 | 
+32 | @Test func fixtureContract() throws {
+   |            `- error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+33 |     let cases = try Cases.load()
+34 |     #expect(cases.text.count >= 43)
+
+Testing.Test:1:30: note: 'Test' declared here
+1 | @attached(peer) public macro Test(_ traits: any Testing.TestTrait...) = #externalMacro(module: "TestingMacros", type: "TestDeclarationMacro")
+  |                              `- note: 'Test' declared here
+
+/Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift:42:12: error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+40 | }
+41 | 
+42 | @Test func textRules() throws {
+   |            `- error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+43 |     for c in try Cases.load().text {
+44 |         let mode = try #require(CleanupMode(rawValue: try #require(c.mode)))
+
+Testing.Test:1:30: note: 'Test' declared here
+1 | @attached(peer) public macro Test(_ traits: any Testing.TestTrait...) = #externalMacro(module: "TestingMacros", type: "TestDeclarationMacro")
+  |                              `- note: 'Test' declared here
+
+/Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift:49:12: error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+47 | }
+48 | 
+49 | @Test func rewriteGuardExpectations() throws {
+   |            `- error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+50 |     for c in try Cases.load().rewrite {
+51 |         let correction = try #require(c.guardCorrection)
+
+Testing.Test:1:30: note: 'Test' declared here
+1 | @attached(peer) public macro Test(_ traits: any Testing.TestTrait...) = #externalMacro(module: "TestingMacros", type: "TestDeclarationMacro")
+  |                              `- note: 'Test' declared here
+
+/Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift:57:12: error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+55 | }
+56 | 
+57 | @Test func ordinarySentencesStayUnchanged() throws {
+   |            `- error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+58 |     for c in try Cases.load().mustNotChange {
+59 |         #expect(c.input == c.expect, "\(c.id): must-not-change fixtures must preserve the input")
+
+Testing.Test:1:30: note: 'Test' declared here
+1 | @attached(peer) public macro Test(_ traits: any Testing.TestTrait...) = #externalMacro(module: "TestingMacros", type: "TestDeclarationMacro")
+  |                              `- note: 'Test' declared here
+
+/Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift:67:12: error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+65 | 
+66 | // Exercise rejection paths too: accepting every rewrite would pass the golden-output cases.
+67 | @Test func unsafeRewritesAreRejected() {
+   |            `- error: external macro implementation type 'TestingMacros.TestDeclarationMacro' could not be found for macro 'Test'; plugin for module 'TestingMacros' not found
+68 |     let original = "Please send the final report to Sam tomorrow."
+69 |     #expect(Cleaner.guardProblem(original: original, edited: "") == "empty")
+
+Testing.Test:1:30: note: 'Test' declared here
+1 | @attached(peer) public macro Test(_ traits: any Testing.TestTrait...) = #externalMacro(module: "TestingMacros", type: "TestDeclarationMacro")
+  |                              `- note: 'Test' declared here
+Failed frontend command:
+/Library/Developer/CommandLineTools/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/DerivedSources/test_entry_point.swift /Users/locust/work/larynx/tests/LarynxTextTests/CleanupTests.swift -target arm64-apple-macos15.0 -module-can-import-version Testing 2403 0 -disable-cross-import-overlay-search -swift-module-cross-import Testing /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Modules/Testing.swiftcrossimport/AppKit.swiftoverlay -swift-module-cross-import Testing /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Modules/Testing.swiftcrossimport/CoreGraphics.swiftoverlay -swift-module-cross-import Testing /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Modules/Testing.swiftcrossimport/CoreImage.swiftoverlay -swift-module-cross-import Testing /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Modules/Testing.swiftcrossimport/CoreTransferable.swiftoverlay -swift-module-cross-import Testing /Library/Developer/CommandLineTools/Library/Developer/Frameworks/Testing.framework/Modules/Testing.swiftcrossimport/Foundation.swiftoverlay -load-resolved-plugin /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/libObservationMacros.dylib\#\#ObservationMacros -load-resolved-plugin /Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/libSwiftMacros.dylib\#\#SwiftMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -stack-check -sdk /Library/Developer/CommandLineTools/SDKs/MacOSX27.2.sdk -I /Users/locust/work/larynx/.build/out/Products/Debug -Isystem /Library/Developer/CommandLineTools/Developer/usr/lib -F /Users/locust/work/larynx/.build/out/Products/Debug/PackageFrameworks -F /Users/locust/work/larynx/.build/out/Products/Debug -F /Library/Developer/CommandLineTools/Library/Developer/Frameworks -F /Library/Developer/CommandLineTools/Developer/Library/Frameworks -module-cache-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/SwiftExplicitPrecompiledModules -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -swift-version 5 -Onone -D SWIFT_PACKAGE -D DEBUG -D Xcode -serialize-debugging-options -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/locust/work/larynx/.build/out/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/locust/work -enable-anonymous-context-mangled-names -file-compilation-dir /Users/locust/work -Xcc -fmodule-map-file\=/Users/locust/work/larynx/.build/checkouts/FluidAudio/Sources/MachTaskSelfWrapper/include/module.modulemap -Xcc -fmodule-map-file\=/Users/locust/work/larynx/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/include/module.modulemap -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /Users/locust/work/larynx/.build/out/SDKStatCaches.noindex/macosx27.2-26B118-a0facfad118c1a7a18f0aad9463f65495818d34bafcb1249783cb8b2c4efe0a2.sdkstatcache -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -Xcc -I/Users/locust/work/larynx/.build/checkouts/FluidAudio/Sources/MachTaskSelfWrapper/include -Xcc -I/Users/locust/work/larynx/.build/checkouts/FluidAudio/Sources/FastClusterWrapper/include -Xcc -I/Users/locust/work/larynx/.build/out/Products/Debug/include -Xcc -I/Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/DerivedSources-normal/arm64 -Xcc -I/Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/DerivedSources/arm64 -Xcc -I/Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -no-auto-bridging-header-chaining -module-name LarynxTextTests -package-name larynx -const-gather-protocols-file /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests_const_extract_protocols.json -disable-clang-spi -clang-target arm64-apple-macos27.2 -target-sdk-version 27.2 -target-sdk-name macosx27.2 -in-process-plugin-server-path /Library/Developer/CommandLineTools/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -emit-module-doc-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests.swiftdoc -emit-module-source-info-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests.swiftsourceinfo -serialize-diagnostics-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests-primary-emit-module.dia -emit-dependencies-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests-primary-emit-module.d -parse-as-library -o /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests.swiftmodule -emit-abi-descriptor-path /Users/locust/work/larynx/.build/out/Intermediates.noindex/Larynx.build/Debug/LarynxTextTests-p.build/Objects-normal/arm64/LarynxTextTests.abi.json
+error: Build failed
+error: fatalError

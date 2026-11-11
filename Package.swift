@@ -17,6 +17,13 @@ let package = Package(
             dependencies: [.product(name: "FluidAudio", package: "FluidAudio")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .testTarget(
+            name: "LarynxTextTests",
+            dependencies: ["LarynxCore"],
+            path: "tests/LarynxTextTests",
+            exclude: ["README.md"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .executableTarget(
             name: "larynx",
             dependencies: ["LarynxCore"],

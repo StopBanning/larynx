@@ -17,6 +17,20 @@ to work with Colin, lessons learned. Read README.md for the feature list and how
 - Every new heuristic needs "must not change" tests: the vocabulary swap once turned "going" into "Golang" in his
   real messages. Check `~/Library/Logs/Larynx.log` for what he actually said and what came out.
 
+## Phase Zero started (Nov 10, task 0.1)
+
+- Task 0.1 is complete: Swift Testing covers 43 text fixtures, 26 rewrite guard expectations,
+  100 ordinary sentences unchanged in all three modes, and six guard acceptance/rejection checks.
+- On this Mac use `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`.
+  The selected Command Line Tools fail to load Testing macros; native build mode also fails to import Testing.
+  The full Xcode command passes in 3.36 s wall (1.955 s test execution) without changing system settings.
+- Fresh baseline from the existing release binary: rules 43/43, rewrite 26/26, spoken 264/300
+  excluding known gaps, matching the prior score. The Python suite exits 1 for those existing spoken failures;
+  it is not an all-green suite. Logs and all spoken results are under `bench/results/phase0-*`.
+- Tests live in lowercase `tests/LarynxTextTests` with an explicit package path because this repository already
+  uses `tests/`; this avoids a case-sensitive checkout problem. See its README for fixture semantics.
+- No production source changed and no install/restart was needed. Next task: 0.2, extract LarynxText.
+
 ## Where things stand
 
 - Repo `~/work/larynx`, public at github.com/StopBanning/larynx, branch `main`, all pushed. Commit as

@@ -1,0 +1,184 @@
+Building for debugging...
+[Computing dependencies]
+[Pre-planning 1 / 185]
+[Planning deferred tasks]
+[3 / 55] MachTaskSelfWrapper
+[29 / 56] MachTaskSelfWrapper
+[35 / 69]
+[36 / 69]
+[38 / 69]
+[40 / 69]
+[42 / 69]
+[44 / 69] FastClusterWrapper
+[45 / 69] FluidAudio
+[45 / 78] FluidAudio
+[45 / 96]
+[45 / 115]
+[45 / 117]
+[45 / 175]
+[54 / 201]
+[56 / 201]
+[58 / 201]
+[62 / 201]
+[66 / 201]
+[67 / 201]
+[68 / 201]
+[69 / 201]
+[74 / 201]
+[76 / 201]
+[78 / 201]
+[80 / 201]
+[81 / 201]
+[86 / 201]
+[88 / 201]
+[89 / 201]
+[91 / 201]
+[92 / 201]
+[100 / 201]
+[102 / 201]
+[103 / 201]
+[104 / 201]
+[109 / 201]
+[110 / 201]
+[111 / 201]
+[113 / 201]
+[114 / 201]
+[121 / 201]
+[122 / 201]
+[123 / 201]
+[128 / 201]
+[129 / 201]
+[130 / 201]
+[132 / 201]
+[133 / 201]
+[134 / 201]
+[144 / 201]
+[146 / 201]
+[147 / 201]
+[148 / 201]
+[153 / 201]
+[155 / 201]
+[156 / 201]
+[157 / 201]
+[160 / 201]
+[161 / 201]
+[174 / 201] FluidAudio
+[175 / 201] FluidAudio
+[176 / 201] FluidAudio
+[177 / 201] FluidAudio
+[184 / 202] LarynxCore
+[184 / 231]
+[184 / 256]
+[189 / 350]
+[192 / 350]
+[195 / 350]
+[196 / 350]
+[198 / 350]
+[202 / 350]
+[205 / 350]
+[206 / 350]
+[207 / 350]
+[208 / 350]
+[209 / 350]
+[212 / 350]
+[215 / 350]
+[217 / 350]
+[218 / 350]
+[220 / 350]
+[221 / 350]
+[222 / 350]
+[225 / 350] FluidAudio
+[227 / 350]
+[230 / 350]
+[232 / 350]
+[233 / 350]
+[239 / 350]
+[240 / 350]
+[241 / 350]
+[243 / 350]
+[246 / 350]
+[248 / 350]
+[248 / 350] FluidAudio
+[248 / 350]
+[249 / 350]
+[250 / 350]
+[255 / 350]
+[256 / 350]
+[257 / 350]
+[258 / 350]
+[261 / 350]
+[262 / 350]
+[262 / 350] FluidAudio
+[264 / 350] FluidAudio
+[264 / 350]
+[271 / 350]
+[273 / 350]
+[279 / 350]
+[280 / 350]
+[283 / 350]
+[285 / 350]
+[301 / 350]
+[302 / 350]
+[307 / 350]
+[315 / 350]
+[317 / 350]
+[318 / 350]
+[321 / 350]
+[322 / 350]
+[323 / 350]
+[334 / 350] LarynxCore
+[343 / 351] LarynxCore
+/Users/locust/work/larynx/Sources/LarynxCore/Cleaner.swift:88:95: warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+ 86 |                 let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
+ 87 |                 let session = LanguageModelSession(model: model, instructions: instructions)
+ 88 |                 let reply = try await session.respond(to: "Input: \(text)\nOutput:", options: GenerationOptions(sampling: .greedy))
+    |                                                                                               |- warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+    |                                                                                               `- note: use 'init(samplingMode:temperature:maximumResponseTokens:)' instead
+ 89 |                 var edited = reply.content.trimmingCharacters(in: .whitespacesAndNewlines)
+ 90 |                 if edited.lowercased().hasPrefix("output:") { edited = String(edited.dropFirst(7)).trimmingCharacters(in: .whitespaces) }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[343 / 351] larynx-product
+[349 / 357] larynx-product
+[350 / 357] LarynxCore
+/Users/locust/work/larynx/Package.swift: LarynxCore: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+[352 / 357] LarynxCore
+/Users/locust/work/larynx/Sources/larynx/main.swift:248:21: warning: mutation of captured var 'previewBusy' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+246 |                 }
+247 |                 await MainActor.run {
+248 |                     previewBusy = false
+    |                     `- warning: mutation of captured var 'previewBusy' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+249 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+250 |                 }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:249:24: warning: reference to captured var 'session' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+247 |                 await MainActor.run {
+248 |                     previewBusy = false
+249 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                        `- warning: reference to captured var 'session' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+250 |                 }
+251 |             }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:249:64: warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+247 |                 await MainActor.run {
+248 |                     previewBusy = false
+249 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                                                                `- warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+250 |                 }
+251 |             }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:249:97: warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+247 |                 await MainActor.run {
+248 |                     previewBusy = false
+249 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                                                                                                 `- warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+250 |                 }
+251 |             }
+
+[#SendableClosureCaptures]: <https://docs.swift.org/compiler/documentation/diagnostics/sendable-closure-captures>
+[353 / 357] larynx-product
+[355 / 357] larynx-product
+/Users/locust/work/larynx/Package.swift: larynx-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/usr/lib' not found
+/Users/locust/work/larynx/Package.swift: larynx-product: ld: warning: search path '/Library/Developer/CommandLineTools/Developer/Library/Frameworks' not found
+Build complete! (149.64 sec)
+error: no tests found; create a target in the 'Tests' directory

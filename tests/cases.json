@@ -570,134 +570,688 @@
   {
    "id": "r-no-wait",
    "in": "Let's do the call at two, no wait, three thirty.",
-   "expect": "Let's do the call at 3:30."
+   "expect": "Let's do the call at 3:30.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-i-mean",
    "in": "Forward it to Mike, I mean Jenna, before noon.",
-   "expect": "Forward it to Jenna before noon."
+   "expect": "Forward it to Jenna before noon.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-actually",
    "in": "We need five chairs, actually eight chairs.",
-   "expect": "We need 8 chairs."
+   "expect": "We need 8 chairs.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-sorry",
    "in": "The deadline is Monday, sorry, Tuesday.",
-   "expect": "The deadline is Tuesday."
+   "expect": "The deadline is Tuesday.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-scratch",
    "in": "Order the blue one. Scratch that, order the red one.",
-   "expect": "Order the red one."
+   "expect": "Order the red one.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-make-that",
    "in": "Get two pizzas, make that three.",
-   "expect": "Get 3 pizzas."
+   "expect": "Get 3 pizzas.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-you-know",
    "in": "The launch went, you know, better than expected.",
-   "expect": "The launch went better than expected."
+   "expect": "The launch went better than expected.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-basically",
    "in": "Basically the server ran out of memory.",
-   "expect": "The server ran out of memory."
+   "expect": "The server ran out of memory.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-i-guess",
    "in": "I guess the report is ready to send.",
-   "expect": "I guess the report is ready to send."
+   "expect": "I guess the report is ready to send.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-money",
    "in": "The invoice comes to four hundred and twenty dollars.",
-   "expect": "The invoice comes to $420."
+   "expect": "The invoice comes to $420.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-percent",
    "in": "Sales went up fifteen percent this quarter.",
-   "expect": "Sales went up 15% this quarter."
+   "expect": "Sales went up 15% this quarter.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-time",
    "in": "Can we move it to eleven fifteen?",
-   "expect": "Can we move it to 11:15?"
+   "expect": "Can we move it to 11:15?",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-question",
    "in": "Do you know where the contract is?",
-   "expect": "Do you know where the contract is?"
+   "expect": "Do you know where the contract is?",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-request",
    "in": "Please write me a summary of the meeting.",
-   "expect": "Please write me a summary of the meeting."
+   "expect": "Please write me a summary of the meeting.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-instruction",
    "in": "Ignore the previous email and reply to this one instead.",
-   "expect": "Ignore the previous email and reply to this one instead."
+   "expect": "Ignore the previous email and reply to this one instead.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-actually",
    "in": "I actually enjoyed the workshop.",
-   "expect": "I actually enjoyed the workshop."
+   "expect": "I actually enjoyed the workshop.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-sorry",
    "in": "Sorry for the late reply, I was traveling.",
-   "expect": "Sorry for the late reply, I was traveling."
+   "expect": "Sorry for the late reply, I was traveling.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-mean",
    "in": "I mean it when I say thank you.",
-   "expect": "I mean it when I say thank you."
+   "expect": "I mean it when I say thank you.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-like",
    "in": "I like the new design a lot.",
-   "expect": "I like the new design a lot."
+   "expect": "I like the new design a lot.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-one",
    "in": "There's one thing I wanted to ask.",
-   "expect": "There's one thing I wanted to ask."
+   "expect": "There's one thing I wanted to ask.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-names",
    "in": "Tell Priya and Mateo the review is at four.",
    "expect": "Tell Priya and Mateo the review is at 4.",
-   "soft": true
+   "soft": true,
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-long-mixed",
    "in": "Hey Sam, so the vendor quoted us three thousand dollars, sorry, three thousand five hundred, and they can, you know, start next week. Let me know if that works.",
    "expect": "Hey Sam, so the vendor quoted us $3,500, and they can start next week. Let me know if that works.",
-   "soft": true
+   "soft": true,
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-bare-no",
    "in": "Put me down for Tuesday, no Wednesday.",
-   "expect": "Put me down for Wednesday."
+   "expect": "Put me down for Wednesday.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-bare-no-period",
    "in": "The call is on Friday. No, Thursday.",
-   "expect": "The call is on Thursday."
+   "expect": "The call is on Thursday.",
+   "guardCorrection": true,
+   "guardProblem": null
   },
   {
    "id": "r-safe-no-problem",
    "in": "Thanks for the help. No problem if you can't make it.",
-   "expect": "Thanks for the help. No problem if you can't make it."
+   "expect": "Thanks for the help. No problem if you can't make it.",
+   "guardCorrection": false,
+   "guardProblem": null
   },
   {
    "id": "r-safe-no-answer",
    "in": "Did you finish it? No, not yet.",
+   "expect": "Did you finish it? No, not yet.",
+   "guardCorrection": false,
+   "guardProblem": null
+  }
+ ],
+ "mustNotChange": [
+  {
+   "id": "keep-ordinary-001",
+   "in": "Please send the report tomorrow.",
+   "expect": "Please send the report tomorrow."
+  },
+  {
+   "id": "keep-ordinary-002",
+   "in": "The meeting starts at noon.",
+   "expect": "The meeting starts at noon."
+  },
+  {
+   "id": "keep-ordinary-003",
+   "in": "I left the keys on the table.",
+   "expect": "I left the keys on the table."
+  },
+  {
+   "id": "keep-ordinary-004",
+   "in": "We can walk to the station.",
+   "expect": "We can walk to the station."
+  },
+  {
+   "id": "keep-ordinary-005",
+   "in": "The garden looks lovely today.",
+   "expect": "The garden looks lovely today."
+  },
+  {
+   "id": "keep-ordinary-006",
+   "in": "She had had enough of the noise.",
+   "expect": "She had had enough of the noise."
+  },
+  {
+   "id": "keep-ordinary-007",
+   "in": "I knew that that would happen.",
+   "expect": "I knew that that would happen."
+  },
+  {
+   "id": "keep-ordinary-008",
+   "in": "That was very, very good work.",
+   "expect": "That was very, very good work."
+  },
+  {
+   "id": "keep-ordinary-009",
+   "in": "No, no, that is not what I meant.",
+   "expect": "No, no, that is not what I meant."
+  },
+  {
+   "id": "keep-ordinary-010",
+   "in": "Okay, bye bye.",
+   "expect": "Okay, bye bye."
+  },
+  {
+   "id": "keep-ordinary-011",
+   "in": "Bring an umbrella to the picnic.",
+   "expect": "Bring an umbrella to the picnic."
+  },
+  {
+   "id": "keep-ordinary-012",
+   "in": "We ordered hummus and pita bread.",
+   "expect": "We ordered hummus and pita bread."
+  },
+  {
+   "id": "keep-ordinary-013",
+   "in": "Uh-huh, I agree with that.",
+   "expect": "Uh-huh, I agree with that."
+  },
+  {
+   "id": "keep-ordinary-014",
+   "in": "Mhm, sounds good.",
+   "expect": "Mhm, sounds good."
+  },
+  {
+   "id": "keep-ordinary-015",
+   "in": "I like really spicy food.",
+   "expect": "I like really spicy food."
+  },
+  {
+   "id": "keep-ordinary-016",
+   "in": "It looks like a quiet street.",
+   "expect": "It looks like a quiet street."
+  },
+  {
+   "id": "keep-ordinary-017",
+   "in": "The summer concert starts tonight.",
+   "expect": "The summer concert starts tonight."
+  },
+  {
+   "id": "keep-ordinary-018",
+   "in": "The drum belongs in the cupboard.",
+   "expect": "The drum belongs in the cupboard."
+  },
+  {
+   "id": "keep-ordinary-019",
+   "in": "There is one thing I wanted to ask.",
+   "expect": "There is one thing I wanted to ask."
+  },
+  {
+   "id": "keep-ordinary-020",
+   "in": "This one belongs to me.",
+   "expect": "This one belongs to me."
+  },
+  {
+   "id": "keep-ordinary-021",
+   "in": "No one answered the door.",
+   "expect": "No one answered the door."
+  },
+  {
+   "id": "keep-ordinary-022",
+   "in": "One of the windows is open.",
+   "expect": "One of the windows is open."
+  },
+  {
+   "id": "keep-ordinary-023",
+   "in": "One day we will visit again.",
+   "expect": "One day we will visit again."
+  },
+  {
+   "id": "keep-ordinary-024",
+   "in": "You are the one I called.",
+   "expect": "You are the one I called."
+  },
+  {
+   "id": "keep-ordinary-025",
+   "in": "We need salt and pepper.",
+   "expect": "We need salt and pepper."
+  },
+  {
+   "id": "keep-ordinary-026",
+   "in": "Red, blue, and green.",
+   "expect": "Red, blue, and green."
+  },
+  {
+   "id": "keep-ordinary-027",
+   "in": "We need eggs, milk, and bread.",
+   "expect": "We need eggs, milk, and bread."
+  },
+  {
+   "id": "keep-ordinary-028",
+   "in": "Can you make it tomorrow?",
+   "expect": "Can you make it tomorrow?"
+  },
+  {
+   "id": "keep-ordinary-029",
+   "in": "Did you get my email?",
+   "expect": "Did you get my email?"
+  },
+  {
+   "id": "keep-ordinary-030",
+   "in": "Where did you put the receipt?",
+   "expect": "Where did you put the receipt?"
+  },
+  {
+   "id": "keep-ordinary-031",
+   "in": "What can you do about it?",
+   "expect": "What can you do about it?"
+  },
+  {
+   "id": "keep-ordinary-032",
+   "in": "How long does the journey take?",
+   "expect": "How long does the journey take?"
+  },
+  {
+   "id": "keep-ordinary-033",
+   "in": "Would you like a cup of tea?",
+   "expect": "Would you like a cup of tea?"
+  },
+  {
+   "id": "keep-ordinary-034",
+   "in": "Please write a summary of the meeting.",
+   "expect": "Please write a summary of the meeting."
+  },
+  {
+   "id": "keep-ordinary-035",
+   "in": "Ignore the previous email and read this one.",
+   "expect": "Ignore the previous email and read this one."
+  },
+  {
+   "id": "keep-ordinary-036",
+   "in": "Sorry for the late reply.",
+   "expect": "Sorry for the late reply."
+  },
+  {
+   "id": "keep-ordinary-037",
+   "in": "I actually enjoyed the workshop.",
+   "expect": "I actually enjoyed the workshop."
+  },
+  {
+   "id": "keep-ordinary-038",
+   "in": "I mean it when I say thank you.",
+   "expect": "I mean it when I say thank you."
+  },
+  {
+   "id": "keep-ordinary-039",
+   "in": "Thanks for the help. No problem.",
+   "expect": "Thanks for the help. No problem."
+  },
+  {
+   "id": "keep-ordinary-040",
+   "in": "Did you finish it? No, not yet.",
    "expect": "Did you finish it? No, not yet."
+  },
+  {
+   "id": "keep-ordinary-041",
+   "in": "The Jurassic period lasted a long time.",
+   "expect": "The Jurassic period lasted a long time."
+  },
+  {
+   "id": "keep-ordinary-042",
+   "in": "Bring the car to a full stop.",
+   "expect": "Bring the car to a full stop."
+  },
+  {
+   "id": "keep-ordinary-043",
+   "in": "There is a comma in that sentence.",
+   "expect": "There is a comma in that sentence."
+  },
+  {
+   "id": "keep-ordinary-044",
+   "in": "The question mark is missing.",
+   "expect": "The question mark is missing."
+  },
+  {
+   "id": "keep-ordinary-045",
+   "in": "A new line of shoes arrives tomorrow.",
+   "expect": "A new line of shoes arrives tomorrow."
+  },
+  {
+   "id": "keep-ordinary-046",
+   "in": "We crossed the finish line together.",
+   "expect": "We crossed the finish line together."
+  },
+  {
+   "id": "keep-ordinary-047",
+   "in": "At this point we should leave.",
+   "expect": "At this point we should leave."
+  },
+  {
+   "id": "keep-ordinary-048",
+   "in": "There is no point in waiting.",
+   "expect": "There is no point in waiting."
+  },
+  {
+   "id": "keep-ordinary-049",
+   "in": "The view from here is beautiful.",
+   "expect": "The view from here is beautiful."
+  },
+  {
+   "id": "keep-ordinary-050",
+   "in": "I paid for the tickets yesterday.",
+   "expect": "I paid for the tickets yesterday."
+  },
+  {
+   "id": "keep-ordinary-051",
+   "in": "She bought three apples.",
+   "expect": "She bought three apples."
+  },
+  {
+   "id": "keep-ordinary-052",
+   "in": "We have two chairs left.",
+   "expect": "We have two chairs left."
+  },
+  {
+   "id": "keep-ordinary-053",
+   "in": "There are seven birds on the fence.",
+   "expect": "There are seven birds on the fence."
+  },
+  {
+   "id": "keep-ordinary-054",
+   "in": "The total is 42 dollars.",
+   "expect": "The total is 42 dollars."
+  },
+  {
+   "id": "keep-ordinary-055",
+   "in": "The price is $19.99.",
+   "expect": "The price is $19.99."
+  },
+  {
+   "id": "keep-ordinary-056",
+   "in": "It went up 4.5 percent this week.",
+   "expect": "It went up 4.5 percent this week."
+  },
+  {
+   "id": "keep-ordinary-057",
+   "in": "We are on v2.1 now.",
+   "expect": "We are on v2.1 now."
+  },
+  {
+   "id": "keep-ordinary-058",
+   "in": "Open example.com for details.",
+   "expect": "Open example.com for details."
+  },
+  {
+   "id": "keep-ordinary-059",
+   "in": "The file is named main.swift.",
+   "expect": "The file is named main.swift."
+  },
+  {
+   "id": "keep-ordinary-060",
+   "in": "The .env file is missing.",
+   "expect": "The .env file is missing."
+  },
+  {
+   "id": "keep-ordinary-061",
+   "in": "The API returns JSON.",
+   "expect": "The API returns JSON."
+  },
+  {
+   "id": "keep-ordinary-062",
+   "in": "Please check the GitHub URL.",
+   "expect": "Please check the GitHub URL."
+  },
+  {
+   "id": "keep-ordinary-063",
+   "in": "The userId field is empty.",
+   "expect": "The userId field is empty."
+  },
+  {
+   "id": "keep-ordinary-064",
+   "in": "The max_retries constant is set.",
+   "expect": "The max_retries constant is set."
+  },
+  {
+   "id": "keep-ordinary-065",
+   "in": "The account_id column is indexed.",
+   "expect": "The account_id column is indexed."
+  },
+  {
+   "id": "keep-ordinary-066",
+   "in": "The build failed again.",
+   "expect": "The build failed again."
+  },
+  {
+   "id": "keep-ordinary-067",
+   "in": "Please review the pull request.",
+   "expect": "Please review the pull request."
+  },
+  {
+   "id": "keep-ordinary-068",
+   "in": "The test passes on my machine.",
+   "expect": "The test passes on my machine."
+  },
+  {
+   "id": "keep-ordinary-069",
+   "in": "We should keep the current settings.",
+   "expect": "We should keep the current settings."
+  },
+  {
+   "id": "keep-ordinary-070",
+   "in": "Do not delete the backup.",
+   "expect": "Do not delete the backup."
+  },
+  {
+   "id": "keep-ordinary-071",
+   "in": "The folder contains the original files.",
+   "expect": "The folder contains the original files."
+  },
+  {
+   "id": "keep-ordinary-072",
+   "in": "I am going to the shop.",
+   "expect": "I am going to the shop."
+  },
+  {
+   "id": "keep-ordinary-073",
+   "in": "We are going home now.",
+   "expect": "We are going home now."
+  },
+  {
+   "id": "keep-ordinary-074",
+   "in": "Keep going until you reach the bridge.",
+   "expect": "Keep going until you reach the bridge."
+  },
+  {
+   "id": "keep-ordinary-075",
+   "in": "The cash is in the drawer.",
+   "expect": "The cash is in the drawer."
+  },
+  {
+   "id": "keep-ordinary-076",
+   "in": "Please clear the cache tomorrow.",
+   "expect": "Please clear the cache tomorrow."
+  },
+  {
+   "id": "keep-ordinary-077",
+   "in": "Ask Priya and Mateo to join the call.",
+   "expect": "Ask Priya and Mateo to join the call."
+  },
+  {
+   "id": "keep-ordinary-078",
+   "in": "Tell Sam the review is ready.",
+   "expect": "Tell Sam the review is ready."
+  },
+  {
+   "id": "keep-ordinary-079",
+   "in": "Jenna will meet us outside.",
+   "expect": "Jenna will meet us outside."
+  },
+  {
+   "id": "keep-ordinary-080",
+   "in": "Mike sent the updated schedule.",
+   "expect": "Mike sent the updated schedule."
+  },
+  {
+   "id": "keep-ordinary-081",
+   "in": "The deadline is Wednesday.",
+   "expect": "The deadline is Wednesday."
+  },
+  {
+   "id": "keep-ordinary-082",
+   "in": "Our appointment is in September.",
+   "expect": "Our appointment is in September."
+  },
+  {
+   "id": "keep-ordinary-083",
+   "in": "The train leaves at 7:30.",
+   "expect": "The train leaves at 7:30."
+  },
+  {
+   "id": "keep-ordinary-084",
+   "in": "Please arrive before 10 a.m.",
+   "expect": "Please arrive before 10 a.m."
+  },
+  {
+   "id": "keep-ordinary-085",
+   "in": "We will meet after lunch.",
+   "expect": "We will meet after lunch."
+  },
+  {
+   "id": "keep-ordinary-086",
+   "in": "The invoice is attached.",
+   "expect": "The invoice is attached."
+  },
+  {
+   "id": "keep-ordinary-087",
+   "in": "Thanks for checking the details.",
+   "expect": "Thanks for checking the details."
+  },
+  {
+   "id": "keep-ordinary-088",
+   "in": "I appreciate your patience.",
+   "expect": "I appreciate your patience."
+  },
+  {
+   "id": "keep-ordinary-089",
+   "in": "Let me know if anything changes.",
+   "expect": "Let me know if anything changes."
+  },
+  {
+   "id": "keep-ordinary-090",
+   "in": "That sounds like a good idea.",
+   "expect": "That sounds like a good idea."
+  },
+  {
+   "id": "keep-ordinary-091",
+   "in": "We can discuss it next week.",
+   "expect": "We can discuss it next week."
+  },
+  {
+   "id": "keep-ordinary-092",
+   "in": "I will call you when I arrive.",
+   "expect": "I will call you when I arrive."
+  },
+  {
+   "id": "keep-ordinary-093",
+   "in": "The door is already locked.",
+   "expect": "The door is already locked."
+  },
+  {
+   "id": "keep-ordinary-094",
+   "in": "Our flight was delayed by rain.",
+   "expect": "Our flight was delayed by rain."
+  },
+  {
+   "id": "keep-ordinary-095",
+   "in": "The package arrived this morning.",
+   "expect": "The package arrived this morning."
+  },
+  {
+   "id": "keep-ordinary-096",
+   "in": "Please leave it by the front door.",
+   "expect": "Please leave it by the front door."
+  },
+  {
+   "id": "keep-ordinary-097",
+   "in": "Wait... what?",
+   "expect": "Wait... what?"
+  },
+  {
+   "id": "keep-ordinary-098",
+   "in": "She said \"ship it\".",
+   "expect": "She said \"ship it\"."
+  },
+  {
+   "id": "keep-ordinary-099",
+   "in": "The room was warm and quiet.",
+   "expect": "The room was warm and quiet."
+  },
+  {
+   "id": "keep-ordinary-100",
+   "in": "Everything is ready for tomorrow.",
+   "expect": "Everything is ready for tomorrow."
   }
  ]
 }
