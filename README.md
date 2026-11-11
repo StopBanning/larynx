@@ -128,10 +128,10 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 
 ## Roadmap
 
-1. Daily driver: guided permissions.
-2. Context: text around the cursor and the selection via Accessibility, per-app styles, code words.
-3. Voice edits on selected text; context from the text around the cursor.
-4. Signed, notarized releases; Windows later.
+The full plan, with a scoreboard against Wispr Flow and a task list, is in [docs/MASTER-PLAN.md](docs/MASTER-PLAN.md).
+In short: measure first (benchmarks, history), fix what real use shows (numbers, clipped words, doubtful results),
+read the screen locally for names and context, hands-free and microphone handling, spoken formatting, styles and
+voice edits with a local model, a proper settings app, 100+ languages, then meeting notes and other platforms.
 
 ## License
 

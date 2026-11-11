@@ -1,8 +1,9 @@
 # Larynx: handoff and plan (updated Nov 10, 2026)
 
 Start here. Colin uses Larynx for all his dictation now (Right Command, mostly into Claude desktop, Messages).
-Next session's job (Colin's words): "see if there's anything we're missing". Ideas for that are under
-"Open questions / candidates" below. Read README.md for the feature list and how it works.
+The roadmap is `docs/MASTER-PLAN.md` (Nov 10): the task-by-task plan to make Larynx better than Wispr Flow on every
+row of its scoreboard. Execute from that file, top to bottom. This file is the short handoff: where things live, how
+to work with Colin, lessons learned. Read README.md for the feature list and how it works.
 
 ## How to work with Colin on this
 - Just do it: build, test, commit, push and install without asking (he's tired of manual steps). Don't ask him to
@@ -21,7 +22,7 @@ Next session's job (Colin's words): "see if there's anything we're missing". Ide
 - Repo `~/work/larynx`, public at github.com/StopBanning/larynx, branch `main`, all pushed. Commit as
   `Colin <343690415+StopBanning@users.noreply.github.com>` with the Claude co-author line.
 - App: `~/Applications/Larynx.app`, built by `./scripts/make-app.sh`, signed with Colin's free
-  "Apple Development: colindavid95@live.com (4U94C34XA7)" identity. Permissions (Mic, Input Monitoring,
+  "Apple Development" identity (team 4U94C34XA7; `security find-identity -v -p codesigning` shows it). Permissions (Mic, Input Monitoring,
   Accessibility) are stored against that certificate, so rebuilds keep them. Do not change the bundle id
   `com.automatedworkflow.larynx` or the signing identity.
 - Apple's on-device model (the rewrite) only works when signed with an Apple Development identity
@@ -61,7 +62,7 @@ e.type = .flagsChanged; e.flags = down ? .maskCommand : []; e.post(tap: .cghidEv
 - Snippets (`snippets.json`, cue on its own expands).
 - Latest full suite: rules 43/43, rewrite 26/26, spoken 264/300 (misses are speech mishearing synthetic voices).
 
-## Open questions / candidates (for "anything we're missing")
+## Open questions / candidates (all now covered by tasks in MASTER-PLAN.md)
 - Confirm learning-from-fixes works in Claude desktop and Messages (AX value readable? Electron?).
 - Voice commands on selected text ("make this shorter") with Apple's on-device model.
 - Context from the text around the cursor (names already in a thread) to bias spelling.
