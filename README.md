@@ -157,3 +157,9 @@ Our modifications are selection, lowercasing, deduplication, sorting, and UTF-8
 encoding; `scripts/generate-wordlist.py` reproduces them from the upstream release.
 The app build script bundles both the list and its notices. When moving the CLI
 executable manually, keep `Larynx_LarynxText.bundle` beside it.
+
+The dictation pipeline in `LarynxCore` now records each cleanup decision as a typed
+Step, preserving the existing stage order. Stage policies and the existing menu
+preferences share [Settings](docs/SETTINGS.md), with optional JSON overrides and
+legacy `defaults` fallbacks. The app's capture/session, engine, serve, and command
+wiring live under `Sources/larynx/App/`; `main.swift` only launches the app or CLI.

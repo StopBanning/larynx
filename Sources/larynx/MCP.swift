@@ -64,8 +64,11 @@ func runMCP() async {
                 } catch { text(id, "\(error)", error: true) }
             case "clean_text":
                 let mode = (a["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .correspondence
-                let tidied = Tidy.apply(Dictionary.apply(a["text"] as? String ?? ""), mode: mode)
-                text(id, await Cleaner.rewrite(tidied, mode: mode).text)
+                let raw = a["text"] as? String ?? ""
+                let input = Transcript(text: raw, raw: raw, engine: "text", mode: mode, audioSeconds: 0,
+                                       asrMs: 0, rewriteMs: 0, totalMs: 0, rewrite: "off", rewritten: false)
+                let context = Pipeline.Context(dictionary: Dictionary.load(), settings: Settings.shared.snapshot())
+                text(id, await Pipeline().run(input, context: context).text)
             case "add_dictionary_word":
                 guard let heard = a["heard"] as? String, let written = a["written"] as? String, !heard.isEmpty
                 else { text(id, "heard and written are required", error: true); continue }

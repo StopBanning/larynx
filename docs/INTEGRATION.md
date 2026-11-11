@@ -44,8 +44,10 @@ the other model if it is already downloaded.
 ### Typed transcript fields (Phase Zero 0.3)
 
 All existing result keys keep their names and types. `finish` now returns a Codable `Transcript`, with
-`Step` records (`stage`, `before`, `after`, `applied`). The wire result adds `steps`, initially an empty array;
-0.4 will populate it from the pipeline. `confidence` is optional and omitted while the existing string-only
+`Step` records (`stage`, `before`, `after`, `applied`). The wire result adds `steps`, populated in pipeline order:
+snippet, dictionary, vocabularyCase, tidy, rewrite. A matched snippet ends the pipeline after its own step.
+Off/bypassed stages have equal before/after and `applied: false`; shadow stages record the proposed output with
+`applied: false` while delivery and subsequent stages use the original text. See [Settings](SETTINGS.md). `confidence` is optional and omitted while the existing string-only
 speech wrapper does not expose a score. No score is fabricated. `snippet` remains present only for a matched
 snippet; delivery fields remain present only after a delivery attempt. Unknown fields should be ignored.
 

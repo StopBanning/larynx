@@ -9,7 +9,12 @@ final class MenuController: NSObject, NSMenuDelegate {
     let statusLine = NSMenuItem(title: "Starting...", action: nil, keyEquivalent: "")
     /// The last 10 transcripts, newest first. Kept in memory only: never written to disk.
     private(set) var recent: [String] = []
-    private let defaults = UserDefaults.standard
+    private let settings = Settings.shared
+
+    @discardableResult private func save(_ value: String, for key: Settings.Key) -> Bool {
+        do { try settings.set(value, for: key); return true }
+        catch { log("could not save \(key.rawValue): \(error)"); return false }
+    }
 
     func remember(_ text: String) {
         DispatchQueue.main.async {
@@ -20,8 +25,8 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     /// Turns on Open at Login the first time the app runs; after that the menu checkbox decides.
     func setUpLoginItemOnce() {
-        guard !defaults.bool(forKey: "loginItemSet") else { return }
-        defaults.set(true, forKey: "loginItemSet")
+        guard !settings.bool(.loginItemSet) else { return }
+        guard save("true", for: .loginItemSet) else { return }
         do { try SMAppService.mainApp.register(); log("added to login items") }
         catch { log("could not add to login items: \(error)") }
     }
@@ -115,11 +120,11 @@ final class MenuController: NSObject, NSMenuDelegate {
     }
 
     @objc func togglePreview() {
-        defaults.set(Pill.enabled ? "off" : "on", forKey: "preview")
+        save(Pill.enabled ? "off" : "on", for: .preview)
     }
 
     @objc func toggleRewrite() {
-        defaults.set(autoRewrite ? "off" : "auto", forKey: "rewrite")
+        save(autoRewrite ? "off" : "auto", for: .rewrite)
     }
 
     @objc func toggleKey(_ sender: NSMenuItem) {
@@ -127,16 +132,15 @@ final class MenuController: NSObject, NSMenuDelegate {
         var keys = activeHotkey?.keys ?? listenKeys
         if keys.contains(key) { keys.removeAll { $0 == key } } else { keys.append(key) }
         guard !keys.isEmpty else { return }  // always keep one talk key
+        guard save(keys.map(\.rawValue).joined(separator: ","), for: .keys) else { return }
         activeHotkey?.keys = keys
-        defaults.set(keys.map(\.rawValue).joined(separator: ","), forKey: "keys")
         log("talk keys: " + keys.map(\.label).joined(separator: ", "))
     }
 
     /// Switching models means loading a different one, so Larynx restarts itself.
     @objc func chooseEngine(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, raw != engine.rawValue else { return }
-        defaults.set(raw, forKey: "engine")
-        defaults.synchronize()
+        guard save(raw, for: .engine) else { return }
         log("speech model: \(raw), restarting")
         let config = NSWorkspace.OpenConfiguration()
         config.createsNewApplicationInstance = true

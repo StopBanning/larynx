@@ -34,3 +34,21 @@ request IDs, verbatim behavior and the additive MCP structured result. It never
 uses mic capture or insertion. Existing main.swift preview concurrency warnings
 remain. Speech confidence is not yet exposed by the wrapper and is omitted;
 steps remain empty until task 0.4. No full post-phase speech benchmark is claimed.
+
+## Tasks 0.4 and 0.5
+
+`phase0-task04-*` covers both the pipeline/session refactor and its Settings
+prerequisite. Nineteen Swift tests cover the portable text contract, pipeline
+order/snippet bypass, off/shadow behavior, independent session states, Settings
+precedence/reloads/atomic writes and every registered setting's documentation.
+Release build and real CLI/serve/MCP file-only protocol checks pass.
+
+The full suite scores exactly match the pre-phase baseline: rules 43/43,
+rewrite 26/26, spoken 264/300 excluding known gaps. The Python exit status is 1
+because existing spoken failures remain. `phase0-task04-baseline-comparison.log`
+compares all 410 voice/rate/case combinations: zero differences in raw text,
+final text, pass/fail or failure reasons, including the known-gap fixtures.
+The pipeline adds Step metadata but no new text transformations. The existing
+Cleaner Foundation Models deprecation warning remains; preview captured-variable
+warnings disappeared with the MainActor session split. No live paste/keyboard
+overlap test or full key-up latency measurement is claimed (capture rig is 0.9).

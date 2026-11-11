@@ -1,0 +1,63 @@
+Building for debugging...
+[3 / 39]
+[5 / 38] LarynxText
+[7 / 39] LarynxText
+[9 / 28] FluidAudio
+[13 / 31] FluidAudio
+[15 / 31] LarynxCore
+[18 / 21] larynx-product
+[21 / 24] larynx-product
+[24 / 26] larynx-product
+Build complete! (1.72 sec)
+Test Suite 'All tests' started at 2026-11-10 22:51:12.330.
+Test Suite 'All tests' passed at 2026-11-10 22:51:12.331.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'All tests' started at 2026-11-10 22:51:12.390.
+Test Suite 'All tests' passed at 2026-11-10 22:51:12.390.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+◇ Test run started.
+↳ Testing Library Version: 2403
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test portableSnippetsRequireWholeUtterance() started.
+◇ Test ordinarySentencesStayUnchanged() started.
+◇ Test bundledEnglishSpelling() started.
+◇ Test unsafeRewritesAreRejected() started.
+◇ Test rewriteGuardExpectations() started.
+◇ Test fixtureContract() started.
+◇ Test textRules() started.
+◇ Test portableDictionaryPreservesBoundariesAndLiteralText() started.
+✔ Test portableSnippetsRequireWholeUtterance() passed after 0.001 seconds.
+✔ Test fixtureContract() passed after 0.001 seconds.
+✔ Test portableDictionaryPreservesBoundariesAndLiteralText() passed after 0.001 seconds.
+✔ Test unsafeRewritesAreRejected() passed after 0.001 seconds.
+✔ Test rewriteGuardExpectations() passed after 0.001 seconds.
+✔ Test bundledEnglishSpelling() passed after 0.019 seconds.
+✔ Test textRules() passed after 0.270 seconds.
+✔ Test ordinarySentencesStayUnchanged() passed after 1.777 seconds.
+✔ Test run with 8 tests in 0 suites passed after 1.778 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2403
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test settingsWritesAreAtomicAndRetainUnknownFields() started.
+◇ Test pipelinePreservesExistingTextContract() started.
+◇ Test disabledStagesAreNotInvokedAndShadowRewriteKeepsText() started.
+◇ Test pipelineUsesExistingOrderAndBypassesLiteralSnippets() started.
+◇ Test legacyServeFieldsSurviveTypedRoundTrip() started.
+◇ Test shadowProposalsNeverFeedLaterStages() started.
+◇ Test coreExportAndCleanerGuardStayCompatible() started.
+◇ Test settingsReloadJSONAndPreserveLegacyFallbacks() started.
+◇ Test transcriptRetainsStepsSnippetAndCopyFailure() started.
+◇ Test sessionsFinishIndependentlyAndRejectInvalidTransitions() started.
+◇ Test everySettingIsDocumented() started.
+✔ Test sessionsFinishIndependentlyAndRejectInvalidTransitions() passed after 0.001 seconds.
+✔ Test disabledStagesAreNotInvokedAndShadowRewriteKeepsText() passed after 0.001 seconds.
+✔ Test legacyServeFieldsSurviveTypedRoundTrip() passed after 0.001 seconds.
+✔ Test transcriptRetainsStepsSnippetAndCopyFailure() passed after 0.001 seconds.
+✔ Test everySettingIsDocumented() passed after 0.001 seconds.
+✔ Test settingsReloadJSONAndPreserveLegacyFallbacks() passed after 0.005 seconds.
+✔ Test settingsWritesAreAtomicAndRetainUnknownFields() passed after 0.005 seconds.
+✔ Test coreExportAndCleanerGuardStayCompatible() passed after 0.009 seconds.
+✔ Test pipelineUsesExistingOrderAndBypassesLiteralSnippets() passed after 0.009 seconds.
+✔ Test shadowProposalsNeverFeedLaterStages() passed after 0.015 seconds.
+✔ Test pipelinePreservesExistingTextContract() passed after 1.994 seconds.
+✔ Test run with 11 tests in 0 suites passed after 1.994 seconds.

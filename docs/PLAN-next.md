@@ -43,9 +43,28 @@ to work with Colin, lessons learned. Read README.md for the feature list and how
 - Tasks 0.2/0.3 are installed in ~/Applications/Larynx.app, retaining the existing signing identity and bundle
   ID. Bundled resources and strict deep signature verification pass. The idle-safe restart script reported
   `Larynx ready` after the expected CoreML reload. No live paste test was run.
-- Push status: task 0.2 is on origin/main. Task 0.3 is committed locally and installed, but its push failed
-  repeatedly because github.com could not be resolved. Run `git push origin main` once DNS recovers.
-  Next implementation task: 0.4, pipeline and session/command structure.
+- Tasks 0.4 and 0.5 are complete together (Settings was a prerequisite of stage policy). `Pipeline` records
+  snippet → dictionary → vocabularyCase → tidy → rewrite decisions; a matched snippet remains literal and
+  stops the pipeline. Off stages skip work; shadow proposals do not affect delivered text or later stages.
+  History persistence/mining of shadow proposals remains task 0.7.
+- `main.swift` is now 25 lines of entry wiring. App/Session, Listen, Serve, Commands and Engine own the shell.
+  Each utterance keeps its own lifecycle and target while another recording can begin. Preview UI is owned by
+  the current session, and the single outstanding preview request gate is preserved. Vocabulary case terms are
+  copied through a lock during background reload. No new text transformations were added.
+- Settings reads optional settings.json with JSON > legacy defaults > built-in precedence (CLI overrides still
+  win where supported). Menu writes are atomic and mirrored to defaults. Malformed edits retain the last valid
+  object; unknown fields survive saves. See docs/SETTINGS.md for all 14 keys/defaults, reload timing and stage
+  semantics. All existing preference consumers use Settings; the documentation coverage test enforces the list.
+- Task 0.4/0.5 checks: 19 Swift tests, release build and file-fed protocol smoke pass. Full suite exactly equals
+  the pre-phase baseline: rules 43/43, rewrite 26/26, spoken 264/300 excluding known gaps. All 410 raw/final
+  strings and pass/fail/reasons match, including known gaps. The suite exits 1 for existing spoken failures;
+  this is not an all-green speech suite. See bench/results/phase0-task04-*.
+- Installed through make-app.sh with the existing signing identity/bundle ID; resources and strict deep
+  signature verification pass. restart-app.sh reported `Larynx ready`. Live hotkey/paste and overlap behavior
+  have not been exercised; only lifecycle tests, file-fed processing and app startup are covered in this task. The existing
+  Cleaner Foundation Models deprecation remains; the old captured preview-variable warnings are gone.
+- Push is optional per Colin's latest instruction. Task 0.2 is on origin/main; task 0.3 and the current work
+  are kept as local commits for the main agent to review. Next implementation task: 0.6, History and crash spool.
 
 ## Where things stand
 

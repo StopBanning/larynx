@@ -1,0 +1,5 @@
+Tasks 0.4/0.5 installed via scripts/make-app.sh with the existing signing identity and bundle ID.
+Bundled word list and upstream notices verified.
+codesign --verify --deep --strict: passed.
+Restarted only via scripts/restart-app.sh: Larynx ready.
+No live hotkey/paste/overlap tests and no privacy setting changes.

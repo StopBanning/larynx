@@ -9,7 +9,7 @@ public enum Vocabulary {
         .appendingPathComponent("Library/Application Support/Larynx/vocabulary.txt")
     /// Where project names are learned from: `defaults write com.automatedworkflow.larynx vocabularyRoots ~/work,~/code`.
     public static var roots: [URL] {
-        let saved = UserDefaults.standard.string(forKey: "vocabularyRoots") ?? "~/work"
+        let saved = Settings.shared.string(.vocabularyRoots)
         return saved.split(separator: ",").map {
             URL(fileURLWithPath: (String($0).trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath, isDirectory: true)
         }
@@ -38,7 +38,7 @@ public enum Vocabulary {
         ((try? String(contentsOf: url, encoding: .utf8)) ?? "").split(separator: "\n").forEach { add(String($0)) }
         Dictionary.load().values.forEach(add)
         projectNames().forEach(add)
-        if UserDefaults.standard.string(forKey: "devTerms") != "off" { developerTerms.forEach(add) }
+        if Settings.shared.string(.devTerms) != "off" { developerTerms.forEach(add) }
         return out
     }
 

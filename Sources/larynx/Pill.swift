@@ -1,4 +1,5 @@
 import AppKit
+import LarynxCore
 
 /// A small floating pill at the bottom of the screen that shows the words as you speak.
 /// It is a non-activating panel that ignores the mouse, so it never takes focus from the app you are dictating into.
@@ -7,7 +8,7 @@ import AppKit
 final class Pill {
     static let shared = Pill()
     /// `defaults write com.automatedworkflow.larynx preview off` turns it off.
-    nonisolated static var enabled: Bool { UserDefaults.standard.string(forKey: "preview") != "off" }
+    nonisolated static var enabled: Bool { Settings.shared.string(.preview) != "off" }
 
     private static let maxWidth: CGFloat = 480
     private static let padding = NSSize(width: 20, height: 12)

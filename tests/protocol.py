@@ -33,7 +33,9 @@ def check_transcript(actual):
         else:
             assert type(actual[key]) is type(value), (key, actual[key], value)
             assert actual[key] == value, (key, actual[key], value)
-    assert isinstance(actual['steps'], list)
+    assert [s['stage'] for s in actual['steps']] == ['snippet', 'dictionary', 'vocabularyCase', 'tidy', 'rewrite']
+    assert actual['steps'][-1]['applied'] is False  # --rewrite off
+
 
 
 rows = run('serve', [
@@ -46,14 +48,20 @@ result = next(r for r in rows if r.get('id') == 'fixture' and r.get('event') == 
 check_transcript(result)
 verbatim = next(r for r in rows if r.get('id') == 42 and r.get('event') == 'result')
 assert verbatim['text'] == verbatim['raw']
+assert all(s['applied'] is False for s in verbatim['steps'])
 assert next(r for r in rows if r.get('id') == 'status')['event'] == 'status'
 
 rows = run('mcp', [
     {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {'protocolVersion': '2025-06-18'}},
+    {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {
+        'name': 'clean_text', 'arguments': {'text': 'the the report', 'mode': 'ai'}}},
     {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call', 'params': {
         'name': 'transcribe_file', 'arguments': {'path': str(fixture), 'mode': 'standard'}}},
 ])
 assert rows[0]['result']['protocolVersion'] == '2025-06-18'
+clean = next(r for r in rows if r.get('id') == 3)['result']
+assert clean['content'] == [{'type': 'text', 'text': 'The report'}]
+assert clean['isError'] is False
 body = next(r for r in rows if r.get('id') == 2)['result']
 assert body['isError'] is False
 assert body['content'] == [{'type': 'text', 'text': legacy['text']}]

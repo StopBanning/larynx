@@ -1,0 +1,22 @@
+Building for production...
+[6 / 24] LarynxText
+[8 / 25] FluidAudio
+[10 / 26] LarynxText
+[12 / 21] FluidAudio
+[15 / 23] LarynxCore
+/Users/locust/work/larynx/Sources/LarynxCore/Cleaner.swift:89:95: warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+ 87 |                 let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
+ 88 |                 let session = LanguageModelSession(model: model, instructions: instructions)
+ 89 |                 let reply = try await session.respond(to: "Input: \(text)\nOutput:", options: GenerationOptions(sampling: .greedy))
+    |                                                                                               |- warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+    |                                                                                               `- note: use 'init(samplingMode:temperature:maximumResponseTokens:)' instead
+ 90 |                 var edited = reply.content.trimmingCharacters(in: .whitespacesAndNewlines)
+ 91 |                 if edited.lowercased().hasPrefix("output:") { edited = String(edited.dropFirst(7)).trimmingCharacters(in: .whitespaces) }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[17 / 24] LarynxCore
+[20 / 21] larynx-product
+[21 / 22] larynx-product
+[24 / 26] larynx-product
+[25 / 26] larynx-product
+Build complete! (23.66 sec)
