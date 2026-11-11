@@ -91,14 +91,16 @@ public actor Transcriber {
     static func swap(_ heard: String, for term: String, in text: String) -> String {
         // A suggestion can cover a few words ("Gavy app"); swap only the one that sounds like the term.
         let words = heard.split(separator: " ").map { $0.trimmingCharacters(in: .punctuationCharacters) }
-        guard !term.contains(" "), let h = words.first(where: { $0.lowercased() != term.lowercased() && soundsAlike($0, term) })
+        guard !term.contains(" "), let h = words.first(where: { $0.lowercased() != term.lowercased() && soundsAlike($0, term, strict: Vocabulary.isEnglish($0)) })
         else { return text }
         let pattern = "(?i)\\b" + NSRegularExpression.escapedPattern(for: h) + "\\b"
         guard let range = text.range(of: pattern, options: .regularExpression) else { return text }
         return text.replacingCharacters(in: range, with: term)
     }
 
-    public static func soundsAlike(_ a: String, _ b: String) -> Bool {
+    /// `strict` (for a real English word the model heard, like "going") demands identical consonants, so only near
+    /// misspellings ("macropod" -> "Macropad") change; "going" never becomes "Golang".
+    public static func soundsAlike(_ a: String, _ b: String, strict: Bool = false) -> Bool {
         func skeleton(_ s: String) -> [Character] {
             Array(s.lowercased().filter { $0.isLetter && !"aeiouy".contains($0) })
         }
@@ -112,6 +114,6 @@ public actor Transcriber {
                 prev = d[j]; d[j] = cur
             }
         }
-        return d[y.count] <= max(x.count, y.count) / 4
+        return d[y.count] <= (strict ? 0 : max(x.count, y.count) / 4)
     }
 }

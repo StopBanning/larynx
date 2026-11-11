@@ -47,7 +47,7 @@ public enum Vocabulary {
         "Supabase", "MongoDB", "Vercel", "PostgreSQL", "Postgres", "Redis", "Kubernetes", "Docker", "Terraform", "Nginx",
         "GraphQL", "Prisma", "Tailwind", "Svelte", "Webpack", "Django", "FastAPI", "Laravel", "Firebase", "Netlify",
         "Cloudflare", "Heroku", "Twilio", "Datadog", "Grafana", "Kafka", "RabbitMQ", "Elasticsearch", "DynamoDB", "SQLite",
-        "MySQL", "Auth0", "Homebrew", "Xcode", "SwiftUI", "Kotlin", "Golang", "TypeScript", "JavaScript", "PyTorch",
+        "MySQL", "Auth0", "Homebrew", "Xcode", "SwiftUI", "Kotlin", "TypeScript", "JavaScript", "PyTorch",
         "TensorFlow", "Ollama", "LangChain", "OpenAI", "Anthropic", "Windsurf", "Copilot", "Codex", "Electron", "Tauri",
         "Vitest", "Playwright", "Cypress", "ESLint", "Prettier", "Figma", "Airtable", "Shopify", "Webflow", "Zapier",
         "FluidAudio", "Parakeet", "CoreML", "Vite", "Nuxt", "Deno", "pnpm", "Sentry", "Drizzle", "Upstash",
