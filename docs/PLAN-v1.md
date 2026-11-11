@@ -205,7 +205,8 @@ grep history.sqlite and the log for it).
 
 ## D. v0.8 "For everyone": installed in two minutes
 
-Headline: download, open, grant three permissions, talk. Needs decision Q1.
+Headline: install with one command, grant three permissions, talk. Q1 is "not yet" (Nov 11), so D5 ships the
+no-cost path first; the signed download comes when he says the traction is there.
 
 **D1. Settings window** (master 6.1), SwiftUI, same glass as the pill. The menu keeps quick toggles.
 **D2. First run** (master 6.2): permissions with live status, mic test, model download with progress and resume,
@@ -300,7 +301,7 @@ W7 (real-hardware numbers) needs decision Q3. Everything before it runs in CI.
 
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
-| Q1 | Apple Developer Program, $99/year (master C1) | **Yes** | The only way strangers get a download that opens, keeps its permissions across updates and updates itself. Also required for an iPhone app later. He re-grants three permissions once. |
+| Q1 | Apple Developer Program, $99/year (master C1) | **Answered Nov 11: not yet.** He will pay once Larynx has traction. Until then D5 takes the no-cost path (install script + Homebrew tap that builds from source). Ask again when people are installing it. | The only way strangers get a download that opens, keeps its permissions across updates and updates itself. Also required for an iPhone app later. He re-grants three permissions once. |
 | Q2 | Keep audio of his own dictations for 30 days, on this Mac only (master C2) | **Answered Nov 11: yes** | Turns his real voice into the benchmark (B3). Without it every number is from robot voices. |
 | Q3 | A real Windows machine for the final Windows tests | The old PC's C: drive, when W6 is reached | CI covers everything earlier. |
 | Q4 | Sign in to Wispr Flow for a measured head-to-head (master C3) | Decide at F2 | Not needed before then. |
@@ -319,7 +320,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | A2-A7 | not started | |
 | B1-B9 | not started | B3 unblocked: Q2 = yes, audio kept since Nov 11 (FLAC). Clips collect while A runs. |
 | C1-C7 | not started | |
-| D1-D8 | not started | D5 waits on Q1 |
+| D1-D8 | not started | D5: no-cost path (Q1 = not yet) |
 | E1-E8 | not started | |
 | F1-F5 | not started | |
 | G | not chosen | Q5 |
