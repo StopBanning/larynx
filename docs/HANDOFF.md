@@ -89,6 +89,8 @@ master plan's invariants (never lose words, never slower, never change a right w
    false starts ("I went to the, I drove" -> "I drove"), 2-3 word repeats without a comma, mid-sentence er/ah/eh, and
    "Aye, I, I"; they changed exactly one line of Colin's 599 real dictations (correctly). A rerun of the suite with
    Ultra and with Clean was running: results in `bench/results/suite2-ultra.log` and `suite2-clean.log`.
+   **Ultra's rerun: 272/300** (was 257; Clean's last score 264), text rules 59/59. It clears the bar. Still to
+   read: `suite2-clean.log` (Clean with the new rules, to confirm no regression).
    Rule (master plan 1.4): switch if Ultra scores >= 262/300 and Clean didn't regress. If so: change the default in
    `Settings.Key.engine` and `App/Engine.swift`, add Ultra to the Speech Model menu (recommended, 25 languages), update
    SETTINGS/README/BENCHMARKS/CHANGELOG, install, then watch his next dictations closely.
