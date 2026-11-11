@@ -115,11 +115,16 @@ extension Hotkey.Key {
                 }
                 guard session.state.deliver() else { return }
                 let delivery = await Inserter.deliver(text, to: app)
-                History.shared.complete(pending, transcript: result, delivery: delivery.label)
+                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label)
                 MenuController.shared.remember(text)
                 // Said it again with a word fixed? Learn the fix (never from password fields or snippets).
                 let learned = session.privateField || result.snippet != nil ? { Relearn.reset(); return [] }()
                     : Relearn.check(text, app: app?.bundleIdentifier)
+                // A repeat with a word fixed: the new words are what the previous dictation should have said.
+                if !learned.isEmpty, let saved, let previous = History.shared.recent(limit: 2).first(where: { $0.id != saved.id }),
+                   Golden.isWordFix(previous.text, text) {
+                    History.shared.recordCorrection(id: previous.id, text: text, source: "repeat")
+                }
                 if case .copied(let why) = delivery {
                     // Nowhere to type: say so where the user is looking, and keep the words on the clipboard.
                     if session.shouldPresent { NSSound(named: "Funk")?.play(); setStatus("Copied, press ⌘V") }
@@ -132,7 +137,7 @@ extension Hotkey.Key {
                         Pill.shared.hide()
                         setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
                     }
-                    if delivery == .inserted { watchForFixes(text, in: app) }
+                    if delivery == .inserted { watchForFixes(text, in: app, id: saved?.id) }
                     if !learned.isEmpty {
                         log("learned from a repeat: " + Relearn.describe(learned))
                         Task { await reloadVocabulary() }
@@ -221,7 +226,7 @@ func logNote(_ note: String) -> String {
 
 /// Watches the text field for 20 seconds after a paste and learns any word the user corrected.
 /// `defaults write com.automatedworkflow.larynx learn off` turns it off.
-func watchForFixes(_ pasted: String, in app: NSRunningApplication?) {
+func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? = nil) {
     guard Settings.shared.string(.learn) != "off" else { return }
     Task { @MainActor in
         guard let field = Learner.focusedTextElement(in: app) else { return }
@@ -236,6 +241,8 @@ func watchForFixes(_ pasted: String, in app: NSRunningApplication?) {
         guard let now = latest else { return }
         let fixes = Learner.fixes(pasted: pasted, now: now)
         guard !fixes.isEmpty else { return }
+        // What the dictation should have said, for the golden set.
+        if let id { History.shared.recordCorrection(id: id, text: Learner.applying(fixes, to: pasted), source: "edit") }
         let added = Learner.learn(fixes)
         log("learned from your fix: " + fixes.map { "\($0.heard) -> \($0.fixed)" }.joined(separator: ", "))
         guard !added.isEmpty else { return }

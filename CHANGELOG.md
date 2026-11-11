@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Golden set: your own voice as the benchmark.** `larynx golden add <id> [--text "what you said"]` keeps a
+  dictation's recording with what you meant to type, in `golden/` on your Mac only; `larynx golden list`,
+  `remove`, and `candidates [--apply]`, which offers dictations whose right text is known because you fixed them:
+  a word you edited after the paste, or the same sentence said again with a word changed (both now recorded with
+  the dictation). `python3 bench/run.py --sets golden` scores every engine through the whole pipeline on those
+  clips; results files keep numbers only. See docs/BENCHMARKS.md.
+
 ## 0.5.0 (Nov 11, 2026): "Ultra"
 
 **Highlights**

@@ -56,6 +56,16 @@ public enum Learner {
         return Double(p.filter(present.contains).count) / Double(p.count) >= 0.6
     }
 
+    /// `pasted` with each fix applied once, as whole words ("Compaq to pass off" + Compaq->compact -> "compact to pass off").
+    public static func applying(_ fixes: [(heard: String, fixed: String)], to pasted: String) -> String {
+        var out = pasted
+        for fix in fixes {
+            let pattern = "(?<![\\w'])" + NSRegularExpression.escapedPattern(for: fix.heard) + "(?![\\w'])"
+            if let range = out.range(of: pattern, options: .regularExpression) { out.replaceSubrange(range, with: fix.fixed) }
+        }
+        return out
+    }
+
     /// Words the user changed in what was pasted: (heard, fixed) pairs that sound alike. Empty when the text was left
     /// alone, rewritten heavily, or can't be found.
     public static func fixes(pasted: String, now: String) -> [(heard: String, fixed: String)] {

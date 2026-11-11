@@ -139,3 +139,35 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(Transcriber.swap("macropod", for: "Macropad", in: "my macropod key") == "my macropod key")
     #expect(Transcriber.swap("macropod", for: "Macropad", in: "my macropod key", personal: ["macropad"]) == "my Macropad key")
 }
+
+@Test func correctionsAndTheGoldenSetStayPrivateAndFollowTheirDictation() throws {
+    let f = try HistoryFixture(#"{"keepAudio": "30"}"#)
+    let pending = f.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
+    let row = try #require(f.history.complete(pending, transcript: f.transcript("Are we ready for Compaq to pass off?"), delivery: "inserted"))
+    f.history.recordCorrection(id: row.id, text: "Are we ready for compact to pass off?", source: "edit")
+    f.history.recordCorrection(id: "no-such-dictation", text: "ignored", source: "edit")
+    #expect(f.history.corrections().count == 1)
+    #expect(f.history.corrections()[row.id]?.text == "Are we ready for compact to pass off?")
+
+    let clip = try Golden.add(row, text: "Are we ready for compact to pass off?", source: "edit", root: f.folder)
+    #expect(FileManager.default.fileExists(atPath: clip.audio))
+    #expect(clip.audio.hasPrefix(Golden.directory(root: f.folder).path))
+    let mode = try FileManager.default.attributesOfItem(atPath: clip.audio)[.posixPermissions] as? Int
+    #expect(mode == 0o600)
+    #expect(Golden.load(root: f.folder).map(\.id) == [row.id])
+    #expect(throws: (any Error).self) { try Golden.add(row, text: "  ", source: "user", root: f.folder) }
+    #expect(try Golden.remove(id: row.id, root: f.folder))
+    #expect(Golden.load(root: f.folder).isEmpty && !FileManager.default.fileExists(atPath: clip.audio))
+
+    // A correction goes when its dictation does.
+    f.history.prune(now: Date().addingTimeInterval(40 * 86_400))
+    #expect(f.history.corrections().isEmpty)
+}
+
+@Test func goldenNamesAndWordFixes() {
+    #expect(Golden.names(in: "Ask Priya about Opus. Then I'll ping Claude, okay?") == ["Priya", "Opus", "Claude"])
+    #expect(Golden.isWordFix("Are we ready for Compaq to pass off Robus?", "Are we ready for compact to pass off to Opus?"))
+    #expect(Golden.isWordFix("Send it to Mike tomorrow morning.", "Send it to Mike tomorrow evening."))
+    #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Send it to Mike tomorrow."))
+    #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Actually, let's wait until next week to decide."))
+}

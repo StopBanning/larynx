@@ -30,6 +30,7 @@ let usage = """
     larynx history [--search words] [--json]   your recent dictations (kept on this Mac, 30 days by default)
     larynx recover                             transcribe recordings a crash left behind
     larynx mine [--log <file>] [--apply]       find words you fixed by saying them again, and learn them
+    larynx golden list|add <id>|candidates     your recordings with what you really said, the benchmark (bench/run.py --sets golden)
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
     larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
 
@@ -118,7 +119,7 @@ case "mine":
             items.sort { $0.time < $1.time }
         }
         var found: [Corrections.Lesson] = []
-        for (a, b) in zip(items, items.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= Relearn.window {
+        for (a, b) in zip(items, items.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= 90 {  // Relearn.window
             for lesson in Corrections.lessons(Corrections.changes(previous: a.text, current: b.text), words: MacWordList()) where !found.contains(lesson) {
                 found.append(lesson)
             }
@@ -249,6 +250,51 @@ case "numbers":
     while let line = readLine() {
         let out = Numbers.apply(line)
         if out != line { print("- \(line)\n+ \(out)\n") }
+    }
+    exit(0)
+case "golden":
+    // Your own recordings with what you really said: the benchmark that matters most (bench/run.py --sets golden).
+    //   larynx golden add <id> [--text "what was said"] [--source user|agent|edit|repeat]   (no --text: the typed text was right)
+    //   larynx golden remove <id> | list | candidates [--apply]
+    let sub = args.dropFirst().first ?? "list"
+    let rows = History.shared.recent(limit: 5000)
+    let clips = Golden.load()
+    switch sub {
+    case "add":
+        guard args.count >= 3, let row = rows.first(where: { $0.id == args[2] }) else { print("larynx golden add <dictation id> [--text ...]"); exit(2) }
+        do {
+            let clip = try Golden.add(row, text: option("--text") ?? row.text, source: option("--source") ?? "user")
+            print("added \(clip.id) (\(clip.source), \(String(format: "%.1f", clip.audioSeconds)) s); golden set: \(Golden.load().count) clips")
+        } catch { print("\(error)"); exit(1) }
+    case "remove":
+        guard args.count >= 3 else { print("larynx golden remove <id>"); exit(2) }
+        print((try? Golden.remove(id: args[2])) == true ? "removed \(args[2])" : "not in the golden set: \(args[2])")
+    case "list":
+        let seconds = clips.reduce(0) { $0 + $1.audioSeconds }
+        let bySource = Swift.Dictionary(grouping: clips, by: { $0.source }).map { "\($0.key) \($0.value.count)" }.sorted().joined(separator: ", ")
+        print("\(clips.count) clips, \(Int(seconds)) s of audio\(clips.isEmpty ? "" : " (" + bySource + ")") in \(Golden.directory().path)")
+        if args.contains("--text") { for c in clips { print("\(c.id)  [\(c.source)]  \(c.text)") } }
+    case "candidates":
+        // Dictations whose right text is known: you fixed a pasted word, or said it again with a word changed.
+        let have = Set(clips.map(\.id))
+        let withAudio = rows.filter { r in r.audioPath.map { FileManager.default.fileExists(atPath: $0) } ?? false && !have.contains(r.id) }
+        var found: [(row: History.Row, text: String, source: String)] = []
+        let corrections = History.shared.corrections()
+        for r in withAudio { if let c = corrections[r.id] { found.append((r, c.text, c.source)) } }
+        let ordered = rows.reversed() as [History.Row]
+        for (a, b) in zip(ordered, ordered.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= 90 {  // Relearn.window
+            guard withAudio.contains(where: { $0.id == a.id }), !found.contains(where: { $0.row.id == a.id }), Golden.isWordFix(a.text, b.text) else { continue }
+            found.append((a, b.text, "repeat"))
+        }
+        for f in found { print("\(f.row.id)  [\(f.source)]\n   typed:  \(f.row.text)\n   meant:  \(f.text)") }
+        if args.contains("--apply") {
+            for f in found { _ = try? Golden.add(f.row, text: f.text, source: f.source) }
+            print("added \(found.count); golden set: \(Golden.load().count) clips")
+        } else {
+            print("\(found.count) candidates\(found.isEmpty ? "" : "; --apply adds them")")
+        }
+    default:
+        print("larynx golden add <id> [--text ...] | remove <id> | list [--text] | candidates [--apply]"); exit(2)
     }
     exit(0)
 case "tidy":

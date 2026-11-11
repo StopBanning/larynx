@@ -38,3 +38,25 @@ to do it. Spoken cleanup suite, text rules 59/59 on both runs (`bench/results/su
 Ultra now beats Bark Clean on cleanup as well as accuracy, and Bark Clean did not regress. **Decision: the default
 is Parakeet Ultra from v0.5.0.** Bark Clean stays in the Speech Model menu and is the second-chance model when Ultra
 hears nothing. Ultra's remaining cleanup misses are false starts (10/20) and self-corrections (29/40): next plan, A2.
+
+## Real voice: the golden set (Nov 11, commit 7bae93b)
+
+Recordings of the author's own dictations (everyday mic and room) with what was meant to be typed, kept only on
+that Mac (`larynx golden`, PLAN-v1 B3). Unlike the sets above, this runs the whole pipeline (dictionary, vocabulary,
+cleanup rules; AI rewrite off) and scores the typed text. Numbers only; the clips and their text never leave the Mac.
+
+| Engine | WER | Punctuation F1 | Names | p50 | p90 |
+| --- | --- | --- | --- | --- | --- |
+| ultra | 0.58% | 99.3 | 76.2% | 53 ms | 89 ms |
+| unified | 2.67% | 84.8 | 71.4% | 53 ms | 103 ms |
+| parakeet | 2.67% | 88.4 | 61.9% | 72 ms | 132 ms |
+| bark3 | 2.79% | 78.2 | 57.1% | 73 ms | 205 ms |
+| clean | 3.48% | 81.9 | 52.4% | 87 ms | 135 ms |
+
+48 clips, 290 s. **Read this with care:** every reference so far was checked by an assistant against the
+conversation and the four speech models, starting from what Ultra typed (fixing what was known to be wrong:
+"Compaq... Robus" → "compact to pass off to Opus", "clod" → "Claude", "doc" → "Dock", stumbles left in). That
+favours Ultra, especially on punctuation, so this baseline is a regression gate for the default engine (no change
+may raise its golden WER), not yet a fair comparison between engines. References from the author's own fixes (edits to a
+pasted dictation and repeats with a word changed are now recorded automatically) will replace that bias as they
+accumulate; the target is 100 clips.

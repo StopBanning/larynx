@@ -158,6 +158,28 @@ public final class History: @unchecked Sendable {
 
     public func recent(limit: Int = 10) -> [Row] { (try? query(nil, limit: limit)) ?? [] }
 
+    /// Records what dictation `id` should have said (`source`: "edit" or "repeat"). Kept only as long as the dictation.
+    public func recordCorrection(id: String, text: String, source: String, now: Date = Date()) {
+        try? withDB { db in
+            try exec(db, "INSERT OR REPLACE INTO corrections (id, text, source, time) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM dictations WHERE id = ?)",
+                     [id, text, source, now.timeIntervalSince1970, id])
+        }
+    }
+
+    /// Every recorded correction, by dictation id.
+    public func corrections() -> [String: (text: String, source: String)] {
+        var out: [String: (text: String, source: String)] = [:]
+        try? withDB { db in
+            let statement = try prepare(db, "SELECT id, text, source FROM corrections", [])
+            defer { sqlite3_finalize(statement) }
+            while sqlite3_step(statement) == SQLITE_ROW {
+                func string(_ i: Int32) -> String? { sqlite3_column_text(statement, i).map { String(cString: $0) } }
+                if let id = string(0), let text = string(1) { out[id] = (text, string(2) ?? "") }
+            }
+        }
+        return out
+    }
+
     /// Full-text search; every word must match (prefixes count: "deplo" finds "deploy").
     public func search(_ text: String, limit: Int = 50) -> [Row] { (try? query(text, limit: limit)) ?? [] }
 
@@ -168,6 +190,7 @@ public final class History: @unchecked Sendable {
         try? withDB { db in
             try exec(db, "DELETE FROM dictations_fts WHERE id IN (SELECT id FROM dictations WHERE time < ?)", [cutoff.timeIntervalSince1970])
             try exec(db, "DELETE FROM dictations WHERE time < ?", [cutoff.timeIntervalSince1970])
+            try exec(db, "DELETE FROM corrections WHERE id NOT IN (SELECT id FROM dictations)")
         }
         let audioCutoff = now.addingTimeInterval(-Double(snapshot.days(.keepAudio) ?? 0) * 86_400)
         let files = (try? FileManager.default.contentsOfDirectory(at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
@@ -248,6 +271,9 @@ public final class History: @unchecked Sendable {
                 """)
             try exec(handle, "CREATE INDEX IF NOT EXISTS dictations_time ON dictations(time)")
             try exec(handle, "CREATE VIRTUAL TABLE IF NOT EXISTS dictations_fts USING fts5(id UNINDEXED, text)")
+            // What a dictation should have said, when the user fixed it: an edit in the field or a repeat with a word
+            // changed. The golden set (`larynx golden`) takes its reference texts from here.
+            try exec(handle, "CREATE TABLE IF NOT EXISTS corrections (id TEXT PRIMARY KEY, text TEXT NOT NULL, source TEXT, time REAL)")
             try exec(handle, "PRAGMA user_version = 1")
             db = handle
         }

@@ -14,6 +14,8 @@ user account only.
 | Dictation text, with the app it went to, timings and the cleanup steps | `history.sqlite` | 30 days (`historyDays`) | `history: off` |
 | Audio of a dictation while it is being transcribed (crash spool) | `history/spool/<id>.wav` | Until the transcript is saved, normally well under a second | `history: off` |
 | Audio after transcription | `history/audio/<id>.flac` | Not kept unless you set `keepAudio` to a number of days | `keepAudio: off` (default) |
+| Your fix to a dictation (a word you edited after the paste, or said again) | `history.sqlite`, table `corrections` | As long as the dictation | `learn: off` |
+| Golden set: recordings you chose with what you meant (`larynx golden add`) | `golden/` | Until you remove them (`larynx golden remove <id>`); not affected by `keepAudio` | Don't add any |
 | Your words | `dictionary.json`, `vocabulary.txt`, `snippets.json` | Until you edit them | - |
 | Settings | `settings.json` (and the `com.automatedworkflow.larynx` defaults) | - | - |
 | Log | `~/Library/Logs/Larynx.log` | Grows until you delete it | Transcript text is not logged unless `debugText: on` |
@@ -40,6 +42,6 @@ rather than deleted, so nothing is thrown away silently.
 
 ## Deleting your data
 
-Quit Larynx, then delete `history.sqlite` (and `history.sqlite-wal`, `history.sqlite-shm`) and the `history/` folder.
+Quit Larynx, then delete `history.sqlite` (and `history.sqlite-wal`, `history.sqlite-shm`), the `history/` folder and the `golden/` folder.
 To remove everything, delete `~/Library/Application Support/Larynx/` (this includes the downloaded models) and
 `~/Library/Logs/Larynx.log`.

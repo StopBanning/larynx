@@ -4,9 +4,14 @@
     python3 bench/run.py                                  # every engine on every built set
     python3 bench/run.py --engines clean,unified --sets jargon,noise5 --limit 20
     python3 bench/run.py --write-doc                       # also rewrite docs/BENCHMARKS.md
+    python3 bench/run.py --sets golden                     # your own recordings (larynx golden), full pipeline
 
 Audio comes from bench/make_sets.py (~/work/scratch/larynx-bench). Each engine runs in one `larynx serve`
 process with cleanup off (verbatim), vocabulary off and the AI rewrite off, so this measures the speech model.
+
+The golden set is different: your own recordings with what you meant to type (`larynx golden`). It runs the whole
+pipeline (your dictionary, vocabulary and cleanup rules; AI rewrite off) and scores the typed text, because that is
+what you see. Its examples are never written to the results file: they are your words.
 """
 import argparse, datetime, json, os, re, statistics, subprocess, sys, time
 from difflib import SequenceMatcher
@@ -76,8 +81,8 @@ def punct_counts(ref, hyp):
 
 
 class Engine:
-    def __init__(self, binary, engine, models):
-        self.p = subprocess.Popen([binary, "serve", "--engine", engine, "--rewrite", "off", "--vocab", "off",
+    def __init__(self, binary, engine, models, vocab=False):
+        self.p = subprocess.Popen([binary, "serve", "--engine", engine, "--rewrite", "off", "--vocab", "on" if vocab else "off",
                                    "--models-dir", models], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.n = 0
@@ -86,9 +91,11 @@ class Engine:
             if msg.get("event") == "ready": break
             if msg.get("event") == "error": raise RuntimeError(msg)
 
-    def transcribe(self, path):
+    def transcribe(self, path, verbatim=True, mode=None):
         self.n += 1
-        self.p.stdin.write(json.dumps({"cmd": "transcribe", "path": path, "verbatim": True, "id": self.n}) + "\n")
+        req = {"cmd": "transcribe", "path": path, "verbatim": verbatim, "id": self.n}
+        if mode: req["mode"] = mode
+        self.p.stdin.write(json.dumps(req) + "\n")
         while True:
             msg = json.loads(self.p.stdout.readline())
             if msg.get("id") == self.n and msg.get("event") in ("result", "error"): return msg
@@ -98,8 +105,11 @@ class Engine:
         except Exception: self.p.kill()
 
 
+GOLDEN = Path(os.environ.get("LARYNX_DATA_DIR") or Path.home() / "Library/Application Support/Larynx").expanduser() / "golden"
+
+
 def load(name, limit):
-    f = DATA / name / "manifest.jsonl"
+    f = (GOLDEN if name == "golden" else DATA / name) / "manifest.jsonl"
     if not f.exists(): return []
     rows = [json.loads(l) for l in f.read_text().splitlines()]
     return rows[:limit] if limit else rows
@@ -121,6 +131,7 @@ def main():
         print(f"== {e}", flush=True)
         try:
             eng = Engine(a.binary, e, a.models_dir)
+            gold = Engine(a.binary, e, a.models_dir, vocab=True) if "golden" in sets else None
         except Exception as err:
             print(f"   could not start: {err}"); continue
         results[e] = {}
@@ -128,8 +139,12 @@ def main():
             err = refw = tp = fp = fn = names_ok = names_all = 0
             ms, secs, samples = [], 0.0, []
             for r in rows:
-                out = eng.transcribe(r["audio"])
-                hyp = out.get("raw", "") if out.get("event") == "result" else ""
+                if s == "golden":
+                    out = gold.transcribe(r["audio"], verbatim=False, mode=r.get("mode"))
+                    hyp = out.get("text", "") if out.get("event") == "result" else ""
+                else:
+                    out = eng.transcribe(r["audio"])
+                    hyp = out.get("raw", "") if out.get("event") == "result" else ""
                 ref_w, hyp_w = norm(r["text"]), norm(hyp)
                 err += edits(ref_w, hyp_w); refw += len(ref_w)
                 if not s.startswith("ls") and s != "long":
@@ -138,7 +153,7 @@ def main():
                     names_all += 1
                     names_ok += bool(re.search(r"(?<![\w])" + re.escape(n) + r"(?![\w])", hyp))
                 ms.append(out.get("asrMs", 0)); secs += out.get("audioSeconds", 0)
-                if len(samples) < 3 and edits(ref_w, hyp_w): samples.append({"ref": r["text"], "hyp": hyp})
+                if len(samples) < 3 and edits(ref_w, hyp_w) and s != "golden": samples.append({"ref": r["text"], "hyp": hyp})
             p = tp / (tp + fp) if tp + fp else 0; rc = tp / (tp + fn) if tp + fn else 0
             ms_sorted = sorted(ms)
             results[e][s] = {
@@ -151,6 +166,7 @@ def main():
             r_ = results[e][s]
             print(f"   {s:9s} WER {r_['wer']:6.2f}%  punct {r_['punctF1']}  names {r_['names']}  p50 {r_['p50ms']} ms  p90 {r_['p90ms']} ms  {r_['rtfx']}x", flush=True)
         eng.close()
+        if gold: gold.close()
     stamp = datetime.date.today().isoformat()
     commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     out = ROOT / f"bench/results/bench-{stamp}-{commit}.json"
