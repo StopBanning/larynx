@@ -15,7 +15,8 @@ public struct BundledWordList: WordList {
               let text = try? String(contentsOf: url, encoding: .utf8) else {
             preconditionFailure("LarynxText's bundled English word list is missing or unreadable")
         }
-        words = Set(text.split(separator: "\n").map { String($0).lowercased() })
+        // Any line ending: Windows checkouts turn "\n" into "\r\n", which Swift treats as one Character.
+        words = Set(text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty })
     }
 
     public func contains(_ word: String) -> Bool { words.contains(word.lowercased()) }

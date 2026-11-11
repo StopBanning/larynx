@@ -1,0 +1,5 @@
+# Keep data files byte-identical on every platform (Windows checkouts would otherwise get CRLF).
+*.txt text eol=lf
+*.json text eol=lf
+*.swift text eol=lf
+*.wav binary
