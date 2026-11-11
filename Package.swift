@@ -30,6 +30,12 @@ let package = Package(
             exclude: ["README.md"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .testTarget(
+            name: "LarynxCoreTests",
+            dependencies: ["LarynxCore"],
+            path: "tests/LarynxCoreTests",
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
         .executableTarget(
             name: "larynx",
             dependencies: ["LarynxCore"],

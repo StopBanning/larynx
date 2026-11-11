@@ -18,3 +18,19 @@ The five Swift tests cover fixture integrity, 43 exact text outputs, 26 rewrite
 reference guard expectations, 100 unchanged sentences in all three cleanup modes,
 and six explicit guard acceptance/rejection checks. No production sources changed.
 No post-phase speech benchmark is claimed: tasks 0.2–0.9 remain outstanding.
+
+## Task 0.2
+
+`phase0-task02-*`: independent Foundation-only text build, eight Swift tests,
+release build, 343 release text checks and the reproducible word-list selection
+and hash. Existing cleanup behavior is preserved; no Linux/Windows build is claimed.
+
+## Task 0.3
+
+`phase0-task03-*`: debug/release builds, eleven Swift tests (eight portable text,
+three transcript/core compatibility), and a real file-fed protocol smoke through
+CLI, serve and MCP. The smoke checks the pre-refactor fixed-audio golden fields,
+request IDs, verbatim behavior and the additive MCP structured result. It never
+uses mic capture or insertion. Existing main.swift preview concurrency warnings
+remain. Speech confidence is not yet exposed by the wrapper and is omitted;
+steps remain empty until task 0.4. No full post-phase speech benchmark is claimed.

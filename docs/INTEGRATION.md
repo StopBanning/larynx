@@ -6,7 +6,9 @@ model and, if asked, pasting into other apps. No network, no accounts.
 ## Shipping it
 
 1. Build: `swift build -c release` in this repo, then copy `.build/release/larynx` into the host app's
-   resources (for Electron: `extraResource` in Forge, or `extraResources` in electron-builder).
+   resources (for Electron: `extraResource` in Forge, or `extraResources` in electron-builder). Keep
+   `.build/release/Larynx_LarynxText.bundle` beside the CLI executable, or in the host app's Resources folder;
+   it contains the portable spelling fallback and its licence notices.
 2. Sign it with the host's Developer ID; macOS will attribute the microphone prompt to the host app.
 3. The first `ready` takes about 45 s on a new machine while the model downloads (about 500 MB). Show a
    "preparing dictation" state until then. Pass `--models-dir` to keep the model inside the host's data folder.
@@ -38,6 +40,20 @@ requested. If pasting is impossible (no Accessibility permission, a password fie
 the clipboard and `delivered` is `copied`, so a transcript is never lost. `result.engine` says which speech model
 produced the text: when the main model returns nothing for a clip that clearly has speech in it, Larynx retries with
 the other model if it is already downloaded.
+
+### Typed transcript fields (Phase Zero 0.3)
+
+All existing result keys keep their names and types. `finish` now returns a Codable `Transcript`, with
+`Step` records (`stage`, `before`, `after`, `applied`). The wire result adds `steps`, initially an empty array;
+0.4 will populate it from the pipeline. `confidence` is optional and omitted while the existing string-only
+speech wrapper does not expose a score. No score is fabricated. `snippet` remains present only for a matched
+snippet; delivery fields remain present only after a delivery attempt. Unknown fields should be ignored.
+
+The typed decoder can also read pre-0.3 result records: absent steps become an empty array. Envelope fields
+such as `id` and `event` remain outside Transcript. `tests/fixtures/serve-before-transcript.json` captures a
+fixed file result before this change, from the same `main.swift` as commit `8927727`. `swift test` checks its
+round trip; `python3 tests/protocol.py` transcribes the fixture through the real release CLI, serve and MCP
+paths and checks the legacy keys, types and text. This smoke uses downloaded models and no microphone/paste.
 
 ## Two ways to use it in Locust
 
@@ -76,6 +92,9 @@ Larynx directly. Tools:
 | `clean_text` | `text`, optional `mode` (default `correspondence`) | Dictionary, tidy rules and, when needed, the AI rewrite |
 | `add_dictionary_word` | `heard`, `written` | Adds an entry to `~/Library/Application Support/Larynx/dictionary.json` |
 | `status` | none | Speech model, rewrite availability, dictionary size |
+
+`transcribe_file` keeps its text content response and adds a `structuredContent` object containing the same
+Transcript fields as serve (without the serve envelope). The other MCP tool responses are unchanged.
 
 Claude Code:
 

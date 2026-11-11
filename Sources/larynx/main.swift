@@ -116,29 +116,27 @@ func requestMicrophone() async -> Bool {
 }
 
 /// Transcribes, optionally cleans, and reports timing for one utterance.
-func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> [String: Any] {
+func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim) async throws -> Transcript {
     let started = Date()
     try await Loader.shared.task.value
     if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
     let (raw, usedEngine) = try await transcribeWithFallback(samples)
     let asrMs = ms(since: started)
     if tidy, let snippet = Snippets.match(raw) {  // a voice shortcut: type the saved text exactly
-        return ["text": snippet.text, "raw": raw, "mode": mode.rawValue, "engine": usedEngine, "snippet": snippet.cue,
-                "rewrite": "snippet", "rewritten": false, "rewriteMs": 0,
-                "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
-                "asrMs": asrMs, "totalMs": ms(since: started)]
+        return Transcript(text: snippet.text, raw: raw, engine: usedEngine, mode: mode,
+                          audioSeconds: (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
+                          asrMs: asrMs, rewriteMs: 0, totalMs: ms(since: started), rewrite: "snippet",
+                          rewritten: false, snippet: snippet.cue)
     }
     let tidied = tidy ? Tidy.apply(Vocabulary.fixCase(Dictionary.apply(raw), terms: caseTerms), mode: mode) : raw
     let rewriteStart = Date()
     let outcome = (clean || autoRewrite) ? await Cleaner.rewrite(tidied, mode: mode, force: clean)
                                          : Cleaner.Outcome(text: tidied, used: false, note: "off")
     let text = outcome.text
-    return [
-        "text": text, "raw": raw, "mode": mode.rawValue, "engine": usedEngine,
-        "rewrite": outcome.note, "rewritten": outcome.used, "rewriteMs": outcome.note == "off" ? 0 : ms(since: rewriteStart),
-        "audioSeconds": (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
-        "asrMs": asrMs, "totalMs": ms(since: started),
-    ]
+    return Transcript(text: text, raw: raw, engine: usedEngine, mode: mode,
+                      audioSeconds: (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
+                      asrMs: asrMs, rewriteMs: outcome.note == "off" ? 0 : ms(since: rewriteStart),
+                      totalMs: ms(since: started), rewrite: outcome.note, rewritten: outcome.used)
 }
 
 // MARK: - Modes
@@ -151,8 +149,8 @@ func runTranscribe() async {
         try await Loader.shared.task.value
         log("model ready in \(ms(since: loadStart)) ms")
         let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard)
-        log("\(result["audioSeconds"]!) s of audio, speech \(result["asrMs"]!) ms, total \(result["totalMs"]!) ms")
-        print(result["text"] as! String)
+        log("\(result.audioSeconds) s of audio, speech \(result.asrMs) ms, total \(result.totalMs) ms")
+        print(result.text)
         exit(0)
     } catch {
         log("\(error)"); exit(1)
@@ -264,11 +262,11 @@ func runListen(keys: [Hotkey.Key]) async {
         Task {
             do {
                 let result = try await finish(samples, clean: wantsClean, mode: mode)
-                let text = result["text"] as! String
+                let text = result.text
                 guard !text.isEmpty else {
                     await MainActor.run { Pill.shared.hide() }
                     setStatus("Heard nothing")
-                    log("heard nothing in \(result["audioSeconds"]!) s of audio (mic muted, or Microphone permission missing?)")
+                    log("heard nothing in \(result.audioSeconds) s of audio (mic muted, or Microphone permission missing?)")
                     return
                 }
                 let delivery = await Inserter.deliver(text, to: app)
@@ -286,7 +284,7 @@ func runListen(keys: [Hotkey.Key]) async {
                     setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
                     if delivery == .inserted { watchForFixes(text, in: app) }
                 }
-                log("\(result["totalMs"]!) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(result["rewrite"] ?? "-") (\(result["rewriteMs"] ?? 0) ms): \(text)")
+                log("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(result.rewrite) (\(result.rewriteMs) ms): \(text)")
             } catch {
                 await MainActor.run { Pill.shared.hide() }
                 setStatus("Error: \(error)"); log("\(error)")
@@ -366,14 +364,16 @@ func runServe() async {
                 var result = try await finish(samples, clean: request["clean"] as? Bool ?? false,
                                               mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
                                               tidy: !(request["verbatim"] as? Bool ?? false))
-                if request["paste"] as? Bool == true, let text = result["text"] as? String, !text.isEmpty {
+                if request["paste"] as? Bool == true, !result.text.isEmpty {
+                    let text = result.text
                     let delivery = await Inserter.deliver(text)
-                    result["delivered"] = delivery.label
-                    result["pasted"] = { if case .copied = delivery { return false } else { return true } }()
-                    if case .copied(let why) = delivery { result["pasteError"] = why }
+                    result.delivered = delivery.label
+                    result.pasted = { if case .copied = delivery { return false } else { return true } }()
+                    if case .copied(let why) = delivery { result.pasteError = why }
                 }
-                result["event"] = "result"
-                reply(result)
+                var body = try result.jsonObject()
+                body["event"] = "result"
+                reply(body)
             } catch { reply(["event": "error", "message": "\(error)"]) }
         case "cancel":
             recorder.stop()
@@ -381,11 +381,12 @@ func runServe() async {
         case "transcribe":
             guard let path = request["path"] as? String else { reply(["event": "error", "message": "transcribe needs a path"]); continue }
             do {
-                var result = try await finish(try loadAudioFile(URL(fileURLWithPath: path)), clean: request["clean"] as? Bool ?? false,
+                let result = try await finish(try loadAudioFile(URL(fileURLWithPath: path)), clean: request["clean"] as? Bool ?? false,
                                               mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
                                               tidy: !(request["verbatim"] as? Bool ?? false))
-                result["event"] = "result"
-                reply(result)
+                var body = try result.jsonObject()
+                body["event"] = "result"
+                reply(body)
             } catch { reply(["event": "error", "message": "\(error)"]) }
         case "status":
             reply(["event": "status", "loaded": await transcriber.isLoaded, "recording": recorder.isRecording,

@@ -1,0 +1,5 @@
+Installed via scripts/make-app.sh with the existing signing identity and bundle ID.
+Verified english.txt and SCOWL-Copyright.txt in the installed resource bundle.
+codesign --verify --deep --strict: passed.
+Restarted only via scripts/restart-app.sh: Larynx ready.
+No microphone/paste tests or privacy setting changes.

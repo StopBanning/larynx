@@ -1,0 +1,14 @@
+{
+  "asrMs": 396,
+  "audioSeconds": 1.76,
+  "engine": "clean",
+  "event": "result",
+  "id": "fixture",
+  "mode": "standard",
+  "raw": "Please send the report tomorrow.",
+  "rewrite": "off",
+  "rewriteMs": 0,
+  "rewritten": false,
+  "text": "Please send the report tomorrow.",
+  "totalMs": 403
+}

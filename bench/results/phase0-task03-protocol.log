@@ -1,0 +1,2 @@
+PASS: serve legacy fields, string/integer request IDs, verbatim, status, MCP text + structured result, CLI transcription
+Fixture text: Please send the report tomorrow.

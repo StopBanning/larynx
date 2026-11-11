@@ -1,7 +1,7 @@
 import Foundation
 
 /// How much to polish, chosen from the app you are dictating into.
-public enum CleanupMode: String, Sendable {
+public enum CleanupMode: String, Codable, Sendable {
     /// AI chats, terminals, code editors: the model reading it doesn't care about polish. Light tidy, no added period.
     case ai
     /// Mail, Slack, Messages, Notes: text a person reads. Tidy, capitalize, end with punctuation.

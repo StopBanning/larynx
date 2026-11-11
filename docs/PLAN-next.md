@@ -34,11 +34,22 @@ to work with Colin, lessons learned. Read README.md for the feature list and how
   WordList abstraction defaults to the same NSSpellChecker behavior; the portable fallback has 56,372 SCOWL
   entries and bundled upstream notices. `make-app.sh` now includes the resource bundle.
 - Task 0.2 checks: independent text-target build, 8 Swift tests, release build, and 343/343 release CLI text
-  checks pass. See `bench/results/phase0-task02-*`. Next task: 0.3, typed Transcript.
+  checks pass. See `bench/results/phase0-task02-*`. Task 0.3 is also complete: `finish` returns Codable Transcript/Step records; serve preserves the old fields
+  and adds steps (empty until 0.4); confidence is optional/omitted until the speech wrapper exposes it. MCP
+  keeps its text and adds structuredContent. Old result records decode with empty steps.
+- Task 0.3 checks: 11 Swift tests and release build pass; `python3 tests/protocol.py` verifies file-fed CLI,
+  serve IDs/verbatim/status, legacy fields/types/text, and MCP text plus structured fields. It never uses the
+  microphone or pastes. Existing preview captured-variable Swift concurrency warnings remain in main.swift.
+- Tasks 0.2/0.3 are installed in ~/Applications/Larynx.app, retaining the existing signing identity and bundle
+  ID. Bundled resources and strict deep signature verification pass. The idle-safe restart script reported
+  `Larynx ready` after the expected CoreML reload. No live paste test was run.
+- Push status: task 0.2 is on origin/main. Task 0.3 is committed locally and installed, but its push failed
+  repeatedly because github.com could not be resolved. Run `git push origin main` once DNS recovers.
+  Next implementation task: 0.4, pipeline and session/command structure.
 
 ## Where things stand
 
-- Repo `~/work/larynx`, public at github.com/StopBanning/larynx, branch `main`, all pushed. Commit as
+- Repo `~/work/larynx`, public at github.com/StopBanning/larynx, branch `main` (see push status above). Commit as
   `Colin <343690415+StopBanning@users.noreply.github.com>` with the Claude co-author line.
 - App: `~/Applications/Larynx.app`, built by `./scripts/make-app.sh`, signed with Colin's free
   "Apple Development" identity (team 4U94C34XA7; `security find-identity -v -p codesigning` shows it). Permissions (Mic, Input Monitoring,

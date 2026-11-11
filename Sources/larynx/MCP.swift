@@ -59,7 +59,8 @@ func runMCP() async {
                     let samples = try loadAudioFile(URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
                     let r = try await finish(samples, clean: false,
                                              mode: (a["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard)
-                    text(id, r["text"] as? String ?? "")
+                    result(id, ["content": [["type": "text", "text": r.text]], "isError": false,
+                                "structuredContent": try r.jsonObject()])
                 } catch { text(id, "\(error)", error: true) }
             case "clean_text":
                 let mode = (a["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .correspondence

@@ -1,0 +1,60 @@
+warning: 'larynx': Source files for target LarynxCoreTests should be located under 'Tests/LarynxCoreTests', or a custom sources path can be set with the 'path' property in Package.swift
+warning: 'larynx': Source files for target LarynxCoreTests should be located under 'Tests/LarynxCoreTests', or a custom sources path can be set with the 'path' property in Package.swift
+Building for debugging...
+[Pre-planning 1 / 272]
+[Planning deferred tasks]
+[8 / 38]
+[10 / 37] LarynxText
+[12 / 39] LarynxText
+[19 / 40] FluidAudio
+[22 / 36] FluidAudio
+[31 / 44] LarynxCore
+/Users/locust/work/larynx/Sources/LarynxCore/Cleaner.swift:89:95: warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+ 87 |                 let model = SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations)
+ 88 |                 let session = LanguageModelSession(model: model, instructions: instructions)
+ 89 |                 let reply = try await session.respond(to: "Input: \(text)\nOutput:", options: GenerationOptions(sampling: .greedy))
+    |                                                                                               |- warning: 'init(sampling:temperature:maximumResponseTokens:)' is deprecated: replaced by 'init(samplingMode:temperature:maximumResponseTokens:)' [#DeprecatedDeclaration]
+    |                                                                                               `- note: use 'init(samplingMode:temperature:maximumResponseTokens:)' instead
+ 90 |                 var edited = reply.content.trimmingCharacters(in: .whitespacesAndNewlines)
+ 91 |                 if edited.lowercased().hasPrefix("output:") { edited = String(edited.dropFirst(7)).trimmingCharacters(in: .whitespaces) }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[37 / 43] LarynxCore
+[40 / 44] larynx-product
+[45 / 49] larynx-product
+/Users/locust/work/larynx/Sources/larynx/main.swift:246:21: warning: mutation of captured var 'previewBusy' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+244 |                 }
+245 |                 await MainActor.run {
+246 |                     previewBusy = false
+    |                     `- warning: mutation of captured var 'previewBusy' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+247 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+248 |                 }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:247:24: warning: reference to captured var 'session' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+245 |                 await MainActor.run {
+246 |                     previewBusy = false
+247 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                        `- warning: reference to captured var 'session' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+248 |                 }
+249 |             }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:247:64: warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+245 |                 await MainActor.run {
+246 |                     previewBusy = false
+247 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                                                                `- warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+248 |                 }
+249 |             }
+
+/Users/locust/work/larynx/Sources/larynx/main.swift:247:97: warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+245 |                 await MainActor.run {
+246 |                     previewBusy = false
+247 |                     if session == mine, recorder.isRecording, !words.isEmpty { Pill.shared.show(words) }
+    |                                                                                                 `- warning: reference to captured var 'words' in concurrently-executing code; this is an error in the Swift 6 language mode [#SendableClosureCaptures]
+248 |                 }
+249 |             }
+
+[#SendableClosureCaptures]: <https://docs.swift.org/compiler/documentation/diagnostics/sendable-closure-captures>
+[46 / 49] larynx-product
+[48 / 49] larynx-product
+Build complete! (2.30 sec)
