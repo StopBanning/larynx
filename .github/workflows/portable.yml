@@ -2,7 +2,7 @@ name: portable
 # Builds and tests Larynx's text cleanup (LarynxText) on Windows and Linux: the shared core of the Windows app.
 on:
   push:
-    paths: ['Sources/LarynxText/**', 'tests/LarynxTextTests/**', 'tests/cases.json', 'ci/**', '.github/workflows/portable.yml']
+    paths: ['Sources/LarynxText/**', 'tests/LarynxTextTests/**', 'tests/cases.json', 'tests/fixtures/**', 'ci/**', '.gitattributes', '.github/workflows/portable.yml']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -29,3 +29,26 @@ jobs:
       - run: cp ci/Package.portable.swift Package.swift
       - run: swift build --target LarynxText
       - run: swift test
+  speech-windows:
+    # The same speech model family (Parakeet TDT 0.6B v3, int8 ONNX) through sherpa-onnx on a Windows CPU:
+    # does it hear the fixture right, and how fast? CI machines are slow 4-core VMs, so real PCs will be faster.
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download sherpa-onnx and the model
+        run: |
+          curl -sSL -o s.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-v2.0.1-win-x64-shared-MT-Release.tar.bz2
+          curl -sSL -o m.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2
+          tar xjf s.tar.bz2 && tar xjf m.tar.bz2
+          ls sherpa-onnx-v2.0.1-win-x64-shared-MT-Release/bin sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8
+      - name: Transcribe the fixture
+        run: |
+          M=sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8
+          ./sherpa-onnx-v2.0.1-win-x64-shared-MT-Release/bin/sherpa-onnx-offline.exe \
+            --encoder=$M/encoder.int8.onnx --decoder=$M/decoder.int8.onnx --joiner=$M/joiner.int8.onnx \
+            --tokens=$M/tokens.txt --model-type=nemo_transducer --num-threads=4 \
+            tests/fixtures/report.wav tests/fixtures/report.wav tests/fixtures/report.wav 2>&1 | tee out.txt
+          grep -i "send the report tomorrow" out.txt
