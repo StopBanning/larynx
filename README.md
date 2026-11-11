@@ -109,9 +109,23 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   next launch finishes the job and shows it under Recent as "Recovered".
 - **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
+## Install
+
+On an Apple Silicon Mac with macOS 15 or later, one line in Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/install.sh | zsh
+```
+
+It checks the Mac, fetches the source, builds `~/Applications/Larynx.app` (Apple's free command-line developer tools
+are needed; it opens their installer if they're missing) and opens it. A setup window walks you through the three
+permissions (Microphone, Input Monitoring, Accessibility), a microphone test and a box to try it. The speech model
+(about 500 MB) downloads once, on first launch. Run the same line again to update. Everything else is in
+Settings… in the menu (⌘,).
+
 ## Use
 
-The easy way is the menu bar app: `./scripts/make-app.sh` builds `~/Applications/Larynx.app`. Open it, allow
+The menu bar app: `./scripts/make-app.sh` builds `~/Applications/Larynx.app` from a checkout. Open it, allow
 Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn, Right Option or Right Command to talk (pressing another key while holding cancels, so shortcuts still work). Its model
 lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some keyboards (Keychron, for one) never send
 Fn to macOS. Change the keys with `defaults write com.automatedworkflow.larynx keys rightCommand` (comma-separated).

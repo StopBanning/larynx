@@ -149,6 +149,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         let reload = NSMenuItem(title: "Reload Vocabulary", action: #selector(reloadVocab), keyEquivalent: "")
         reload.target = self
         menu.addItem(reload)
+        let setupItem = NSMenuItem(title: "Setup…", action: #selector(openSetup), keyEquivalent: "")
+        setupItem.target = self
+        menu.addItem(setupItem)
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -281,6 +287,10 @@ final class MenuController: NSObject, NSMenuDelegate {
             DispatchQueue.main.async { NSApp.terminate(nil) }
         }
     }
+
+    @objc func openSetup() { Task { @MainActor in FirstRun.shared.show() } }
+
+    @objc func openSettings() { Task { @MainActor in SettingsWindow.shared.show() } }
 
     @objc func toggleLogin() {
         do {

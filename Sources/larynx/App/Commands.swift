@@ -355,6 +355,11 @@ case "context":
     print("\(target?.bundleIdentifier ?? "?"): \(ctx.ms) ms, window title \(ctx.windowTitle.count) chars, before cursor \(ctx.before.count), after \(ctx.after.count), visible \(ctx.visible.count) chars from \(ctx.elements) elements\(ctx.complete ? "" : " (stopped at the limit)")")
     print("names and terms (\(terms.count)): " + terms.joined(separator: ", "))
     exit(0)
+case "settings-snapshot":
+    // Renders the settings panes to PNGs (layout check, no window shown): larynx settings-snapshot <dir>
+    NSApplication.shared.setActivationPolicy(.prohibited)
+    MainActor.assumeIsolated { snapshotSettings(to: args.count > 1 ? args[1] : ".") }
+    exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
     MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60, prefill: option("--prefill") ?? "") }

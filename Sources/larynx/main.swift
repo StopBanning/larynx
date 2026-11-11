@@ -18,6 +18,7 @@ if inApp && args.isEmpty {
     Vocabulary.ensureExists()
     Snippets.ensureExists()
     makeMenuBarItem()
+    MainActor.assumeIsolated { FirstRun.shared.showIfNeeded() }
     MenuController.shared.setUpLoginItemOnce()
     Task { await runListen(keys: listenKeys) }
     app.run()

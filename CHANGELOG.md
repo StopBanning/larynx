@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Settings window** (menu: Settings…, ⌘,): talk keys, hands-free, pill, speech model, microphone, vocabulary,
+  cleanup and stages, history and recordings, screen context, your words. Same settings.json as the menu.
+- **Setup window** on a fresh install (or menu: Setup…): the three permissions with live status and buttons to the
+  right System Settings pane, a microphone level test, the speech model's state, and a box to try a dictation.
+- **One-line install**: `curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/install.sh | zsh`
+  builds and opens Larynx (Apple Silicon, macOS 15+); run it again to update. A Homebrew formula that builds from
+  source is in `packaging/homebrew/`.
 - **Larynx reads what's on screen** (memory only, never kept): at each press it collects the names around the
   cursor and in the window (about 25 ms in Claude, in the background) to settle words that sound the same, like
   "doc" vs "Dock" when the Dock is on screen. Only a noun that sounds exactly like a name on screen is considered;
