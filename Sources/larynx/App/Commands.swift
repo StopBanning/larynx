@@ -337,7 +337,8 @@ case "review":
     }
     if !mics.isEmpty { print("  mic start (log): p50 \(pct(mics, 0.5)) ms, p90 \(pct(mics, 0.9)) ms over \(mics.count) presses (0 = warm)") }
     let count = { (needle: String) in lines.filter { $0.contains(needle) }.count }
-    print("  log: tails \(count("kept listening")), edit watches \(count("edit watch:")) (readable \(count("edit watch: readable")), fixed \(count("word fixed"))), lessons \(count("learned from"))")
+    let fixedCount = lines.filter { $0.range(of: #"edit watch: readable, \d+ words? fixed"#, options: .regularExpression) != nil }.count
+    print("  log: tails \(count("kept listening")), edit watches \(count("edit watch:")) (readable \(count("edit watch: readable")), fixed \(fixedCount)), lessons \(count("learned from"))")
     if showText {
         for r in doubtful { print("\n[not sure] \(r.id)  \(r.text)") }
         for r in fixed { print("\n[fixed] \(r.id)\n   typed: \(r.text)\n   meant: \(corrections[r.id]?.text ?? "")") }
