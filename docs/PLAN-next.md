@@ -1,7 +1,20 @@
-# Larynx: next build plan (written Nov 8, 2026)
+# Larynx: handoff and plan (updated Nov 10, 2026)
 
-Goal: make dictation never lose text or land in the wrong app, show live text while you talk, and let agents use
-Larynx. Ideas taken from VoiceStudio's dictation docs (AGPL: ideas only, no code copied).
+Start here. Colin uses Larynx for all his dictation now (Right Command, mostly into Claude desktop, Messages).
+Next session's job (Colin's words): "see if there's anything we're missing". Ideas for that are under
+"Open questions / candidates" below. Read README.md for the feature list and how it works.
+
+## How to work with Colin on this
+- Just do it: build, test, commit, push and install without asking (he's tired of manual steps). Don't ask him to
+  run commands unless it's a privacy permission (TCC), which only he can change.
+- Install with `./scripts/make-app.sh`, then restart ONLY with `./scripts/restart-app.sh` (waits until he isn't
+  dictating). He dictates constantly; a restart mid-sentence loses his words, and a rebuild can trigger a ~2 min
+  CoreML recompile ("Loading speech model...").
+- Never run live paste tests while he's at the keyboard (they paste into his apps). Test with files (`larynx transcribe`),
+  `larynx tidy`, `larynx fixes`, `larynx focus`, `larynx pill-demo`, or `LARYNX_FORCE_COPY=1`.
+- No subagents unless he asks. Don't touch the Locust repo (integration doc lives in docs/INTEGRATION.md).
+- Every new heuristic needs "must not change" tests: the vocabulary swap once turned "going" into "Golang" in his
+  real messages. Check `~/Library/Logs/Larynx.log` for what he actually said and what came out.
 
 ## Where things stand
 
@@ -17,7 +30,7 @@ Larynx. Ideas taken from VoiceStudio's dictation docs (AGPL: ideas only, no code
 - Log: `~/Library/Logs/Larynx.log`. Models: `~/Library/Application Support/Larynx/models` (bark-3.0-clean default,
   parakeet-tdt-0.6b-v3). Dictionary: `~/Library/Application Support/Larynx/dictionary.json`.
 - Tests: `python3 tests/suite.py --rewrite auto` (about 7 min; `--only <id-part>`, `--voices Samantha --rates 175` for quick runs).
-  Last full run (v0.3.0): rules 28/28, rewrite 26/26, spoken 264/300 (misses are mishearings), self-corrections 38/40.
+  Last full run (Nov 10): rules 43/43, rewrite 26/26, spoken 264/300 (misses are mishearings).
 - Self-test without Colin: `scratchpad/rcmd down|up` posts a Right Command press (rebuild it from the snippet below);
   speak with `say`; read the log. Bring TextEdit to front for non-AI modes:
   `osascript -e 'tell application "TextEdit" to make new document' -e 'tell application "TextEdit" to activate'`.
@@ -29,6 +42,34 @@ let down = CommandLine.arguments.dropFirst().first == "down"
 let e = CGEvent(keyboardEventSource: CGEventSource(stateID: .hidSystemState), virtualKey: 54, keyDown: down)!
 e.type = .flagsChanged; e.flags = down ? .maskCommand : []; e.post(tap: .cghidEventTap)
 ```
+
+## Done since (Nov 9-10)
+- Menu: Recent (last 10, memory only), Live Preview / AI Cleanup / Talk Key / Speech Model / Open at Login, Edit
+  Dictionary / Vocabulary / Snippets, Reload Vocabulary. Opens at login by default (SMAppService).
+- Pill: clear Liquid Glass (`NSGlassEffectView`, macOS 26), up to 3 lines, scrolls to newest words; preview only
+  transcribes the last 12 s.
+- Tidy rules: trailing "and"/"but", restarted questions ("can you could you"), filler "like" before intensifiers,
+  same-kind corrections ("Tuesday, no Wednesday"). Code by voice (`CodeWords.swift`): case commands, "main dot swift",
+  acronyms/brand spellings.
+- Vocabulary (`Vocabulary.swift`): ~/work project names + ~70 dev terms + dictionary + vocabulary.txt, boosted by
+  FluidAudio CTC 110M rescoring (`Transcriber.loadVocabulary`). FluidAudio's own rewritten text is far too eager, so
+  only its one-word swaps are used, gated by `Transcriber.soundsAlike` (strict for real English words). `fixCase`
+  spells non-English terms properly ("prisma" -> "Prisma").
+- Learns from fixes (`Learner.swift`): 15 s after a paste it rereads the field (AX value) and learns sound-alike word
+  changes. Built and unit-checked with `larynx fixes`; NOT yet confirmed in real use.
+- Never loses text when no field has focus: `Inserter.focusedField` (AX) decides insert / copy only / paste+keep.
+- Snippets (`snippets.json`, cue on its own expands).
+- Latest full suite: rules 43/43, rewrite 26/26, spoken 264/300 (misses are speech mishearing synthetic voices).
+
+## Open questions / candidates (for "anything we're missing")
+- Confirm learning-from-fixes works in Claude desktop and Messages (AX value readable? Electron?).
+- Voice commands on selected text ("make this shorter") with Apple's on-device model.
+- Context from the text around the cursor (names already in a thread) to bias spelling.
+- Real-world accuracy: mine Larynx.log for repeated misheard words and add to tests / vocabulary.
+- Settings window instead of `defaults` switches; first-run onboarding for other people.
+- Distribution: notarized DMG needs the paid Apple developer program ($99/yr); otherwise build from source.
+- Windows / phone: not started.
+- Long dictation: final transcription of 60 s+ clips is untested for speed; preview is fine.
 
 ## Done (Nov 8, 2026, v0.3.0)
 
