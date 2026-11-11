@@ -108,3 +108,12 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(f.spoolFiles.isEmpty)
     #expect(f.history.recent().isEmpty)
 }
+
+@Test func editWatcherKeepsTheLastVersionThatStillHoldsThePaste() {
+    let pasted = "Tell Gavy to dim the lights"
+    #expect(Learner.stillHolds(pasted, in: "Tell Govee to dim the lights"))
+    #expect(Learner.stillHolds(pasted, in: "Hey, Tell Govee to dim the lights please"))
+    #expect(!Learner.stillHolds(pasted, in: ""))  // sent
+    #expect(!Learner.stillHolds(pasted, in: "Something else entirely"))
+    #expect(Learner.fixes(pasted: pasted, now: "Tell Govee to dim the lights").map(\.fixed) == ["Govee"])
+}

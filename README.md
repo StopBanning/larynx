@@ -34,9 +34,15 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   misheard word only when it sounds like the term ("macropod" becomes "Macropad"). `larynx vocab` lists them; change
   the folders with `defaults write com.automatedworkflow.larynx vocabularyRoots ~/work,~/code`; turn it off with
   `defaults write com.automatedworkflow.larynx vocabulary off`.
-- **Learns from your fixes**: about 15 seconds after a paste, Larynx reads the text field again. If you changed a word
-  to something that sounds like what it heard ("Gavy" to "Govee"), the new word joins your vocabulary and comes out
-  right next time. Turn it off with `defaults write com.automatedworkflow.larynx learn off`.
+- **Teaches itself your words**, two ways, and the pill says "Learned" when it does:
+  - *Say it again.* If you repeat a sentence within 90 seconds with one word changed ("Tell Logus to start" ...
+    "Tell Locust to start"), Larynx learns the fix. A made-up word the speech model produced goes into your
+    dictionary (always safe: it can't change a real word); a new name goes into your vocabulary. When both are real
+    words ("send"/"sent") it's probably a change of mind, so it's only saved as a suggestion.
+  - *Fix it in place.* For 20 seconds after a paste, Larynx watches the text field (works in Messages and Claude).
+    If you change a word to one that sounds like what it heard ("Gavy" to "Govee"), it learns that too.
+  - The menu has **Undo Learned** for the last thing it learned; `larynx mine` lists what your history would teach.
+    Turn learning off with `learn: off`.
 - **Snippets**: say a cue on its own ("my calendar link") and Larynx types the saved text. Edit them from the menu
   (`snippets.json`, `{"cue": "text"}`).
 - **Code by voice**: "camel case user id" becomes `userId`; also snake, kebab, pascal and constant case ("all caps").

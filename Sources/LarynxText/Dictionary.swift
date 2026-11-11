@@ -21,6 +21,16 @@ public enum Dictionary {
         try data.write(to: url, options: .atomic)
     }
 
+    /// Removes one entry (undoing something learned). Returns false when it wasn't there.
+    @discardableResult
+    public static func remove(heard: String) throws -> Bool {
+        var map = load()
+        guard map.removeValue(forKey: heard.lowercased()) != nil else { return false }
+        let data = try JSONSerialization.data(withJSONObject: map, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: url, options: .atomic)
+        return true
+    }
+
     /// Creates the file with a starter entry if it doesn't exist yet.
     public static func ensureExists() {
         guard !FileManager.default.fileExists(atPath: url.path) else { return }

@@ -117,6 +117,9 @@ extension Hotkey.Key {
                 let delivery = await Inserter.deliver(text, to: app)
                 History.shared.complete(pending, transcript: result, delivery: delivery.label)
                 MenuController.shared.remember(text)
+                // Said it again with a word fixed? Learn the fix (never from password fields or snippets).
+                let learned = session.privateField || result.snippet != nil ? { Relearn.reset(); return [] }()
+                    : Relearn.check(text, app: app?.bundleIdentifier)
                 if case .copied(let why) = delivery {
                     // Nowhere to type: say so where the user is looking, and keep the words on the clipboard.
                     if session.shouldPresent { NSSound(named: "Funk")?.play(); setStatus("Copied, press ⌘V") }
@@ -130,6 +133,11 @@ extension Hotkey.Key {
                         setStatus(delivery == .inserted ? "Ready" : "Ready (also on the clipboard)")
                     }
                     if delivery == .inserted { watchForFixes(text, in: app) }
+                    if !learned.isEmpty {
+                        log("learned from a repeat: " + Relearn.describe(learned))
+                        Task { await reloadVocabulary() }
+                        if session.shouldPresent { Pill.shared.message("Learned " + Relearn.describe(learned), symbol: "sparkles", seconds: 2.5) }
+                    }
                 }
                 logTranscript("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(logNote(result.rewrite)) (\(result.rewriteMs) ms), \(text.split(separator: " ").count) words, \(pending.persists ? pending.id : "not saved")", text: text)
             } catch {
@@ -192,14 +200,21 @@ func logNote(_ note: String) -> String {
     return note
 }
 
-/// Reads the text field again 15 seconds after a paste and learns any word the user corrected.
+/// Watches the text field for 20 seconds after a paste and learns any word the user corrected.
 /// `defaults write com.automatedworkflow.larynx learn off` turns it off.
 func watchForFixes(_ pasted: String, in app: NSRunningApplication?) {
     guard Settings.shared.string(.learn) != "off" else { return }
     Task { @MainActor in
         guard let field = Learner.focusedTextElement(in: app) else { return }
-        try? await Task.sleep(nanoseconds: 15_000_000_000)
-        guard let now = Learner.text(of: field) else { return }
+        // Look every second for 20 s and keep the last version that still holds the pasted words: people fix a word
+        // and hit send within seconds, and after sending the field is empty.
+        var latest: String?
+        for _ in 0..<20 {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard let now = Learner.text(of: field) else { break }
+            if Learner.stillHolds(pasted, in: now) { latest = now } else if latest != nil { break }
+        }
+        guard let now = latest else { return }
         let fixes = Learner.fixes(pasted: pasted, now: now)
         guard !fixes.isEmpty else { return }
         let added = Learner.learn(fixes)

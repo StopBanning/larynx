@@ -27,6 +27,26 @@ public enum Vocabulary {
             """.utf8).write(to: url)
     }
 
+    /// Appends a word to vocabulary.txt unless it's already there. Returns true when it was added.
+    @discardableResult
+    public static func add(_ word: String) -> Bool {
+        ensureExists()
+        var file = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let known = Set(file.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        guard !known.contains(word.lowercased()) else { return false }
+        if !file.isEmpty, !file.hasSuffix("\n") { file += "\n" }
+        file += word + "\n"
+        return (try? file.write(to: url, atomically: true, encoding: .utf8)) != nil
+    }
+
+    /// Removes a word from vocabulary.txt (undoing something learned).
+    public static func remove(_ word: String) {
+        guard let file = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let kept = file.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { $0.trimmingCharacters(in: .whitespaces).lowercased() != word.lowercased() }
+        try? kept.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+    }
+
     /// Every term, deduplicated case-insensitively, user entries first.
     public static func terms() -> [String] {
         var seen = Set<String>(), out: [String] = []

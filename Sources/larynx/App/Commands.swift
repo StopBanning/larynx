@@ -29,6 +29,7 @@ let usage = """
                                               hold the key, speak, release: text pastes where your cursor is
     larynx history [--search words] [--json]   your recent dictations (kept on this Mac, 30 days by default)
     larynx recover                             transcribe recordings a crash left behind
+    larynx mine [--log <file>] [--apply]       find words you fixed by saying them again, and learn them
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
     larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
 
@@ -97,6 +98,45 @@ case "history":
         }
     }
     exit(0)
+case "mine":
+    // Finds repeats with a word fixed in your history (and, with --log, in old Larynx.log lines that still have
+    // text) and prints what would be learned. --apply saves the safe lessons. larynx mine [--log path] [--apply]
+    Task { @MainActor in
+        var items: [(text: String, app: String?, time: Date)] = History.shared.recent(limit: 5000).reversed().map { ($0.text, $0.app, $0.time) }
+        if let path = option("--log") {
+            let re = try! NSRegularExpression(pattern: #"^larynx: \d+ ms \[\w+ ([^\]]*)\] [a-z+]+, rewrite: .*? \(\d+ ms\): (.+)$"#)
+            let lines = ((try? String(contentsOfFile: (path as NSString).expandingTildeInPath, encoding: .utf8)) ?? "").split(separator: "\n")
+            // Old lines have no timestamps: treat neighbours as 30 s apart so each is compared with the one before it.
+            var t = Date.distantPast
+            for line in lines {
+                let s = String(line)
+                guard let m = re.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
+                      let app = Range(m.range(at: 1), in: s), let text = Range(m.range(at: 2), in: s) else { continue }
+                t = t.addingTimeInterval(30)
+                items.insert((String(s[text]), String(s[app]), t), at: 0)
+            }
+            items.sort { $0.time < $1.time }
+        }
+        var found: [Corrections.Lesson] = []
+        for (a, b) in zip(items, items.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= Relearn.window {
+            for lesson in Corrections.lessons(Corrections.changes(previous: a.text, current: b.text), words: MacWordList()) where !found.contains(lesson) {
+                found.append(lesson)
+            }
+        }
+        for lesson in found {
+            switch lesson {
+            case .dictionary(let h, let m): print("dictionary  \(h) -> \(m)")
+            case .vocabulary(let w): print("vocabulary  \(w)")
+            case .suggestion(let h, let m): print("suggestion  \(h) -> \(m)   (real words: not learned automatically)")
+            }
+        }
+        if found.isEmpty { print("Nothing to learn yet.") }
+        if args.contains("--apply") {
+            let applied = Relearn.apply(found)
+            print("applied: \(applied.isEmpty ? "nothing new" : Relearn.describe(applied))")
+        }
+        exit(0)
+    }
 case "recover":
     // Transcribes anything a crash left in the spool, as the app does at launch: larynx recover [--json]
     Task {
@@ -117,7 +157,9 @@ case "focus":
     Thread.sleep(forTimeInterval: wait)
     let app = NSWorkspace.shared.frontmostApplication
     let f = Inserter.focusedField(in: app)
-    print("\(app?.bundleIdentifier ?? "?"): editable=\(f.editable.map(String.init) ?? "unknown") role=\(f.role)")
+    let readable = Learner.focusedTextElement(in: app).flatMap { Learner.text(of: $0) }
+    print("\(app?.bundleIdentifier ?? "?"): editable=\(f.editable.map(String.init) ?? "unknown") role=\(f.role) "
+          + "text readable=\(readable.map { "yes (\($0.count) chars)" } ?? "no")")
     exit(0)
 case "fixes":
     // What Larynx would learn if you pasted <before> and the field later said <after> (nothing is saved).

@@ -22,14 +22,38 @@ public enum Learner {
         return text(of: element) == nil ? nil : element
     }
 
+    /// The field's text. Tries the plain value first, then asks for the text by character range (Messages and
+    /// other SwiftUI/WebKit fields answer only that way), then for the attributed string.
     public static func text(of element: AXUIElement) -> String? {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success else { return nil }
-        return value as? String
+        if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success {
+            if let s = value as? String { return s }
+            if let a = value as? NSAttributedString { return a.string }
+        }
+        var count: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXNumberOfCharactersAttribute as CFString, &count) == .success,
+              let n = (count as? NSNumber)?.intValue, n >= 0 else { return nil }
+        if n == 0 { return "" }
+        var range = CFRange(location: 0, length: n)
+        guard let axRange = AXValueCreate(.cfRange, &range) else { return nil }
+        var out: CFTypeRef?
+        if AXUIElementCopyParameterizedAttributeValue(element, kAXStringForRangeParameterizedAttribute as CFString, axRange, &out) == .success,
+           let s = out as? String { return s }
+        if AXUIElementCopyParameterizedAttributeValue(element, kAXAttributedStringForRangeParameterizedAttribute as CFString, axRange, &out) == .success,
+           let a = out as? NSAttributedString { return a.string }
+        return nil
     }
 
     static func tokens(_ s: String) -> [String] {
         s.split(whereSeparator: \.isWhitespace).map { $0.trimmingCharacters(in: .punctuationCharacters) }.filter { !$0.isEmpty }
+    }
+
+    /// True when most (60%) of the pasted words are still in the field: the user is editing it, not done with it.
+    public static func stillHolds(_ pasted: String, in now: String) -> Bool {
+        let p = tokens(pasted).map { $0.lowercased() }
+        guard !p.isEmpty else { return false }
+        let present = Set(tokens(now).map { $0.lowercased() })
+        return Double(p.filter(present.contains).count) / Double(p.count) >= 0.6
     }
 
     /// Words the user changed in what was pasted: (heard, fixed) pairs that sound alike. Empty when the text was left

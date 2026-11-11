@@ -75,6 +75,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         recentItem.submenu = recentMenu
         menu.addItem(recentItem)
 
+        if !Relearn.lastApplied.isEmpty {
+            let undo = NSMenuItem(title: "Undo Learned: " + Relearn.describe(Relearn.lastApplied), action: #selector(undoLearned), keyEquivalent: "")
+            undo.target = self
+            menu.addItem(undo)
+        }
+
         menu.addItem(.separator())
         menu.addItem(toggle("Live Preview", on: Pill.enabled, #selector(togglePreview)))
         menu.addItem(toggle("AI Cleanup", on: autoRewrite, #selector(toggleRewrite)))
@@ -124,6 +130,8 @@ final class MenuController: NSObject, NSMenuDelegate {
         item.state = on ? .on : .off
         return item
     }
+
+    @objc func undoLearned() { Task { @MainActor in Relearn.undoLast() } }
 
     @objc func copyRecent(_ sender: NSMenuItem) {
         guard shownRecent.indices.contains(sender.tag) else { return }
