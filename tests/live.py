@@ -76,8 +76,15 @@ def run_case(name, extra_env, want_delivery, prefill="", expect=lambda text: tex
             return False, f"{name}: capture window did not come to the front: {ready}"
         with tempfile.TemporaryDirectory(dir=os.path.expanduser("~/work/scratch")) as data:
             env = dict(os.environ, LARYNX_CAPTURE_PID=str(cap_pid), LARYNX_DATA_DIR=data, **extra_env)
-            feed = subprocess.run([BIN, "listen", "--feed", str(ROOT / "tests/fixtures/report.wav"), "--deliver",
-                                   "--mode", "standard", "--models-dir", MODELS], capture_output=True, text=True, env=env, timeout=300)
+            mark = os.environ.get("LARYNX_LIVE_MARK")
+            if mark: Path(mark).touch()  # our own ⌘V is about to happen: tell when-idle it isn't you
+            try:
+                feed = subprocess.run([BIN, "listen", "--feed", str(ROOT / "tests/fixtures/report.wav"), "--deliver",
+                                       "--mode", "standard", "--models-dir", MODELS], capture_output=True, text=True, env=env, timeout=300)
+            finally:
+                if mark:
+                    time.sleep(0.5)
+                    Path(mark).unlink(missing_ok=True)
         result = next((json.loads(l) for l in feed.stdout.splitlines() if '"event":"result"' in l.replace(" ", "")), None)
         if not result:
             return False, f"{name}: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]}"
