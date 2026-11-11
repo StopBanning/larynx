@@ -360,6 +360,14 @@ case "settings-snapshot":
     NSApplication.shared.setActivationPolicy(.prohibited)
     MainActor.assumeIsolated { snapshotSettings(to: args.count > 1 ? args[1] : ".") }
     exit(0)
+case "idle":
+    // Seconds since the last keyboard/mouse input: "<hardware> <any>" (hardware = the HID system state, which
+    // scripts/when-idle.sh uses so the live tests' own synthetic keystrokes don't count as you touching the Mac).
+    let any = CGEventType(rawValue: ~0)!
+    let hardware = CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: any)
+    let session = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: any)
+    print("\(Int(hardware)) \(Int(session))")
+    exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
     MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60, prefill: option("--prefill") ?? "") }

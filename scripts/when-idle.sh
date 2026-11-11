@@ -5,8 +5,16 @@
 set -u
 IDLE=300
 [[ "${1:-}" == "--idle" ]] && { IDLE=$2; shift 2; }
-# Seconds since the last keyboard or mouse input; 0 (never idle) if it can't be read.
+LARYNX="${LARYNX_BIN:-${0:a:h}/../.build/release/larynx}"
+# Seconds since the last keyboard or mouse input from the hardware (so the tests' own synthetic ⌘V doesn't count);
+# falls back to IOKit's HIDIdleTime; 0 (never idle) if neither can be read.
 idle() {
+  local h
+  h=$("$LARYNX" idle 2>/dev/null | awk '{print $1}')
+  [[ -n "$h" ]] && { echo $h; return; }
+  ioidle
+}
+ioidle() {
   local s
   for _ in 1 2 3; do
     s=$(ioreg -r -k HIDIdleTime -d 1 2>/dev/null | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}')
@@ -28,7 +36,7 @@ while kill -0 $pid 2>/dev/null; do
   now=$(idle)
   if (( now < start )); then   # idle time went back down: someone touched the keyboard or mouse
     pkill -P $pid 2>/dev/null; kill $pid 2>/dev/null
-    echo "when-idle: input arrived, stopped the command" >&2
+    echo "when-idle: input arrived, stopped the command (idle readings: $("$LARYNX" idle 2>/dev/null), IOKit $(ioidle) s)" >&2
     exit 3
   fi
   start=$now

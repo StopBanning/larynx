@@ -38,8 +38,12 @@ final class CaptureWindow: NSObject, NSTextViewDelegate {
         // for up to 2 s).
         waitForFront(tries: 40)
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { exit(0) }
-        // Quit when the driving test goes away.
-        DispatchQueue.global().async { while readLine() != nil {}; DispatchQueue.main.async { exit(0) } }
+        // Quit when the driving test goes away, if it is connected by a pipe. Launched through `open` (how tests bring
+        // it to the front) stdin is empty from the start, so then only --seconds and the test's own kill end it.
+        var info = stat()
+        if fstat(0, &info) == 0, (info.st_mode & S_IFMT) == S_IFIFO {
+            DispatchQueue.global().async { while readLine() != nil {}; DispatchQueue.main.async { exit(0) } }
+        }
         app.run()
     }
 
