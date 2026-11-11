@@ -12,14 +12,14 @@ models through [FluidAudio](https://github.com/FluidInference/FluidAudio). Nothi
 No account, no subscription, no word limits.
 
 <p align="center">
-  <img src="docs/images/pill-listening.png" alt="Larynx listening: the target app's icon and a waveform" height="44">
-  &nbsp;
-  <img src="docs/images/pill-words.png" alt="Larynx showing the words as you speak" height="54">
-  &nbsp;
-  <img src="docs/images/pill-transcribing.png" alt="Larynx finishing the transcript" height="71">
+  <img src="docs/images/pill-glass-clear.png" alt="The Larynx pill in clear Liquid Glass over colour stripes: app icon, voice waveform and live words" width="640">
 </p>
-<p align="center"><sub>The Liquid Glass pill: where your words are going, a waveform that moves with your voice, and the words
-as you say them.</sub></p>
+<p align="center"><sub>The pill, in Liquid Glass: where your words are going, a waveform that moves with your voice, and the
+words as you say them. The menu's Pill Glass slider goes from clear to frosted to solid:</sub></p>
+<p align="center">
+  <img src="docs/images/pill-glass-frosted.png" alt="The pill frosted" width="380">
+  <img src="docs/images/pill-glass-solid.png" alt="The pill solid" width="380">
+</p>
 
 ## Why it exists
 
@@ -53,8 +53,9 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   to and a waveform that moves with your voice; your words appear in a bubble that grows out of it. When you let go
   the two melt into one shape while the transcript is made. It sits just above the text box you're dictating into
   (or at the bottom of the screen when the app doesn't say where that is), never takes focus, warns you if the mic
-  hears nothing, and shows a lock when you're in a password field (nothing saved). Turn it off from the menu (Live
-  Preview); `larynx pill-demo` plays it for a screenshot.
+  hears nothing, and shows a lock when you're in a password field (nothing saved). The menu's Pill Glass slider sets
+  how see-through it is, from clear glass to solid, and shows the pill while you drag. Turn it off from the menu
+  (Live Preview); `larynx pill-demo` plays it for a screenshot (`LARYNX_DEMO_BACKDROP=1` adds colour stripes behind it).
 - **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
   Larynx brings the original back before pasting.
 - **Never loses a transcript**: before pasting, Larynx asks macOS whether a text field has focus. If nothing can take

@@ -4,7 +4,8 @@
 
 - **Liquid Glass pill:** one glass capsule with the icon of the app your words are going to, a waveform driven by
   your voice, and the words as you speak. It sits just above the text field you're dictating into, warns when the
-  mic hears nothing, and shows a lock in password fields. `larynx pill-demo` plays it for screenshots.
+  mic hears nothing, and shows a lock in password fields. A Pill Glass slider in the menu goes from clear glass to
+  solid. `larynx pill-demo` plays it for screenshots.
 - **History and crash recovery:** dictations are kept on your Mac for 30 days in SQLite with full-text search
   (`larynx history --search`). Each recording is written to disk before transcription, so a crash can't lose it:
   the next launch recovers it. Password fields and password managers are never stored; `history: off` stores
@@ -12,7 +13,7 @@
 - **Self-learning:** say a sentence again with a word fixed and Larynx learns the fix; edit a pasted word in place
   and it learns that too (now works in Messages and Claude). Menu: Undo Learned. `larynx mine` shows what your
   history would teach.
-- **Foundations:** Swift Testing suite (29 tests), a portable text engine (`LarynxText`) that builds and passes on
+- **Foundations:** Swift Testing suite (29 tests) on macOS CI, a portable text engine (`LarynxText`) that builds and passes on
   Windows and Linux in CI, a typed transcript and ordered pipeline with off/shadow/on stages, `settings.json` with
   live reload ([docs/SETTINGS.md](docs/SETTINGS.md)).
 - **Fixes:** audio files no longer lose their last ~40 ms when transcribed from a file; the word list reads Windows

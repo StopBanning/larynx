@@ -83,6 +83,7 @@ final class MenuController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
         menu.addItem(toggle("Live Preview", on: Pill.enabled, #selector(togglePreview)))
+        menu.addItem(glassSliderItem())
         menu.addItem(toggle("AI Cleanup", on: autoRewrite, #selector(toggleRewrite)))
         let keyItem = NSMenuItem(title: "Talk Key", action: nil, keyEquivalent: "")
         let keyMenu = NSMenu()
@@ -122,6 +123,34 @@ final class MenuController: NSObject, NSMenuDelegate {
         reload.target = self
         menu.addItem(reload)
         menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    /// "Glass" with a slider from clear (left) to solid (right); the pill appears while you drag.
+    private func glassSliderItem() -> NSMenuItem {
+        let item = NSMenuItem()
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 46))
+        let title = NSTextField(labelWithString: "Pill Glass")
+        title.font = .menuFont(ofSize: 0)
+        title.frame = NSRect(x: 20, y: 26, width: 200, height: 16)
+        let slider = NSSlider(value: Double(Settings.shared.string(.pillGlass)) ?? 0, minValue: 0, maxValue: 100,
+                              target: self, action: #selector(glassChanged(_:)))
+        slider.isContinuous = true
+        slider.frame = NSRect(x: 18, y: 4, width: 150, height: 20)
+        slider.setAccessibilityLabel("Pill glass: clear to solid")
+        let ends = NSTextField(labelWithString: "Clear · Solid")
+        ends.font = .systemFont(ofSize: 10)
+        ends.textColor = .secondaryLabelColor
+        ends.frame = NSRect(x: 172, y: 7, width: 64, height: 14)
+        for v in [title, slider, ends] { view.addSubview(v) }
+        item.view = view
+        return item
+    }
+
+    @objc func glassChanged(_ sender: NSSlider) {
+        let value = Int(sender.doubleValue.rounded())
+        Task { @MainActor in Pill.shared.previewGlass(Double(value) / 100) }
+        // Save when the drag ends (or on each click) rather than on every pixel.
+        if NSApp.currentEvent?.type != .leftMouseDragged { save(String(value), for: .pillGlass) }
     }
 
     private func toggle(_ title: String, on: Bool, _ action: Selector) -> NSMenuItem {

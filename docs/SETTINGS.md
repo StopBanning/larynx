@@ -30,6 +30,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `devTerms` | `on` | `on` or `off`; include the built-in developer term list in vocabulary. |
 | `preview` | `on` | `on` or `off`; live preview pill. |
 | `pillPosition` | `auto` | `auto` puts the pill just above the text field you are dictating into (when the app says where it is and the field is not a tall document area), else at the bottom of the screen; `bottom` always uses the bottom of the screen. |
+| `pillGlass` | `0` | 0-100: how see-through the pill is. 0 is clear Liquid Glass, around 50 is frosted, 100 is solid. The Glass slider in the menu sets it and shows the pill while you drag. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
 | `loginItemSet` | `false` | Internal boolean: first-run login-item setup has been attempted. Actual login-item status comes from macOS. |
