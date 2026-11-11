@@ -1,0 +1,31 @@
+name: portable
+# Builds and tests Larynx's text cleanup (LarynxText) on Windows and Linux: the shared core of the Windows app.
+on:
+  push:
+    paths: ['Sources/LarynxText/**', 'tests/LarynxTextTests/**', 'tests/cases.json', 'ci/**', '.github/workflows/portable.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: compnerd/gha-setup-swift@v0.5.1
+        with:
+          branch: swift-6.1.2-release
+          tag: 6.1.2-RELEASE
+      - name: Use the portable manifest
+        run: Copy-Item ci/Package.portable.swift Package.swift -Force
+      - run: swift --version
+      - run: swift build --target LarynxText
+      - run: swift test
+  linux:
+    runs-on: ubuntu-24.04
+    container: swift:6.1.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp ci/Package.portable.swift Package.swift
+      - run: swift build --target LarynxText
+      - run: swift test
