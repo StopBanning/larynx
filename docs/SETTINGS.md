@@ -1,6 +1,7 @@
 # Larynx settings
 
-Settings live in `~/Library/Application Support/Larynx/settings.json`. The file is
+Settings live in `~/Library/Application Support/Larynx/settings.json` (the `LARYNX_DATA_DIR`
+environment variable moves it, together with history, to another folder; tests use this). The file is
 optional; Larynx does not create it merely to read settings. Precedence is:
 command-line override (where supported), valid JSON value, legacy `defaults` key,
 built-in default. Legacy defaults still work for keys not overridden in JSON.
@@ -28,9 +29,14 @@ override allows a later `defaults write` for that key to take effect again.
 | `vocabularyRoots` | `~/work` | Comma-separated project root paths; tilde expanded; empty disables project roots. |
 | `devTerms` | `on` | `on` or `off`; include the built-in developer term list in vocabulary. |
 | `preview` | `on` | `on` or `off`; live preview pill. |
+| `pillPosition` | `auto` | `auto` puts the pill just above the text field you are dictating into (when the app says where it is and the field is not a tall document area), else at the bottom of the screen; `bottom` always uses the bottom of the screen. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
 | `loginItemSet` | `false` | Internal boolean: first-run login-item setup has been attempted. Actual login-item status comes from macOS. |
+| `history` | `on` | `on` or `off`; keep dictations in `history.sqlite` on this Mac and spool audio until each is transcribed (crash recovery). `off` keeps Recent in memory only and writes nothing. See [PRIVACY.md](PRIVACY.md). |
+| `historyDays` | `30` | Whole days (1-3650) of dictation text to keep; older rows are deleted at launch and after each dictation. A JSON number or string. |
+| `keepAudio` | `off` | `off` or whole days (1-365) to keep each dictation's audio in `history/audio/` after it is transcribed. |
+| `debugText` | `off` | `on` or `off`; write transcript text into `~/Library/Logs/Larynx.log` (for debugging only). Off logs timing, app, delivery and word counts. |
 | `stages.snippet` | `on` | `off`, `shadow`, `on`; whole-utterance snippet matching. |
 | `stages.dictionary` | `on` | `off`, `shadow`, `on`; personal dictionary replacements. |
 | `stages.vocabularyCase` | `on` | `off`, `shadow`, `on`; distinctive vocabulary spelling/case. |

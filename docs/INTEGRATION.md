@@ -110,3 +110,13 @@ claude mcp add larynx -- ~/work/larynx/.build/release/larynx mcp --models-dir "$
   `stop` (about 50 ms for a short clip).
 - Mic recording through `serve` has been built but not yet tested live; file transcription is tested.
 - Apple Silicon and macOS 15 or later only.
+
+## History (the menu bar app only)
+
+`serve` and `mcp` never write history: a host app owns its own record of what was dictated. The menu bar app (and
+`larynx listen`) keeps dictations in `~/Library/Application Support/Larynx/history.sqlite`; see
+[PRIVACY.md](PRIVACY.md). `larynx history [--search words] [--limit n] [--json]` reads it; `--json` prints rows with
+`id`, `time`, `app`, `mode`, `engine`, `raw`, `text`, `steps`, `audioSeconds`, `totalMs`, `delivery`, `audioPath`
+and `flags` (`["recovered"]` for dictations rebuilt after a crash). `larynx recover` transcribes anything a crash left
+in the spool. `larynx listen --feed <audio>` runs one dictation from a file through the listen path's spool,
+pipeline and history with no microphone, key or paste, and prints JSON lines (`spooled`, then `result`).

@@ -79,6 +79,9 @@ to work with Colin, lessons learned. Read README.md for the feature list and how
 - Colin's keyboard is a Keychron B1 Pro: no Fn, no Right Option reaches macOS. Right Command (keycode 54) is his talk key.
 - Log: `~/Library/Logs/Larynx.log`. Models: `~/Library/Application Support/Larynx/models` (bark-3.0-clean default,
   parakeet-tdt-0.6b-v3). Dictionary: `~/Library/Application Support/Larynx/dictionary.json`.
+- History and crash recovery: `python3 tests/history.py` (file-only, throwaway `LARYNX_DATA_DIR`; kills a fed
+  dictation mid-transcription and checks the next run recovers it). Swift tests need full Xcode on this Mac:
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`.
 - Tests: `python3 tests/suite.py --rewrite auto` (about 7 min; `--only <id-part>`, `--voices Samantha --rates 175` for quick runs).
   Last full run (Nov 10): rules 43/43, rewrite 26/26, spoken 264/300 (misses are mishearings).
 - Self-test without Colin: `scratchpad/rcmd down|up` posts a Right Command press (rebuild it from the snippet below);

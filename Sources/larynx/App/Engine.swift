@@ -62,7 +62,7 @@ func transcribeWithFallback(_ samples: [Float]) async throws -> (text: String, e
     guard seconds >= 0.5, level >= 0.01 || forced, engine.other.isDownloaded(in: modelsDir) else { return (first, engine.rawValue) }
     try await FallbackLoader.shared.task.value
     let second = try await fallbackTranscriber.transcribe(samples)
-    log("fallback engine: \(engine.other.rawValue) (\(String(format: "%.1f", seconds)) s, rms \(String(format: "%.3f", level))): \(second.isEmpty ? "also empty" : second)")
+    logTranscript("fallback engine: \(engine.other.rawValue) (\(String(format: "%.1f", seconds)) s, rms \(String(format: "%.3f", level))): \(second.isEmpty ? "also empty" : "heard \(second.split(separator: " ").count) words")", text: second)
     return (second, engine.other.rawValue)
 }
 

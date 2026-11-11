@@ -5,11 +5,15 @@ import CoreFoundation
 /// Command-line overrides belong to the caller; precedence here is JSON > legacy defaults > built-in default.
 public final class Settings: @unchecked Sendable {
     public static let shared = Settings()
-    public static let defaultURL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/Larynx/settings.json")
+    /// `LARYNX_DATA_DIR` moves settings.json along with history (tests use a throwaway folder).
+    public static let defaultURL = (ProcessInfo.processInfo.environment["LARYNX_DATA_DIR"]
+        .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath, isDirectory: true) }
+        ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Larynx"))
+        .appendingPathComponent("settings.json")
 
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
+        case history, historyDays, keepAudio, debugText, pillPosition
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -23,6 +27,9 @@ public final class Settings: @unchecked Sendable {
             case .vocabularyRoots: return "~/work"
             case .keys: return ""
             case .loginItemSet: return "false"
+            case .historyDays: return "30"
+            case .keepAudio, .debugText: return "off"
+            case .pillPosition: return "auto"
             default: return "on"
             }
         }
@@ -31,7 +38,10 @@ public final class Settings: @unchecked Sendable {
             switch self {
             case .engine: return ["clean", "parakeet"].contains(value)
             case .rewrite: return ["auto", "off"].contains(value)
-            case .vocabulary, .devTerms, .preview, .learn: return ["on", "off"].contains(value)
+            case .vocabulary, .devTerms, .preview, .learn, .history, .debugText: return ["on", "off"].contains(value)
+            case .pillPosition: return ["auto", "bottom"].contains(value)
+            case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
+            case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet: return ["true", "false"].contains(value)
             case .keys, .vocabularyRoots: return true
             default: return StageMode(rawValue: value) != nil
@@ -47,6 +57,8 @@ public final class Settings: @unchecked Sendable {
         public func string(_ key: Key) -> String { values[key] ?? key.defaultValue }
         public func bool(_ key: Key) -> Bool { string(key) == "true" }
         public func stageMode(_ key: Key) -> StageMode { StageMode(rawValue: string(key)) ?? .on }
+        /// A whole number of days, or nil for "off".
+        public func days(_ key: Key) -> Int? { Int(string(key)) }
     }
 
     public enum WriteError: Error { case invalidFile, invalidValue }
@@ -79,6 +91,8 @@ public final class Settings: @unchecked Sendable {
             var fromFile = value as? String
             if key == .loginItemSet, let value, CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() {
                 fromFile = (value as? Bool).map(String.init)
+            } else if fromFile == nil, let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() {
+                fromFile = String(number.intValue)  // "historyDays": 30 as a JSON number
             }
             let legacy = key == .loginItemSet ? String(defaults.bool(forKey: key.rawValue)) : defaults.string(forKey: key.rawValue)
             if let fromFile, key.valid(fromFile) { values[key] = fromFile }

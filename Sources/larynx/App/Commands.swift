@@ -27,6 +27,8 @@ let usage = """
     larynx transcribe <audio file> [--clean]   print the transcript of a file
     larynx listen [--key fn|rightOption|rightCommand|rightControl] [--clean]
                                               hold the key, speak, release: text pastes where your cursor is
+    larynx history [--search words] [--json]   your recent dictations (kept on this Mac, 30 days by default)
+    larynx recover                             transcribe recordings a crash left behind
     larynx serve                               JSON lines on stdin/stdout, for apps such as Locust (see docs/INTEGRATION.md)
     larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
 
@@ -74,7 +76,39 @@ func runTranscribe() async {
 func runCommand() {
 switch args.first {
 case "transcribe": Task { await runTranscribe() }
-case "listen": Task { await runListen(keys: listenKeys) }
+case "listen":
+    if let feed = option("--feed") { Task { await runFeed(feed) } } else { Task { await runListen(keys: listenKeys) } }
+case "history":
+    // larynx history [--search words] [--limit n] [--json]
+    let limit = Int(option("--limit") ?? "") ?? 20
+    let rows = option("--search").map { History.shared.search($0, limit: limit) } ?? History.shared.recent(limit: limit)
+    if args.contains("--json") {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        print(String(decoding: (try? encoder.encode(rows)) ?? Data("[]".utf8), as: UTF8.self))
+    } else if rows.isEmpty {
+        print(Settings.shared.string(.history) == "off" ? "History is off (history: off in settings.json)." : "No dictations found.")
+    } else {
+        let f = DateFormatter(); f.dateFormat = "MMM d HH:mm"
+        for r in rows {
+            let mark = r.flags.contains("recovered") ? " [recovered]" : ""
+            print("\(f.string(from: r.time))  \(r.app ?? "?")\(mark)\n  \(r.text)")
+        }
+    }
+    exit(0)
+case "recover":
+    // Transcribes anything a crash left in the spool, as the app does at launch: larynx recover [--json]
+    Task {
+        let rows = await recoverAbandoned(before: launchedAt)
+        if args.contains("--json") {
+            let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601; encoder.outputFormatting = [.sortedKeys]
+            print(String(decoding: (try? encoder.encode(rows)) ?? Data("[]".utf8), as: UTF8.self))
+        } else {
+            print(rows.isEmpty ? "Nothing to recover." : rows.map { "recovered \($0.id): \($0.text)" }.joined(separator: "\n"))
+        }
+        exit(0)
+    }
 case "serve": Task { await runServe() }
 case "mcp": Task { await runMCP() }
 case "focus":
@@ -98,13 +132,37 @@ case "vocab":
     log("edit \(Vocabulary.url.path); project names come from \(Vocabulary.roots.map(\.path).joined(separator: ", "))")
     exit(0)
 case "pill-demo":
-    // Holds the live preview on screen so it can be looked at or screenshotted: larynx pill-demo [seconds] [text]
-    let seconds = Double(args.dropFirst().first ?? "") ?? 15
+    // Plays the pill's states with a synthetic voice so they can be watched or screenshotted (holding the talk key
+    // while pressing a screenshot shortcut cancels the dictation). larynx pill-demo [seconds] [text]
+    let seconds = Double(args.dropFirst().first ?? "") ?? 12
     let sample = args.count > 2 ? args[2] : "I wanna add you on my schedule for Wednesday, and can you send the report before the meeting starts on Friday afternoon?"
     NSApplication.shared.setActivationPolicy(.accessory)
     Task { @MainActor in
-        Pill.shared.show(sample)
-        try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+        let started = Date()
+        // Speech-like loudness: syllables (~5 Hz) inside phrases (~0.4 Hz), with short pauses.
+        let level: () -> Float = {
+            let t = Date().timeIntervalSince(started)
+            let syllable = (sin(t * 2 * .pi * 4.7) + 1) / 2, phrase = max(0, sin(t * 2 * .pi * 0.38) + 0.35)
+            return Float(0.004 + 0.12 * syllable * min(1, phrase) + Double.random(in: 0...0.015))
+        }
+        let front = NSWorkspace.shared.frontmostApplication
+        Pill.shared.listen(app: front, privateField: false, field: Inserter.focusedFieldFrame(in: front), level: level)
+        log("pill window \(Pill.shared.windowNumber ?? -1)")
+        let words = sample.split(separator: " ")
+        let speaking = seconds * 0.7
+        var shown = 0
+        while Date().timeIntervalSince(started) < speaking {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            let due = Int(Double(words.count) * min(1, (Date().timeIntervalSince(started) - 0.8) / (speaking - 1)))
+            if due > shown { shown = due; Pill.shared.words(words.prefix(shown).joined(separator: " ")) }
+        }
+        log("pill frame words \(Pill.shared.frame.map { NSStringFromRect($0) } ?? "-")")
+        Pill.shared.transcribing()
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 0.2 * 1_000_000_000))
+        Pill.shared.message("Copied: press ⌘V to paste", symbol: "doc.on.clipboard", tint: .systemOrange)
+        try? await Task.sleep(nanoseconds: UInt64(seconds * 0.1 * 1_000_000_000))
+        Pill.shared.hide()
+        try? await Task.sleep(nanoseconds: 300_000_000)
         exit(0)
     }
     NSApplication.shared.run()
@@ -123,4 +181,29 @@ case "tidy":
     print(Tidy.apply(args.last ?? "", mode: mode)); exit(0)
 default: print(usage); exit(args.isEmpty || args.first == "--help" || args.first == "-h" ? 0 : 2)
 }
+}
+
+/// `larynx listen --feed <audio>`: one dictation from a file through the listen path's spool, pipeline and history,
+/// with no microphone, key or paste. Prints the result as JSON. `LARYNX_TEST_DELAY_MS` waits between spooling and
+/// transcription, so a test can kill the process mid-dictation and check that the next launch recovers it.
+func runFeed(_ path: String) async {
+    do {
+        let samples = try loadAudioFile(URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+        let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
+        let pending = History.shared.begin(samples: samples, app: nil, mode: mode, privateField: false)
+        emit(["event": "spooled", "id": pending.id, "saved": pending.persists])
+        if let delay = Int(ProcessInfo.processInfo.environment["LARYNX_TEST_DELAY_MS"] ?? "") {
+            try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000)
+        }
+        let result = try await finish(samples, clean: wantsClean, mode: mode)
+        if result.text.isEmpty { History.shared.discard(pending) }
+        else { History.shared.complete(pending, transcript: result, delivery: "none") }
+        var body = try result.jsonObject()
+        body["event"] = "result"
+        body["id"] = pending.id
+        emit(body)
+        exit(0)
+    } catch {
+        log("\(error)"); exit(1)
+    }
 }

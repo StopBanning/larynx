@@ -7,8 +7,17 @@ import ServiceManagement
 final class MenuController: NSObject, NSMenuDelegate {
     static let shared = MenuController()
     let statusLine = NSMenuItem(title: "Starting...", action: nil, keyEquivalent: "")
-    /// The last 10 transcripts, newest first. Kept in memory only: never written to disk.
-    private(set) var recent: [String] = []
+    /// The last 10 transcripts, newest first, for `history: off` (memory only, never written to disk).
+    private var memoryRecent: [String] = []
+    /// What the Recent submenu showed when it was last opened; clicks copy from here.
+    private var shownRecent: [String] = []
+
+    /// Recent comes from History when it's on, otherwise from this session's memory.
+    var recent: [(text: String, recovered: Bool)] {
+        guard settings.string(.history) != "off" else { return memoryRecent.map { ($0, false) } }
+        return History.shared.recent(limit: 10).map { ($0.text, $0.flags.contains("recovered")) }
+    }
+
     private let settings = Settings.shared
 
     @discardableResult private func save(_ value: String, for key: Settings.Key) -> Bool {
@@ -18,8 +27,8 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     func remember(_ text: String) {
         DispatchQueue.main.async {
-            self.recent.insert(text, at: 0)
-            if self.recent.count > 10 { self.recent.removeLast() }
+            self.memoryRecent.insert(text, at: 0)
+            if self.memoryRecent.count > 10 { self.memoryRecent.removeLast() }
         }
     }
 
@@ -43,6 +52,8 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         let recentItem = NSMenuItem(title: "Recent", action: nil, keyEquivalent: "")
         let recentMenu = NSMenu()
+        let recent = self.recent
+        shownRecent = recent.map(\.text)
         if recent.isEmpty {
             let none = NSMenuItem(title: "Nothing yet", action: nil, keyEquivalent: "")
             none.isEnabled = false
@@ -51,8 +62,9 @@ final class MenuController: NSObject, NSMenuDelegate {
             let note = NSMenuItem(title: "Click to copy", action: nil, keyEquivalent: "")
             note.isEnabled = false
             recentMenu.addItem(note)
-            for (i, text) in recent.enumerated() {
-                let title = text.count > 60 ? String(text.prefix(57)) + "..." : text
+            for (i, (text, recovered)) in recent.enumerated() {
+                let short = text.count > 60 ? String(text.prefix(57)) + "..." : text
+                let title = recovered ? "Recovered: " + short : short
                 let item = NSMenuItem(title: title, action: #selector(copyRecent(_:)), keyEquivalent: "")
                 item.target = self
                 item.tag = i
@@ -114,8 +126,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     }
 
     @objc func copyRecent(_ sender: NSMenuItem) {
-        guard recent.indices.contains(sender.tag) else { return }
-        Inserter.copyOnly(recent[sender.tag])
+        guard shownRecent.indices.contains(sender.tag) else { return }
+        Inserter.copyOnly(shownRecent[sender.tag])
         setStatus("Copied, press ⌘V")
     }
 

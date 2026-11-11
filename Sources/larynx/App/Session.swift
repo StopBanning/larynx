@@ -9,6 +9,8 @@ import LarynxCore
     let target: NSRunningApplication?
     var state = SessionState()
     var previewTimer: Timer?
+    /// A password field or an app on the privacy list: the words never touch the disk.
+    var privateField = false
 
     init(target: NSRunningApplication?) {
         self.target = target

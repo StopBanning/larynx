@@ -13,8 +13,12 @@ Daily-driver quality on Apple Silicon, macOS 15+ (the AI rewrite needs macOS 26)
 about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite runs.
 
 - **Hold to talk** with Fn, Right Option or Right Command; pressing another key while holding cancels, so shortcuts still work.
-- **Live preview**: a small pill at the bottom of the screen shows the words as you speak. It never takes focus.
-  Turn it off from the menu (Live Preview).
+- **Live preview in Liquid Glass**: while you talk, a small glass orb shows the icon of the app your words are going
+  to and a waveform that moves with your voice; your words appear in a bubble that grows out of it. When you let go
+  the two melt into one shape while the transcript is made. It sits just above the text box you're dictating into
+  (or at the bottom of the screen when the app doesn't say where that is), never takes focus, warns you if the mic
+  hears nothing, and shows a lock when you're in a password field (nothing saved). Turn it off from the menu (Live
+  Preview); `larynx pill-demo` plays it for a screenshot.
 - **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
   Larynx brings the original back before pasting.
 - **Never loses a transcript**: before pasting, Larynx asks macOS whether a text field has focus. If nothing can take
@@ -41,7 +45,13 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   out of the box (`defaults write com.automatedworkflow.larynx devTerms off` removes them).
 - **25 languages**: switch the Speech Model in the menu to Parakeet v3.
 - **Menu bar settings**: Live Preview, AI Cleanup, Talk Key and Open at Login are checkboxes in the menu; Recent lists
-  your last 10 transcripts (click to copy; kept in memory only, never saved to disk). Opens at login by default.
+  your last 10 transcripts (click to copy). Opens at login by default.
+- **History that stays on your Mac**: dictations are kept for 30 days in a local database you can search with
+  `larynx history --search <words>`. Audio is not kept (unless you turn on `keepAudio`), and nothing typed into a
+  password field or a password manager is ever stored. `history: off` keeps everything in memory instead. See
+  [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Survives a crash**: each recording is written to disk before it is transcribed, so if Larynx quits mid-way the
+  next launch finishes the job and shows it under Recent as "Recovered".
 - **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
 
 ## Use
@@ -60,6 +70,7 @@ From a terminal:
 swift build -c release
 .build/release/larynx transcribe note.m4a          # print a transcript
 .build/release/larynx listen --key fn              # system-wide hold-to-talk
+.build/release/larynx history --search deploy      # search your dictation history
 .build/release/larynx serve                        # JSON lines for host apps
 .build/release/larynx mcp                          # MCP server for agents
 ```
@@ -120,6 +131,8 @@ tried for numbers and rejected: it turned "two thirty and it costs" into "32 it 
 | `CodeWords.swift` | Spoken code: case commands, file names, acronyms |
 | `Snippets.swift` | Voice shortcuts |
 | `Learner.swift` | Learns words from your fixes |
+| `History.swift` | Local dictation history (SQLite, full-text search) and the crash spool |
+| `Privacy.swift` | Password fields and apps whose dictations are never stored |
 | `Vocabulary.swift` | Your words: project names, dictionary, vocabulary.txt |
 | `Pill.swift` | The live preview panel |
 | `Menu.swift` | The menu bar menu: recent transcripts and settings |
