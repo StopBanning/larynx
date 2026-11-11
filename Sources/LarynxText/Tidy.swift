@@ -72,7 +72,39 @@ public enum Tidy {
     public static let shadowRules: [(name: String, apply: (String) -> String)] = [
         ("lone-letter", loneLetterRestarts),
         ("spoken-list", spokenList),
+        ("counted-list", countedList),
     ]
+
+    /// "There are three things I want from you. I want you to provide the report, get it back, ship it off." An
+    /// announced count followed by exactly that many comma-separated items (each two words or more) becomes a
+    /// numbered list. A lead-in shared by the items ("I want you to") stays above the list.
+    static func countedList(_ text: String) -> String {
+        let counts = ["two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6]
+        guard let m = text.range(of: "(?i)\\b(two|three|four|five|six|[2-6])\\s+(?:\\w+\\s+)?(things|steps|items|points|tasks|questions|ideas|options)\\b[^.:!?]*[.:]",
+                                 options: .regularExpression),
+              let countWord = text[m].split(separator: " ").first,
+              let n = counts[countWord.lowercased()] else { return text }
+        let intro = String(text[..<m.upperBound])
+        var body = String(text[m.upperBound...]).trimmingCharacters(in: .whitespaces)
+        // The items run to the end of the next sentence.
+        var after = ""
+        if let end = body.range(of: "[.!?](\\s|$)", options: .regularExpression) {
+            after = String(body[end.upperBound...]); body = String(body[..<end.lowerBound])
+        }
+        var lead = ""
+        if let l = body.range(of: "^(?i)(?:I want you to|I need you to|you need to|we need to|we should|please|you should)\\s+", options: .regularExpression) {
+            lead = String(body[l]).trimmingCharacters(in: .whitespaces); body = String(body[l.upperBound...])
+        }
+        let items = body.replacingOccurrences(of: ",?\\s+and\\s+(?=[^,]*$)", with: ", ", options: .regularExpression)
+            .components(separatedBy: ", ").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard items.count == n, items.allSatisfy({ $0.split(separator: " ").count >= 2 }) else { return text }
+        let list = items.enumerated().map { "\($0.offset + 1). " + $0.element.prefix(1).uppercased() + $0.element.dropFirst() }
+        var out = intro.trimmingCharacters(in: .whitespaces)
+        if !lead.isEmpty { out += " " + lead + ":" }
+        out += "\n" + list.joined(separator: "\n")
+        let rest = after.trimmingCharacters(in: .whitespaces)
+        return rest.isEmpty ? out : out + "\n\n" + rest
+    }
 
     /// "Number one, flights. Number two, hotels." / "First, flights, second, hotels" → a numbered list, one item per
     /// line. Needs at least two items in order starting at one; otherwise nothing changes.
@@ -95,7 +127,7 @@ public enum Tidy {
         return intro.isEmpty ? list : intro + "\n" + list
     }
 
-    /// A lone lowercase letter that starts a word said a little later: "someone who f will actually fucking do it"
+    /// A lone lowercase letter that starts a word said a little later: "we can b maybe borrow it"
     /// drops the "f". Not when it labels something ("plan b", "vitamin d", "the letter s") or the word follows at once
     /// ("the b branch").
     static func loneLetterRestarts(_ text: String) -> String {
@@ -123,7 +155,7 @@ public enum Tidy {
     static let clauseFollowers = "(?:(?i:the|a|an|my|your|our|their|his|her|its)\\b|\\d|(?i:one|two|three|four|five|six|seven|eight|nine|ten)\\b|(?!I\\b|I')[A-Z])"
     /// The subject of a new clause, after which "is," keeps its comma.
     static let clauseStarts = "(?i:i|i'm|i'll|i've|i'd|we|we're|we'll|you|you're|they|they're|he|she|it|it's|there|there's|that's|this|let's|so|then|because|'cause|honestly|actually|okay|ok)\\b"
-    /// Words after a comma that close or tag a phrase ("a lot with, okay?"); the comma before them is real.
+    /// Words after a comma that close or tag a phrase ("come along with, okay?"); the comma before them is real.
     static let tagWords = "(?i:okay|ok|right|yeah|yes|though|too|honestly|man|dude|bro|then|please|lol)\\b"
 
     /// Placeholders for spoken "new line" / "new paragraph" while the rules run (not letters, not whitespace).
@@ -135,11 +167,11 @@ public enum Tidy {
         // shoes" stays). Marked now, turned into line breaks after the spacing rules.
         s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new paragraph[.,!?:;]*(?=\\s|$)", with: "$1 \(paragraphMark) ", options: .regularExpression)
         s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new line[.,!?:;]*(?=\\s|$)", with: "$1 \(lineMark) ", options: .regularExpression)
-        // 0. A phrase restarted after a filler: "from your uh from our workstation" -> "from our workstation". The small
+        // 0. A phrase restarted after a filler: "from your uh from our shared drive" -> "from our shared drive". The small
         // word said again right after the "uh" marks where the speaker started over; only one word is dropped with it.
         s = s.replacingOccurrences(of: "(?i)\\b(\(restartWords))\\s+[\\w']+,?\\s+(?:\(fillers)|er|ah)[,.]?\\s+(?=\\1\\s+\\w)", with: "",
                                    options: .regularExpression)
-        // 0b. "I, uh, hit that": the comma after a subject pronoun was only the pause before the filler.
+        // 0b. "I, uh, pressed that": the comma after a subject pronoun was only the pause before the filler.
         s = s.replacingOccurrences(of: "\\b(I|[Ww]e|[Yy]ou|[Tt]hey|[Hh]e|[Ss]he),\\s*(?i:\(fillers))[,.]?\\s+(?=[a-z])", with: "$1 ",
                                    options: .regularExpression)
         // 1. Leftover fillers, with the comma that came with them.
@@ -165,7 +197,7 @@ public enum Tidy {
         // Without the comma only after "the/a/my...": "I went to the I drove" (a determiner never comes before "I").
         s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(I)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|my|your|our|their)\\s+(?=I(?:'m|'ll|'ve|'d|\\s+(?:\(restartVerbs))\\b))",
                                    with: "$1", options: .regularExpression)
-        // 1e. A word cut off as the speaker starts the phrase again: "when we w when we want" -> "when we when we want"
+        // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place".
@@ -190,7 +222,7 @@ public enum Tidy {
         // 2f. Spoken code: case commands, file names, acronyms.
         s = CodeWords.apply(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
-        // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, whip up"),
+        // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .regularExpression)
@@ -214,7 +246,7 @@ public enum Tidy {
             s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         if mode == .email { s = emailLayout(s) }
-        // 4b. A dictation never ends on a comma or semicolon ("...the best in the biz,"): end it the way the mode ends
+        // 4b. A dictation never ends on a comma or semicolon ("...pack the bags for the trip,"): end it the way the mode ends
         // a trailed-off sentence (step 2e).
         if let last = s.last, last == "," || last == ";" {
             let cut = String(s.dropLast()).trimmingCharacters(in: .whitespaces)

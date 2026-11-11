@@ -55,7 +55,7 @@ cleanup rules; AI rewrite off) and scores the typed text. Numbers only; the clip
 
 48 clips, 290 s. **Read this with care:** every reference so far was checked by an assistant against the
 conversation and the four speech models, starting from what Ultra typed (fixing what was known to be wrong:
-"Compaq... Robus" → "compact to pass off to Opus", "clod" → "Claude", "doc" → "Dock", stumbles left in). That
+"Compaq" → "compact", "Robus" → "to Opus", "clod" → "Claude", "doc" → "Dock", stumbles left in). That
 favours Ultra, especially on punctuation, so this baseline is a regression gate for the default engine (no change
 may raise its golden WER), not yet a fair comparison between engines. References from the author's own fixes (edits to a
 pasted dictation and repeats with a word changed are now recorded automatically) will replace that bias as they

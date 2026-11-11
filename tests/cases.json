@@ -664,8 +664,8 @@
     {
       "id": "t-cut-off-restart",
       "mode": "standard",
-      "in": "Walk me through it when we w when we want to look at it.",
-      "expect": "Walk me through it when we want to look at it."
+      "in": "Call me back when we w when we finish lunch.",
+      "expect": "Call me back when we finish lunch."
     },
     {
       "id": "t-cut-off-restart-two-letters",
@@ -694,8 +694,8 @@
     {
       "id": "t-end-comma",
       "mode": "standard",
-      "in": "Make us the best in the biz,",
-      "expect": "Make us the best in the biz."
+      "in": "Pack the bags for the trip,",
+      "expect": "Pack the bags for the trip."
     },
     {
       "id": "t-end-semicolon-ai",
@@ -736,8 +736,8 @@
     {
       "id": "t-restart-after-filler",
       "mode": "ai",
-      "in": "So you can just make the reels from your uh from our workstation now.",
-      "expect": "So you can just make the reels from our workstation now."
+      "in": "Send the files from your uh from our shared drive today.",
+      "expect": "Send the files from our shared drive today."
     },
     {
       "id": "t-restart-after-filler-noun",
@@ -748,8 +748,8 @@
     {
       "id": "t-pronoun-comma-filler",
       "mode": "ai",
-      "in": "I, uh, hit that, um, what's it called? Capture.",
-      "expect": "I hit that, what's it called? Capture."
+      "in": "I, uh, pressed that, um, what's it called? Refresh.",
+      "expect": "I pressed that, what's it called? Refresh."
     },
     {
       "id": "t-email-layout",
@@ -1595,8 +1595,8 @@
     },
     {
       "id": "keep-comma-01",
-      "in": "Alright, come in, whip up a plan for the release.",
-      "expect": "Alright, come in, whip up a plan for the release."
+      "in": "Alright, come in, sit down and grab a coffee.",
+      "expect": "Alright, come in, sit down and grab a coffee."
     },
     {
       "id": "keep-comma-02",
@@ -1705,13 +1705,13 @@
     },
     {
       "id": "keep-comma-tag-01",
-      "in": "It's possible that Blender isn't the best bet, but it probably is, let's be honest.",
-      "expect": "It's possible that Blender isn't the best bet, but it probably is, let's be honest."
+      "in": "The old laptop might be slow, but it probably is, let's be honest.",
+      "expect": "The old laptop might be slow, but it probably is, let's be honest."
     },
     {
       "id": "keep-comma-tag-02",
-      "in": "This is a template we could do a lot with, okay? Lock in.",
-      "expect": "This is a template we could do a lot with, okay? Lock in."
+      "in": "This is a recipe we could cook a lot with, okay? Tell me tonight.",
+      "expect": "This is a recipe we could cook a lot with, okay? Tell me tonight."
     },
     {
       "id": "keep-comma-tag-03",

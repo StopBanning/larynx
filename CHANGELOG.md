@@ -8,9 +8,10 @@
 - **"New paragraph" and "new line"** said as their own phrase make real line breaks, in every app. "A new line of
   shoes" is left alone.
 - Spoken lists ("Number one, flights. Number two, hotels.") are being tried in shadow: proposals are recorded
-  (`larynx mine --shadow spoken-list`), your text isn't changed yet.
+  (`larynx mine --shadow spoken-list`), your text isn't changed yet. So are announced lists: "three things … X, Y,
+  Z" with exactly three items (`counted-list`).
 - **Dictations fit what's already in the field.** Several dictations into one message no longer run together
-  ("time.Are we" → "time. Are we"), and a dictation that continues a sentence starts lowercase ("Hey Sam, can
+  ("lunch.Are we" → "lunch. Are we"), and a dictation that continues a sentence starts lowercase ("Hey Sam, can
   you…"). Names, "I", acronyms and your vocabulary keep their capitals; empty fields, new lines and a selection
   being replaced are left alone; unreadable fields behave as before. `fitToField: off` turns it off.
 - `larynx review`: the daily read in one command: speed per model against the budget, how dictations were
@@ -28,7 +29,7 @@
 - **"Scratch that"** (or "undo that") said on its own within 30 seconds of a dictation, in the same app, undoes it.
   Also in the menu: Undo Last Dictation.
 - Dictations put on the clipboard for pasting are marked transient, so clipboard managers don't keep them.
-- "I, uh, hit that" → "I hit that" (the comma was only the pause before the "uh").
+- "I, uh, pressed that" → "I pressed that" (the comma was only the pause before the "uh").
 - **The last word is no longer cut off** when you let go of the key while still saying it: Larynx keeps listening
   until the word ends (at most 0.3 s). Dictations that end in a pause stop at once, as before, so there's no added
   delay; on the author's recordings the tail would run for 1 in 53. A new press during the tail starts the next
@@ -45,9 +46,9 @@
 - "Fable" is in the built-in AI model names.
 - **Shadow mode you can read.** `larynx mine --shadow [stage]` lists what a stage set to `shadow` would have
   changed. New risky cleanup rules start as shadow rules: they run on every dictation and record their proposal in
-  history without touching your text (first one: dropping a cut-off letter, "who f will actually" → "who will
-  actually"). `larynx tidy --shadow` shows them on any text.
-- Commas before a tag or a new clause are kept: "a lot with, okay?", "it probably is, let's be honest".
+  history without touching your text (first one: dropping a cut-off letter, "we can b maybe borrow it" → "we can maybe
+  borrow it"). `larynx tidy --shadow` shows them on any text.
+- Commas before a tag or a new clause are kept: "come along with, okay?", "it probably is, let's see".
 - **Golden set: your own voice as the benchmark.** `larynx golden add <id> [--text "what you said"]` keeps a
   dictation's recording with what you meant to type, in `golden/` on your Mac only; `larynx golden list`,
   `remove`, and `candidates [--apply]`, which offers dictations whose right text is known because you fixed them:
@@ -81,9 +82,9 @@
 
 - Ultra types what it hears, so the tidy rules now remove what Bark Clean used to drop inside the model: false starts
   ("I went to the, I drove" and "I went to the I drove" → "I drove"), repeated phrases, mid-sentence "er/ah/eh", a
-  word cut off as you restart ("when we w when we want" → "when we want"), and a phrase restarted after an "uh"
-  ("from your uh from our workstation" → "from our workstation").
-- Commas after "on" and "in" are kept where they end a phrase: "come in, whip up a plan", "Hold on, I'll check",
+  word cut off as you restart ("when we w when we finish" → "when we finish"), and a phrase restarted after an "uh"
+  ("from your uh from our shared drive" → "from our shared drive").
+- Commas after "on" and "in" are kept where they end a phrase: "come in, sit down", "Hold on, I'll check",
   "Log in, then click save". Leftover commas are still removed where a filler was ("meet on, Thursday" → "meet on
   Thursday"); "The thing is, we need more time" keeps its comma. A dictation no longer ends on a comma.
 - A comma after "if" before a word is dropped ("if, Opus did it" → "if Opus did it"); asides keep theirs.

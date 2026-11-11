@@ -146,12 +146,12 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
 }
 
 @Test func shadowRulesRecordProposalsButNeverChangeTheText() async {
-    let input = "But I'll ask someone who f will actually fix it."
+    let input = "We can b maybe borrow it tomorrow."
     let result = await Pipeline().run(transcript(input, mode: .ai), context: .init(rewrite: false))
     #expect(result.text == input)
     let shadow = result.steps.first { $0.stage == "shadow:lone-letter" }
     #expect(shadow?.applied == false)
-    #expect(shadow?.after == "But I'll ask someone who will actually fix it.")
+    #expect(shadow?.after == "We can maybe borrow it tomorrow.")
     // Nothing to propose: no shadow step at all.
     let plain = await Pipeline().run(transcript("We should go with plan b because it is cheaper.", mode: .ai), context: .init(rewrite: false))
     #expect(!plain.steps.contains { $0.stage.hasPrefix("shadow:") })
@@ -159,4 +159,14 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
         let r = await Pipeline().run(transcript(keep, mode: .ai), context: .init(rewrite: false))
         #expect(!r.steps.contains { $0.stage.hasPrefix("shadow:") }, "\(keep)")
     }
+}
+
+@Test func countedListsAreProposedInShadowOnly() async {
+    let input = "There are three things for today. I want you to water the plants, feed the cat, take out the trash."
+    let result = await Pipeline().run(transcript(input, mode: .ai), context: .init(rewrite: false))
+    #expect(result.text == input)
+    #expect(result.steps.first { $0.stage == "shadow:counted-list" }?.after
+            == "There are three things for today. I want you to:\n1. Water the plants\n2. Feed the cat\n3. Take out the trash")
+    let story = await Pipeline().run(transcript("We tried three things, but none of them worked.", mode: .ai), context: .init(rewrite: false))
+    #expect(!story.steps.contains { $0.stage == "shadow:counted-list" })
 }

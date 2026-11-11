@@ -56,7 +56,7 @@ public enum Learner {
         return Double(p.filter(present.contains).count) / Double(p.count) >= 0.6
     }
 
-    /// `pasted` with each fix applied once, as whole words ("Compaq to pass off" + Compaq->compact -> "compact to pass off").
+    /// `pasted` with each fix applied once, as whole words ("Send the Compaq" + Compaq->compact -> "Send the compact").
     public static func applying(_ fixes: [(heard: String, fixed: String)], to pasted: String) -> String {
         var out = pasted
         for fix in fixes {

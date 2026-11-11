@@ -144,13 +144,13 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
 @Test func correctionsAndTheGoldenSetStayPrivateAndFollowTheirDictation() throws {
     let f = try HistoryFixture(#"{"keepAudio": "30"}"#)
     let pending = f.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
-    let row = try #require(f.history.complete(pending, transcript: f.transcript("Are we ready for Compaq to pass off?"), delivery: "inserted"))
-    f.history.recordCorrection(id: row.id, text: "Are we ready for compact to pass off?", source: "edit")
+    let row = try #require(f.history.complete(pending, transcript: f.transcript("Book the Compaq room for Friday."), delivery: "inserted"))
+    f.history.recordCorrection(id: row.id, text: "Book the compact room for Friday.", source: "edit")
     f.history.recordCorrection(id: "no-such-dictation", text: "ignored", source: "edit")
     #expect(f.history.corrections().count == 1)
-    #expect(f.history.corrections()[row.id]?.text == "Are we ready for compact to pass off?")
+    #expect(f.history.corrections()[row.id]?.text == "Book the compact room for Friday.")
 
-    let clip = try Golden.add(row, text: "Are we ready for compact to pass off?", source: "edit", root: f.folder)
+    let clip = try Golden.add(row, text: "Book the compact room for Friday.", source: "edit", root: f.folder)
     #expect(FileManager.default.fileExists(atPath: clip.audio))
     #expect(clip.audio.hasPrefix(Golden.directory(root: f.folder).path))
     let mode = try FileManager.default.attributesOfItem(atPath: clip.audio)[.posixPermissions] as? Int
@@ -167,7 +167,7 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
 
 @Test func goldenNamesAndWordFixes() {
     #expect(Golden.names(in: "Ask Priya about Opus. Then I'll ping Claude, okay?") == ["Priya", "Opus", "Claude"])
-    #expect(Golden.isWordFix("Are we ready for Compaq to pass off Robus?", "Are we ready for compact to pass off to Opus?"))
+    #expect(Golden.isWordFix("Can we book the Compaq room before the Robus meeting?", "Can we book the compact room before the Rome bus meeting?"))
     #expect(Golden.isWordFix("Send it to Mike tomorrow morning.", "Send it to Mike tomorrow evening."))
     #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Send it to Mike tomorrow."))
     #expect(!Golden.isWordFix("Send it to Mike tomorrow.", "Actually, let's wait until next week to decide."))

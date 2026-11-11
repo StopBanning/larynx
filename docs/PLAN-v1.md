@@ -70,8 +70,8 @@ Rollback rule: if words are lost, or p90 goes over 350 ms across 100 dictations,
 settings.json, restart with `restart-app.sh`, and write down why.
 **Real-voice check (audio is kept since Nov 11):** once 200 recordings exist, run every one through `ultra`,
 `clean`, `unified` and `parakeet` (`larynx transcribe <file> --engine <e>`) and list each clip where Ultra differs
-from what the other three agree on. First sample, Nov 11: "compact to pass off to Opus" came out of Ultra as
-"Compaq to pass off Robus" while the other three wrote "Compact ... for Opus". If Ultra is the odd one out more
+from what the other three agree on. First sample, Nov 11: "compact" came out of Ultra as "Compaq" and "to Opus" as
+"Robus", while the other three heard "compact". If Ultra is the odd one out more
 often than Bark Clean is, switch the default back to `clean` and bring B4's consensus pass forward: it would have
 caught this one.
 Done when: 200 dictations read, the four-engine comparison is in BENCHMARKS.md (counts only), findings fixed or
@@ -82,7 +82,7 @@ trailing off 8/10 (see `bench/results/suite2-ultra.log`). Rules only, no model. 
 Ultra, rules and must-not-change at 100%, and the history replay changes nothing wrongly.
 
 **A3. Stop removing commas that were right.** Tidy step 3 strips the comma after any small word
-(`Tidy.joiners`). It turned "come in, whip up a plan" into "come in whip up a plan"; it also breaks "Log in, then
+(`Tidy.joiners`). It turned "come in, sit down" into "come in sit down" (from a real dictation); it also breaks "Log in, then
 click save" and "Hold on, I'll check". In history, 8 raw transcripts hit this rule and 4 of them are "in,".
 New rule: words that can never end a clause (the, a, an, my, your, our, their) always lose the comma.
 Prepositions and "is/was/are/were/be" lose it only when the next word is a determiner, possessive, number or
@@ -90,7 +90,7 @@ capitalized name ("meet on, Thursday", "send it to, the team"). and/but/or keep 
 Done when: those three sentences are must-not-change cases, "meet on, Thursday" still passes, and the replay over
 history has zero wrong changes.
 
-**A4. End a dictation properly.** 2 of 145 dictations ended in a comma ("...the best in the biz,"). A final comma
+**A4. End a dictation properly.** 2 of 145 dictations ended in a comma. A final comma
 or semicolon becomes the mode's normal ending. Done when: cases added, replay clean.
 
 **A5. Numbers no longer wake the AI rewrite.** Remove `numberCues` from `Cleaner.reason` and rule 3 from the
@@ -318,13 +318,13 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | A (switch to Ultra) | done Nov 11 (v0.5.0 released; A1 watch continues to 200 dictations) | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
 | A1 | started | Watch began with the first dictation after the Nov 11 restart. Finding 1: "when we uh w when we want" left "w when we" behind; fixed with the cut-off-restart rule (Tidy step 1e), replayed over 149 real dictations: 1 change, correct. 41 Ultra dictations by Nov 11 02:47: key-up to text p50 101 ms, p90 154 ms (inside invariant 2), no lost words. |
 | A1 real-voice check | tool ready | `python3 bench/realvoice.py [--show]`. First run, 25 recordings (111 s): Ultra odd one out 0 times, Bark Clean 1, Unified 2, Parakeet 0; all four agree on 10/25. Rerun at 200. |
-| A2 | done | Suite with Ultra 272 -> **281/300** (`bench/results/suite4-ultra.log`): false starts 10/10, fillers 75/80, text 71/71, rewrite 26/26. New rules: no-comma false start after a determiner ("I went to the I drove", restart verb required), ", are," after is/was, "a the", leading "Ah," when hesitating, a phrase restarted after a filler ("from your uh from our", from his real dictation). Replay: 1 of 194 changes (correct). Left: 9 misses are the speech model (hummus, uh-huh, Mateo); "you eh" for "yeah"; "uh" heard as "I" (Rishi). |
-| A3 | done | On/in keep their comma unless a determiner, number or capitalized name follows; be-verbs keep it before a new clause's subject. 10 must-not-change cases. Replay (`tests/replay.py`) over 188 real dictations: 5 changes, all right (commas back in "come in, whip up", "looking in, write up", "Take it all in, brother", "if we are, it's"; trailing commas gone). |
+| A2 | done | Suite with Ultra 272 -> **281/300** (`bench/results/suite4-ultra.log`): false starts 10/10, fillers 75/80, text 71/71, rewrite 26/26. New rules: no-comma false start after a determiner ("I went to the I drove", restart verb required), ", are," after is/was, "a the", leading "Ah," when hesitating, a phrase restarted after a filler (a phrase restarted after a filler, from a real dictation). Replay: 1 of 194 changes (correct). Left: 9 misses are the speech model (hummus, uh-huh, Mateo); "you eh" for "yeah"; "uh" heard as "I" (Rishi). |
+| A3 | done | On/in keep their comma unless a determiner, number or capitalized name follows; be-verbs keep it before a new clause's subject. 10 must-not-change cases. Replay (`tests/replay.py`) over 188 real dictations: 5 changes, all right (commas restored after "in" and "are" in four dictations; trailing commas gone). |
 | A4 | done | Final comma/semicolon becomes the mode's ending (period; nothing in AI apps, as step 2e). |
 | A5 | done | `numberCues` and rule 3 gone; `larynx rewrite` and the rewrite's output now go through the numbers stage. Rewrite benchmark through tidy -> numbers -> rewrite: 26/26 (two expectations changed to house style: "eight chairs", "three pizzas"). Numbers learned "to eleven fifteen" -> 11:15 (quarter/half hours only); numbers replay over 98 dictations: 0 changes. |
 | A6 | done (menu path not tried live) | `make-app.sh` warms the configured model with the app binary (73 s on the first install after this change, 1 s on the next: some rebuilds invalidate the cache, so it runs every time). Menu pick loads the new model in a background Transcriber, keeps dictating on the old one, saves and restarts after 3 s with no recording. |
 | A7 | done Nov 11 | v0.5.0 tagged and released (notes from CHANGELOG, no binary). README first screen: pill GIF from `pill-demo`, the three numbers, scoreboard rows for numbers, hands-free, history. Suite with rewrite on (`bench/results/suite5-ultra-rewrite.log`): 281/300; self-corrections 29/40 with Ultra vs 38/40 with Bark Clean, a gap for E6. |
-| B1 | done | Stage shadow was already wired; added `larynx mine --shadow [stage]`, shadow rules (`Tidy.shadowRules`, recorded as `shadow:<name>` steps, never applied) and `larynx tidy --shadow`. First shadow rule `lone-letter`: 1 proposal over 216 real dictations, correct ("who f will actually"). **Rule for every risky new rule from now on: shadow first, promote after its proposals on real dictations are read.** |
+| B1 | done | Stage shadow was already wired; added `larynx mine --shadow [stage]`, shadow rules (`Tidy.shadowRules`, recorded as `shadow:<name>` steps, never applied) and `larynx tidy --shadow`. First shadow rule `lone-letter`: 1 proposal over 216 real dictations, correct (a cut-off letter before the word it started). **Rule for every risky new rule from now on: shadow first, promote after its proposals on real dictations are read.** |
 | B4 | done | Per-word confidence from the model (`transcribe --words`), `Doubt` (under 0.4, or under 0.8 for an unknown lowercase word), history flag `doubtful`, pill hint (`doubtHint`), doubtful rows in `golden candidates`. Calibration and the second-opinion simulation in BENCHMARKS.md: swapping in Unified or Bark Clean where Ultra is unsure changes WER by under ±0.3 points on golden/jargon/noise: **no-go** (bar was -10%), consensus spike closed with it. Big-model spike: LFM3-Audio-2B run on golden + jargon + noise: worse than Ultra on every set (golden 4.30 vs 1.63, jargon 10.28 vs 8.78, noise5 24.40 vs 16.02), p90 up to 1.3 s; fixed "Compaq" and "clod" but none of the doubtful rows: **no-go** (BENCHMARKS.md). "lixi" can't be recovered: no recording, and the spell checker knows the word. |
 | B2 | built; live run pending | `larynx capture-window`, `listen --feed --deliver` (only into a running larynx capture window, LARYNX_CAPTURE_PID; refuses other pids, checked with Finder; restores the full clipboard, checked), `scripts/when-idle.sh` (idle 5 min + unlocked + not recording; kills on input), `tests/live.py` (wraps the build as a throwaway ad-hoc-signed test app so macOS brings it to the front). Not yet run end to end: the screen was locked, and a locked session won't bring windows forward. Run `scripts/when-idle.sh python3 tests/live.py` when the screen is unlocked and nobody is typing. |
 | B5 | tail done; onset measuring | Kept recordings: speech in the first 50 ms in 1 of 47 (start maybe clipped), in the last 50 ms in 1 of 47. Smart tail instead of a fixed 250 ms (which would break invariant 2): keep recording only while the last 100 ms is still speech, up to 300 ms; would run on 1 of 53 real recordings (the clipped one). Hand-over when a new press comes during the tail. `recording... mic N ms` now logged: if p90 > 80 ms over a day, start the engine earlier (master 1.2). |
@@ -334,7 +334,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | B8 | done | `larynx review [--hours 24] [--text]`: speed per engine against the 150/350 budget, deliveries, stages that changed text, doubtful / undone / fixed / said-again counts, shadow proposals, mic start and tails and edit watches from the log. First run: Ultra p50 106 ms, p90 160 ms over 75. |
 | B9 | done | `bench/latency.py`: 50 clips (jargon, noise10, ls-other) through `serve` with the full pipeline in AI mode; exits 1 over budget. First run: Ultra p50 66 ms, p90 87 ms, max 115 ms: PASS. Run before every release (A7-style checklist). |
 | B3 | started: 48 of 100 clips | `larynx golden` (add/list/remove/candidates), corrections table (edits and repeats recorded live), `bench/run.py --sets golden` (full pipeline, numbers only). 48 clips from the first 53 recordings, references checked by the agent (5 left out as unsure), so biased toward Ultra: Ultra 0.58% WER, Unified/Parakeet 2.67%, Bark Clean 3.48% (docs/BENCHMARKS.md). Next: `larynx golden candidates --apply` as edits and repeats come in; agent-check new recordings each session; standing gate from now: no change may raise Ultra's golden WER. |
-| C4 | done (done early, as planned) | `Fit.adjust` (LarynxText) from the text before the cursor (AXValue + AXSelectedTextRange): missing space after the previous text, lowercase first word mid-sentence when it is an ordinary English word (not I, acronyms, camelCase, vocabulary terms, names), capitals kept after an opening bracket/quote, nothing for empty/newline/selection/unreadable. `fitToField` setting. Unit tests; live capture-window cases ("Okay." + text, "Hey Sam," + text) in tests/live.py. Fixes the "time.Are we" slips. |
+| C4 | done (done early, as planned) | `Fit.adjust` (LarynxText) from the text before the cursor (AXValue + AXSelectedTextRange): missing space after the previous text, lowercase first word mid-sentence when it is an ordinary English word (not I, acronyms, camelCase, vocabulary terms, names), capitals kept after an opening bracket/quote, nothing for empty/newline/selection/unreadable. `fitToField` setting. Unit tests; live capture-window cases ("Okay." + text, "Hey Sam," + text) in tests/live.py. Fixes dictations running together with no space. |
 | C1-C3, C5-C7 | not started | |
 | D1-D8 | not started | D5: no-cost path (Q1 = not yet) |
 | E3 (part) | started Nov 11, at Colin's ask | "new line" / "new paragraph" as standalone phrases → real breaks (all modes). Email mode for mail apps (`CleanupMode.email`): greeting and sign-off+name on their own lines. Spoken lists as shadow rule `spoken-list`. Rewrite skipped for multi-line text. Replay: 0 of 231 change; golden unchanged. Prompt mode (rewrite a dictation into a structured prompt) judged low value for him (Claude reads natural speech) and skipped unless asked. |
@@ -344,11 +344,11 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | W1-W7 | not started | W0 done (docs/WINDOWS.md) |
 
 Slips seen in real dictation, filed under the task that fixes them:
-- "come in, whip up" lost its comma -> A3. Dictation ending in a comma -> A4.
+- "come in, …" lost its comma -> A3. Dictation ending in a comma -> A4.
 - "lixi" for "look-see" (made-up word pasted without a second look) -> B4.
 - "come in" for "come on", "make us, the best" (stray comma from the model) -> watch under A1 with Ultra; if they
   persist, B4's consensus pass and E3.
 - "reel" as "real", "OpenS", "Russ", "Logus" -> C2, C3, C7.
 - Ultra only: "Compaq" for compact, "Robus" for "to Opus" (dictionary entries added for him) -> A1 real-voice check,
   B4 consensus. "Two opus" for "To Opus" in a 1.4 s clip: every engine wrote it; needs context -> C1.
-- Several short dictations into one field run together with no space ("time.Are we") -> C4; do it early.
+- Several short dictations into one field run together with no space ("sentence.Next", no space) -> C4; do it early.
