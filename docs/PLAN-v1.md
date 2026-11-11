@@ -315,7 +315,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 
 | Task | State | Notes / evidence |
 |---|---|---|
-| A (switch to Ultra) | done Nov 11 | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
+| A (switch to Ultra) | done Nov 11 (v0.5.0 released; A1 watch continues to 200 dictations) | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
 | A1 | started | Watch began with the first dictation after the Nov 11 restart. Finding 1: "when we uh w when we want" left "w when we" behind; fixed with the cut-off-restart rule (Tidy step 1e), replayed over 149 real dictations: 1 change, correct. 41 Ultra dictations by Nov 11 02:47: key-up to text p50 101 ms, p90 154 ms (inside invariant 2), no lost words. |
 | A1 real-voice check | tool ready | `python3 bench/realvoice.py [--show]`. First run, 25 recordings (111 s): Ultra odd one out 0 times, Bark Clean 1, Unified 2, Parakeet 0; all four agree on 10/25. Rerun at 200. |
 | A2 | done | Suite with Ultra 272 -> **281/300** (`bench/results/suite4-ultra.log`): false starts 10/10, fillers 75/80, text 71/71, rewrite 26/26. New rules: no-comma false start after a determiner ("I went to the I drove", restart verb required), ", are," after is/was, "a the", leading "Ah," when hesitating, a phrase restarted after a filler ("from your uh from our", from his real dictation). Replay: 1 of 194 changes (correct). Left: 9 misses are the speech model (hummus, uh-huh, Mateo); "you eh" for "yeah"; "uh" heard as "I" (Rishi). |
@@ -323,7 +323,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | A4 | done | Final comma/semicolon becomes the mode's ending (period; nothing in AI apps, as step 2e). |
 | A5 | done | `numberCues` and rule 3 gone; `larynx rewrite` and the rewrite's output now go through the numbers stage. Rewrite benchmark through tidy -> numbers -> rewrite: 26/26 (two expectations changed to house style: "eight chairs", "three pizzas"). Numbers learned "to eleven fifteen" -> 11:15 (quarter/half hours only); numbers replay over 98 dictations: 0 changes. |
 | A6 | done (menu path not tried live) | `make-app.sh` warms the configured model with the app binary (73 s on the first install after this change, 1 s on the next: some rebuilds invalidate the cache, so it runs every time). Menu pick loads the new model in a background Transcriber, keeps dictating on the old one, saves and restarts after 3 s with no recording. |
-| A7 | not started | |
+| A7 | done Nov 11 | v0.5.0 tagged and released (notes from CHANGELOG, no binary). README first screen: pill GIF from `pill-demo`, the three numbers, scoreboard rows for numbers, hands-free, history. Suite with rewrite on (`bench/results/suite5-ultra-rewrite.log`): 281/300; self-corrections 29/40 with Ultra vs 38/40 with Bark Clean, a gap for E6. |
 | B1-B9 | not started | B3 unblocked: Q2 = yes, audio kept since Nov 11 (FLAC). Clips collect while A runs. |
 | C1-C7 | not started | |
 | D1-D8 | not started | D5: no-cost path (Q1 = not yet) |

@@ -35,7 +35,7 @@ master plan's invariants (never lose words, never slower, never change a right w
 
 | What | Where |
 | --- | --- |
-| Repo | `~/work/larynx`, github.com/StopBanning/larynx (public, MIT), branch `main`, tags v0.1.0-v0.4.0, release v0.4.0 |
+| Repo | `~/work/larynx`, github.com/StopBanning/larynx (public, MIT), branch `main`, tags v0.1.0-v0.5.0, release v0.5.0 |
 | App | `~/Applications/Larynx.app` (menu bar), log `~/Library/Logs/Larynx.log` (no transcript text unless `debugText: on`) |
 | User data | `~/Library/Application Support/Larynx/`: `settings.json`, `history.sqlite`, `dictionary.json`, `vocabulary.txt`, `snippets.json`, `suggestions.json`, `privacy.json`, `models/` |
 | Models on disk | bark-3.0-clean (default), parakeet-tdt-0.6b-v3, parakeet-ultra, parakeet-unified-en-0.6b, bark-3.0, parakeet-ctc-110m (vocabulary) |

@@ -11,11 +11,13 @@ wherever your cursor is, in about a tenth of a second. Speech runs on the Neural
 models through [FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing you say ever leaves your Mac.
 No account, no subscription, no word limits.
 
+<p align="center"><b>0.1 s</b> from letting go of the key to text &nbsp;·&nbsp; <b>0 bytes</b> of your voice sent anywhere &nbsp;·&nbsp; <b>$0</b>, no limits</p>
+
 <p align="center">
-  <img src="docs/images/pill-glass-clear.png" alt="The Larynx pill in clear Liquid Glass over colour stripes: app icon, voice waveform and live words" width="640">
+  <img src="docs/images/pill-demo.gif" alt="The Larynx pill in clear Liquid Glass over colour stripes: the app icon, a waveform moving with the voice, and the words appearing as they are spoken" width="640">
 </p>
 <p align="center"><sub>The pill, in Liquid Glass: where your words are going, a waveform that moves with your voice, and the
-words as you say them. The menu's Pill Glass slider goes from clear to frosted to solid:</sub></p>
+words as you say them. The menu's Pill Glass slider goes from fully see-through to clear glass, frosted and solid:</sub></p>
 <p align="center">
   <img src="docs/images/pill-glass-frosted.png" alt="The pill frosted" width="380">
   <img src="docs/images/pill-glass-solid.png" alt="The pill solid" width="380">
@@ -31,8 +33,11 @@ feature while staying local and free. Where it stands (measured from daily use a
 | Where your audio goes | Stays on your Mac ([PRIVACY.md](docs/PRIVACY.md)) | Its servers |
 | Works offline | Yes | No |
 | Price, limits | Free, unlimited, MIT | Free tier with weekly limits, paid plans |
-| Key-up to text | 0.11 s median, 0.34 s p90 (447 real dictations) | Network round trip |
-| Cleanup | Fillers, stutters, self-corrections ("Tuesday, no Wednesday"), spoken numbers, code by voice | Similar |
+| Key-up to text | 0.11 s median, 0.25 s p90 (205 real dictations) | Network round trip |
+| Cleanup | Fillers, stutters, false starts, self-corrections ("Tuesday, no Wednesday"), code by voice | Similar |
+| Numbers as digits | "five point five" → 5.5, "three percent" → 3%, in every app, instantly (rules, no AI call) | Yes |
+| Hands-free | Double-tap the key, or a one-press Hands-Free Key; up to 30 min | Yes |
+| History | 30 days on your Mac, full-text search, audio optional; password fields never kept | Yes |
 | Learns your words | From repeats and from your edits, with Undo | From your edits |
 | Never loses a dictation | Crash spool + clipboard fallback + target-app lock | Varies |
 | Scriptable | CLI, JSON-lines API, MCP server | Limited |
@@ -58,8 +63,8 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   the two melt into one shape while the transcript is made. It sits just above the text box you're dictating into
   (or at the bottom of the screen when the app doesn't say where that is), never takes focus, warns you if the mic
   hears nothing, and shows a lock when you're in a password field (nothing saved). The menu's Pill Glass slider sets
-  how see-through it is, from clear glass to solid, and shows the pill while you drag. Turn it off from the menu
-  (Live Preview); `larynx pill-demo` plays it for a screenshot (`LARYNX_DEMO_BACKDROP=1` adds colour stripes behind it).
+  how see-through it is, from no glass at all to clear glass, frosted and solid, and shows the pill while you drag. Turn it off from the menu
+  (Live Preview); `larynx pill-demo` plays it for a screenshot (`LARYNX_DEMO_BACKDROP=1` adds colour stripes behind it, `=dark` a dark window).
 - **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
   Larynx brings the original back before pasting.
 - **Never loses a transcript**: before pasting, Larynx asks macOS whether a text field has focus. If nothing can take
@@ -151,23 +156,23 @@ a sentence for Mail, Slack, Messages and Notes.
 
 | Suite | What it checks | Latest (Nov 11, 2026) |
 | --- | --- | --- |
-| `swift test` | 29 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, the rewrite guard, the pipeline, settings, history, crash spool, privacy rules, self-learning | all pass |
-| `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | rules 43/43, rewrite 26/26, spoken 264/300 (nearly every miss is the speech model mishearing a synthetic voice) |
+| `swift test` | 39 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, the rewrite guard, the pipeline, settings, history, crash spool, privacy rules, self-learning | all pass |
+| `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
 
-Spoken-suite detail:
+Spoken-suite detail (Parakeet Ultra, AI rewrite on where it would run, Nov 11):
 
 | Area | Pass |
 | --- | --- |
-| Fillers | 72/80 |
-| Repeats | 57/60 |
-| False starts | 10/10 |
-| Self-corrections | 38/40 (0/40 before the rewrite layer) |
-| Trailing off | 10/10 |
+| Fillers | 75/80 |
+| Repeats | 55/60 |
+| False starts | 10/10 (harder ones: 10/20) |
+| Self-corrections | 29/40 (0/40 without the rewrite layer; Bark Clean scored 38/40) |
+| Trailing off | 8/10 |
 | Verbal tics | 30/30 |
-| Must not change | 95/120 |
+| Must not change | 111/120 |
 | Real-world messages | 30/30 |
 
 Nearly every remaining miss is the speech model mishearing a synthetic voice (hummus as "Hamas", Priya as "prio",
