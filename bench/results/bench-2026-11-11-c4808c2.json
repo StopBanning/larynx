@@ -1,0 +1,822 @@
+{
+  "date": "2026-11-11",
+  "commit": "c4808c2",
+  "machine": "Apple M6, 16 GB, macOS 27.2",
+  "results": {
+    "clean": {
+      "jargon": {
+        "clips": 120,
+        "wer": 15.57,
+        "punctF1": 74.6,
+        "names": 25.6,
+        "p50ms": 32,
+        "p90ms": 38,
+        "rtfx": 84.3,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the super base migration before launch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the superbase migration before lunch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Super Base migration before lunch?"
+          }
+        ]
+      },
+      "noise10": {
+        "clips": 80,
+        "wer": 18.41,
+        "punctF1": 74.4,
+        "names": 21.4,
+        "p50ms": 31,
+        "p90ms": 38,
+        "rtfx": 86.9,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Suthase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Super Base migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "the versal deploy failed again so check the logs"
+          }
+        ]
+      },
+      "noise5": {
+        "clips": 80,
+        "wer": 24.1,
+        "punctF1": 72.6,
+        "names": 13.4,
+        "p50ms": 32,
+        "p90ms": 36,
+        "rtfx": 86.3,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Suncabase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Super Late migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "diversal deploy failed again so check the logs"
+          }
+        ]
+      },
+      "whisper": {
+        "clips": 40,
+        "wer": 44.01,
+        "punctF1": 74.1,
+        "names": 7.1,
+        "p50ms": 31,
+        "p90ms": 36,
+        "rtfx": 78.2,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "push this up is migration before lunch"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "the versal deploy failed again, so check the locks."
+          },
+          {
+            "ref": "I moved the cache from Redis to Postgres last week.",
+            "hyp": "I moved the cash from Register Postgres last week."
+          }
+        ]
+      },
+      "ls-clean": {
+        "clips": 300,
+        "wer": 2.38,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 42,
+        "p90ms": 90,
+        "rtfx": 144.5,
+        "examples": [
+          {
+            "ref": "THE CHAOS IN WHICH HIS ARDOUR EXTINGUISHED ITSELF WAS A COLD INDIFFERENT KNOWLEDGE OF HIMSELF",
+            "hyp": "The chaos in which his ardor extinguished itself was a cold, indifferent knowledge of himself."
+          },
+          {
+            "ref": "THEN YOU CAN ASK HIM QUESTIONS ON THE CATECHISM DEDALUS",
+            "hyp": "Then you can ask him questions on the catechism, Daedalus."
+          },
+          {
+            "ref": "HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE",
+            "hyp": "He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrick and was safe."
+          }
+        ]
+      },
+      "ls-other": {
+        "clips": 300,
+        "wer": 4.26,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 45,
+        "p90ms": 78,
+        "rtfx": 124.5,
+        "examples": [
+          {
+            "ref": "ONE AFTERNOON SHE MET BESSY HIGGINS IN THE STREET AND STOPPED TO SPEAK TO HER",
+            "hyp": "One afternoon, she met Bessie Higgins in the street and stopped to speak to her."
+          },
+          {
+            "ref": "SHE SOUNDED TO BE SUCH A CAREFUL ECONOMICAL PERSON THAT I SHOULD LIKE ANY ONE OUT OF THE SAME FAMILY",
+            "hyp": "She sounded to be such a careful economical person, that I should like anyone out of the same family."
+          },
+          {
+            "ref": "IN MAKING A POST MORTEM EXAMINATION THE ALIMENTARY CANAL SHOULD BE REMOVED AND PRESERVED FOR FURTHER INVESTIGATION",
+            "hyp": "In making a postmodern examination, the elementary canal should be removed and preserved for further investigation."
+          }
+        ]
+      },
+      "long": {
+        "clips": 10,
+        "wer": 2.2,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 294,
+        "p90ms": 380,
+        "rtfx": 263.9,
+        "examples": [
+          {
+            "ref": "HE HOPED THERE WOULD BE STEW FOR DINNER TURNIPS AND CARROTS AND BRUISED POTATOES AND FAT MUTTON PIECES TO BE LADLED OUT IN THICK PEPPERED FLOUR FATTENED SAUCE STUFF IT INTO YOU HIS BELLY COUNSELLED HIM AFTER EARLY NIGHTFALL THE YELLOW LAMPS WOULD LIGHT UP HERE AND THERE THE SQUALID QUARTER OF THE BROTHELS HELLO BERTIE ANY GOOD IN YOUR MIND NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS THE DULL LIGHT FELL MORE FAINTLY UPON THE PAGE WHEREON ANOTHER EQUATION BEGAN TO UNFOLD ITSELF SLOWLY AND TO SPREAD ABROAD ITS WIDENING TAIL A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+            "hyp": "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce. Stuff it into you, his belly counseled him. After early nightfall, the yellow lamps would light up here and there the squalid quarter of the brothels. Hello, Bertie. Any good in your mind? Number ten, fresh Nelly is waiting on you. Good night, husband. The music came nearer, and he recalled the words, the words of Shelley's fragment upon the moon, wandering companionless, pale for weariness. The dull light fell more faintly upon the page, whereon another equation began to unfold itself slowly and to spread abroad its widening tail. A cold, lucid indifference reigned in his soul."
+          },
+          {
+            "ref": "HE COULD WAIT NO LONGER FOR A FULL HOUR HE HAD PACED UP AND DOWN WAITING BUT HE COULD WAIT NO LONGER HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE THE UNIVERSITY PRIDE AFTER SATISFACTION UPLIFTED HIM LIKE LONG SLOW WAVES WHOSE FEET ARE AS THE FEET OF HARTS AND UNDERNEATH THE EVERLASTING ARMS THE PRIDE OF THAT DIM IMAGE BROUGHT BACK TO HIS MIND THE DIGNITY OF THE OFFICE HE HAD REFUSED SOON THE WHOLE BRIDGE WAS TREMBLING AND RESOUNDING",
+            "hyp": "He could wait no longer. For a full hour, he had paced up and down, waiting, but he could wait no longer. He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrack and was safe. The university, pride after satisfaction, uplifted him like long, slow waves, whose feet are as the feet of hearts, and underneath the everlasting arms. The pride of that dim image brought back to his mind the dignity of the office he had refused. Soon the whole bridge was trembling and resounding."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS THEY UNITE EVERY QUALITY AND SOMETIMES YOU WILL FIND ME REFERRING TO THEM AS COLORISTS SOMETIMES AS CHIAROSCURISTS BY BEING STUDIOUS OF COLOR THEY ARE STUDIOUS OF DIVISION AND WHILE THE CHIAROSCURIST DEVOTES HIMSELF TO THE REPRESENTATION OF DEGREES OF FORCE IN ONE THING UNSEPARATED LIGHT THE COLORISTS HAVE FOR THEIR FUNCTION THE ATTAINMENT OF BEAUTY BY ARRANGEMENT OF THE DIVISIONS OF LIGHT MY FIRST AND PRINCIPAL REASON WAS THAT THEY ENFORCED BEYOND ALL RESISTANCE ON ANY STUDENT WHO MIGHT ATTEMPT TO COPY THEM THIS METHOD OF LAYING PORTIONS OF DISTINCT HUE SIDE BY SIDE SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE IT IS THE HEAD OF A PARROT WITH A LITTLE FLOWER IN HIS BEAK FROM A PICTURE OF CARPACCIO'S ONE OF HIS SERIES OF THE LIFE OF SAINT GEORGE THEN HE COMES TO THE BEAK OF IT THE BROWN GROUND BENEATH IS LEFT FOR THE MOST PART ONE TOUCH OF BLACK IS PUT FOR THE HOLLOW TWO DELICATE LINES OF DARK GRAY DEFINE THE OUTER CURVE AND ONE LITTLE QUIVERING TOUCH OF WHITE DRAWS THE INNER EDGE OF THE MANDIBLE",
+            "hyp": "You will find me continually speaking of four men, Tichin, Holbein, Turner, and Tinterette, in almost the same terms. They unite every quality, and sometimes you will find me referring to them as colorists, sometimes as chioscurists. By being studious of color, they are studious of division, and while the chioscurist devotes himself to the representation of degrees of force in one thing, unseparated light, the colorists have for their function the attainment of beauty by arrangement of the divisions of light. My first and principal reason was that they enforced, beyond all resistance, on any student who might attempt to copy them this method of laying portions of distinct hue side by side. Some of the touches, indeed, when the tint has been mixed with much water, have been laid in little drops or ponds, so that the pigment might crystallize hard at the edge. It is the head of a parrot with a little flower in his beak from a picture of Carpatchio's, one of his series of the life of Saint George. Then he comes to the beak of it. The brown ground beneath is left for the most part.. One touch of black is put for the hollow. Two delicate lines of dark grey define the outer curve, and one little quivering touch of white draws the inner edge of the mandible."
+          }
+        ]
+      }
+    },
+    "parakeet": {
+      "jargon": {
+        "clips": 120,
+        "wer": 8.68,
+        "punctF1": 100.0,
+        "names": 52.4,
+        "p50ms": 40,
+        "p90ms": 46,
+        "rtfx": 66.1,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the super base migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          }
+        ]
+      },
+      "noise10": {
+        "clips": 80,
+        "wer": 13.92,
+        "punctF1": 97.5,
+        "names": 42.0,
+        "p50ms": 40,
+        "p90ms": 48,
+        "rtfx": 66.6,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Sue Base migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push a superbase migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the logs."
+          }
+        ]
+      },
+      "noise5": {
+        "clips": 80,
+        "wer": 20.21,
+        "punctF1": 97.1,
+        "names": 38.4,
+        "p50ms": 44,
+        "p90ms": 55,
+        "rtfx": 56.9,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the synthabase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before launch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal Defloy failed again, so check the logs."
+          }
+        ]
+      },
+      "whisper": {
+        "clips": 40,
+        "wer": 34.43,
+        "punctF1": 82.7,
+        "names": 17.9,
+        "p50ms": 45,
+        "p90ms": 60,
+        "rtfx": 52.2,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "You push the super base migration before lunch."
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the logs."
+          },
+          {
+            "ref": "I moved the cache from Redis to Postgres last week.",
+            "hyp": "I moved the cash from Redis to Postgres last week."
+          }
+        ]
+      },
+      "ls-clean": {
+        "clips": 300,
+        "wer": 2.25,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 47,
+        "p90ms": 102,
+        "rtfx": 129.2,
+        "examples": [
+          {
+            "ref": "THEN YOU CAN ASK HIM QUESTIONS ON THE CATECHISM DEDALUS",
+            "hyp": "Then you can ask him questions on the catechism, Daedalus."
+          },
+          {
+            "ref": "BROTHER MAC ARDLE BROTHER KEOGH",
+            "hyp": "Brother McArdle. Brother Keoph."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS",
+            "hyp": "You will find me continually speaking of four men Titian, Holbein, Turner, and Tinteret, in almost the same terms."
+          }
+        ]
+      },
+      "ls-other": {
+        "clips": 300,
+        "wer": 3.86,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 46,
+        "p90ms": 79,
+        "rtfx": 125.2,
+        "examples": [
+          {
+            "ref": "THERE'S IRON THEY SAY IN ALL OUR BLOOD AND A GRAIN OR TWO PERHAPS IS GOOD BUT HIS HE MAKES ME HARSHLY FEEL HAS GOT A LITTLE TOO MUCH OF STEEL ANON",
+            "hyp": "There's iron, they say, In all our blood An' a grain or two perhaps is good But his he makes me harshly feel Has got a little too much of steel. Anonon."
+          },
+          {
+            "ref": "ONE AFTERNOON SHE MET BESSY HIGGINS IN THE STREET AND STOPPED TO SPEAK TO HER",
+            "hyp": "One afternoon she met Bessie Higgins in the street and stopped to speak to her."
+          },
+          {
+            "ref": "BESSY WAS SILENT IN HER TURN FOR A MINUTE OR TWO THEN SHE REPLIED",
+            "hyp": "Bessie was silent, in her turn, for a minute or two. Then she replied,"
+          }
+        ]
+      },
+      "long": {
+        "clips": 10,
+        "wer": 2.43,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 234,
+        "p90ms": 358,
+        "rtfx": 288.1,
+        "examples": [
+          {
+            "ref": "HE HOPED THERE WOULD BE STEW FOR DINNER TURNIPS AND CARROTS AND BRUISED POTATOES AND FAT MUTTON PIECES TO BE LADLED OUT IN THICK PEPPERED FLOUR FATTENED SAUCE STUFF IT INTO YOU HIS BELLY COUNSELLED HIM AFTER EARLY NIGHTFALL THE YELLOW LAMPS WOULD LIGHT UP HERE AND THERE THE SQUALID QUARTER OF THE BROTHELS HELLO BERTIE ANY GOOD IN YOUR MIND NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS THE DULL LIGHT FELL MORE FAINTLY UPON THE PAGE WHEREON ANOTHER EQUATION BEGAN TO UNFOLD ITSELF SLOWLY AND TO SPREAD ABROAD ITS WIDENING TAIL A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+            "hyp": "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce. Stuff it into you, his belly counseled him. After early nightfall the yellow lamps would light up here and there the squalid quarter of the brothels. Hello, Bertie, any good in your mind? Number ten. Fresh Nelly is waiting on you. Good night, husband. The music came nearer, and he recalled the words, the words of Shelley's fragment upon the moon wandering companionless, pale for weariness. The dull light fell more faintly upon the page whereon another equation began to unfold itself slowly and to spread abroad its widening tail. A cold, lucid indifference reigned in his soul."
+          },
+          {
+            "ref": "HE COULD WAIT NO LONGER FOR A FULL HOUR HE HAD PACED UP AND DOWN WAITING BUT HE COULD WAIT NO LONGER HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE THE UNIVERSITY PRIDE AFTER SATISFACTION UPLIFTED HIM LIKE LONG SLOW WAVES WHOSE FEET ARE AS THE FEET OF HARTS AND UNDERNEATH THE EVERLASTING ARMS THE PRIDE OF THAT DIM IMAGE BROUGHT BACK TO HIS MIND THE DIGNITY OF THE OFFICE HE HAD REFUSED SOON THE WHOLE BRIDGE WAS TREMBLING AND RESOUNDING",
+            "hyp": "He could wait no longer. For a full hour he had paced up and down, waiting, but he could wait no longer. He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrack and was safe. The university pride after satisfaction uplifted him like long slow waves, whose feet are as the feet of hearts and underneath the everlasting arms. The pride of that dim image brought back to his mind the dignity of the office he had refused. Soon the whole bridge was trembling and resounding."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS THEY UNITE EVERY QUALITY AND SOMETIMES YOU WILL FIND ME REFERRING TO THEM AS COLORISTS SOMETIMES AS CHIAROSCURISTS BY BEING STUDIOUS OF COLOR THEY ARE STUDIOUS OF DIVISION AND WHILE THE CHIAROSCURIST DEVOTES HIMSELF TO THE REPRESENTATION OF DEGREES OF FORCE IN ONE THING UNSEPARATED LIGHT THE COLORISTS HAVE FOR THEIR FUNCTION THE ATTAINMENT OF BEAUTY BY ARRANGEMENT OF THE DIVISIONS OF LIGHT MY FIRST AND PRINCIPAL REASON WAS THAT THEY ENFORCED BEYOND ALL RESISTANCE ON ANY STUDENT WHO MIGHT ATTEMPT TO COPY THEM THIS METHOD OF LAYING PORTIONS OF DISTINCT HUE SIDE BY SIDE SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE IT IS THE HEAD OF A PARROT WITH A LITTLE FLOWER IN HIS BEAK FROM A PICTURE OF CARPACCIO'S ONE OF HIS SERIES OF THE LIFE OF SAINT GEORGE THEN HE COMES TO THE BEAK OF IT THE BROWN GROUND BENEATH IS LEFT FOR THE MOST PART ONE TOUCH OF BLACK IS PUT FOR THE HOLLOW TWO DELICATE LINES OF DARK GRAY DEFINE THE OUTER CURVE AND ONE LITTLE QUIVERING TOUCH OF WHITE DRAWS THE INNER EDGE OF THE MANDIBLE",
+            "hyp": "You will find me continually speaking of four men, Titian, Holbein, Turner, and Tinteret, in almost the same terms. They unite every quality. And sometimes you will find me referring to them as colorists, sometimes as chiaroscurists. By being studious of color they are studious of division, and while the chiaroscurist devotes himself to the representation of degrees of force in one thing, unseparated light, the colorists have for their function the attainment of beauty by arrangement of the divisions of light. My first and principal reason was that they enforced, beyond all resistance, on any student who might attempt to copy them, this method of laying portions of distinct hue side by side. Some of the touches, indeed, when the tint has been mixed with much water, have been laid in little drops or ponds, so that the pigment might crystallize hard at the edge. It is the head of a parrot with a little flower in his beak from a picture of Carpaccios, one of his series of the life of Saint George. Then he comes to the beak of it.. One touch of black is put for the hollow, two delicate lines of dark grey define the outer curve, and one little quivering touch of white draws the inner edge of the mandible."
+          }
+        ]
+      }
+    },
+    "bark3": {
+      "jargon": {
+        "clips": 120,
+        "wer": 15.87,
+        "punctF1": 10.7,
+        "names": 4.8,
+        "p50ms": 26,
+        "p90ms": 33,
+        "rtfx": 99.6,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the super base migration before launch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the superbase migration before lunch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the superbase migration before lunch"
+          }
+        ]
+      },
+      "noise10": {
+        "clips": 80,
+        "wer": 18.41,
+        "punctF1": 12.5,
+        "names": 2.7,
+        "p50ms": 26,
+        "p90ms": 29,
+        "rtfx": 105.1,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the suitabase migration before launch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push a superbase migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "the versal deploy failed again so check the logs"
+          }
+        ]
+      },
+      "noise5": {
+        "clips": 80,
+        "wer": 25.9,
+        "punctF1": 26.7,
+        "names": 2.7,
+        "p50ms": 26,
+        "p90ms": 30,
+        "rtfx": 104.1,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push the synchronase migration before launch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "can you push a superbase migration before lunch"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "the versal defloy failed again so check the logs"
+          }
+        ]
+      },
+      "whisper": {
+        "clips": 40,
+        "wer": 39.82,
+        "punctF1": 37.2,
+        "names": 1.8,
+        "p50ms": 27,
+        "p90ms": 33,
+        "rtfx": 83.8,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "You push a supervis migration before lunch."
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "the versal deploy failed again so check the logs"
+          },
+          {
+            "ref": "I moved the cache from Redis to Postgres last week.",
+            "hyp": "i moved the cash from redis to pasta last week"
+          }
+        ]
+      },
+      "ls-clean": {
+        "clips": 300,
+        "wer": 2.72,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 35,
+        "p90ms": 63,
+        "rtfx": 176.6,
+        "examples": [
+          {
+            "ref": "THE CHAOS IN WHICH HIS ARDOUR EXTINGUISHED ITSELF WAS A COLD INDIFFERENT KNOWLEDGE OF HIMSELF",
+            "hyp": "The chaos in which his ardor extinguished itself was a cold, indifferent knowledge of himself."
+          },
+          {
+            "ref": "HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE",
+            "hyp": "He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrick and was safe."
+          },
+          {
+            "ref": "BROTHER MAC ARDLE BROTHER KEOGH",
+            "hyp": "Brother McCartell, Brother Kioff."
+          }
+        ]
+      },
+      "ls-other": {
+        "clips": 300,
+        "wer": 4.71,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 44,
+        "p90ms": 96,
+        "rtfx": 120.6,
+        "examples": [
+          {
+            "ref": "I DON'T BELIEVE ALL I HEAR NO NOT BY A BIG DEAL",
+            "hyp": "I don't believe all I hear. No, not by big deal."
+          },
+          {
+            "ref": "IN MAKING A POST MORTEM EXAMINATION THE ALIMENTARY CANAL SHOULD BE REMOVED AND PRESERVED FOR FURTHER INVESTIGATION",
+            "hyp": "In making a postmodern examination, the elementary canal should be removed and preserved for further investigation."
+          },
+          {
+            "ref": "ON THE EVAPORATION OF THE ALCOHOL THE RESINOUS AND FATTY MATTERS SEPARATE",
+            "hyp": "On the evaporation of the alcohol, the vesinous and fatty matters separate."
+          }
+        ]
+      },
+      "long": {
+        "clips": 10,
+        "wer": 2.65,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 184,
+        "p90ms": 277,
+        "rtfx": 363.6,
+        "examples": [
+          {
+            "ref": "HE HOPED THERE WOULD BE STEW FOR DINNER TURNIPS AND CARROTS AND BRUISED POTATOES AND FAT MUTTON PIECES TO BE LADLED OUT IN THICK PEPPERED FLOUR FATTENED SAUCE STUFF IT INTO YOU HIS BELLY COUNSELLED HIM AFTER EARLY NIGHTFALL THE YELLOW LAMPS WOULD LIGHT UP HERE AND THERE THE SQUALID QUARTER OF THE BROTHELS HELLO BERTIE ANY GOOD IN YOUR MIND NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS THE DULL LIGHT FELL MORE FAINTLY UPON THE PAGE WHEREON ANOTHER EQUATION BEGAN TO UNFOLD ITSELF SLOWLY AND TO SPREAD ABROAD ITS WIDENING TAIL A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+            "hyp": "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce. Stuff it into you, his belly counseled him. After early nightfall, the yellow lamps would light up here and there the squalid quarter of the brothels. Hello, Bertie, any good in your mind? Number ten, fresh Nelly is waiting on you. Good night, husband. The music came nearer, and he recalled the words, the words of Shelley's fragment upon the moon, wandering companionless, pale for weariness. The dull light fell more faintly upon the page, whereon another equation began to unfold itself slowly and to spread abroad its widening tail. A cold, lucid indifference reigned in his soul."
+          },
+          {
+            "ref": "HE COULD WAIT NO LONGER FOR A FULL HOUR HE HAD PACED UP AND DOWN WAITING BUT HE COULD WAIT NO LONGER HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE THE UNIVERSITY PRIDE AFTER SATISFACTION UPLIFTED HIM LIKE LONG SLOW WAVES WHOSE FEET ARE AS THE FEET OF HARTS AND UNDERNEATH THE EVERLASTING ARMS THE PRIDE OF THAT DIM IMAGE BROUGHT BACK TO HIS MIND THE DIGNITY OF THE OFFICE HE HAD REFUSED SOON THE WHOLE BRIDGE WAS TREMBLING AND RESOUNDING",
+            "hyp": "He could wait no longer. For a full hour, he had paced up and down, waiting, but he could wait no longer. He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrick and was safe. The university, pride after satisfaction, uplifted him like long slow waves, whose feet are as the feet of hearts and underneath the everlasting arms. The pride of that dim image brought back to his mind the dignity of the office he had refused. Soon the whole bridge was trembling and resounding."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS THEY UNITE EVERY QUALITY AND SOMETIMES YOU WILL FIND ME REFERRING TO THEM AS COLORISTS SOMETIMES AS CHIAROSCURISTS BY BEING STUDIOUS OF COLOR THEY ARE STUDIOUS OF DIVISION AND WHILE THE CHIAROSCURIST DEVOTES HIMSELF TO THE REPRESENTATION OF DEGREES OF FORCE IN ONE THING UNSEPARATED LIGHT THE COLORISTS HAVE FOR THEIR FUNCTION THE ATTAINMENT OF BEAUTY BY ARRANGEMENT OF THE DIVISIONS OF LIGHT MY FIRST AND PRINCIPAL REASON WAS THAT THEY ENFORCED BEYOND ALL RESISTANCE ON ANY STUDENT WHO MIGHT ATTEMPT TO COPY THEM THIS METHOD OF LAYING PORTIONS OF DISTINCT HUE SIDE BY SIDE SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE IT IS THE HEAD OF A PARROT WITH A LITTLE FLOWER IN HIS BEAK FROM A PICTURE OF CARPACCIO'S ONE OF HIS SERIES OF THE LIFE OF SAINT GEORGE THEN HE COMES TO THE BEAK OF IT THE BROWN GROUND BENEATH IS LEFT FOR THE MOST PART ONE TOUCH OF BLACK IS PUT FOR THE HOLLOW TWO DELICATE LINES OF DARK GRAY DEFINE THE OUTER CURVE AND ONE LITTLE QUIVERING TOUCH OF WHITE DRAWS THE INNER EDGE OF THE MANDIBLE",
+            "hyp": "You will find me continually speaking of four men, Tishan, Holbein, Turner, and Tinteret, in almost the same terms. They unite every quality, and sometimes you will find me referring to them as colorists, sometimes as chiarists. By being studious of color, they are studious of division, and while the curoscurist devotes himself to the representation of degrees of force in one thing, unseparated light, the colorists have for their function the attainment of beauty by arrangement of the divisions of light. My first and principal reason was that they enforced, beyond all resistance, on any student who might attempt to copy them this method of laying portions of distinct hue side by side. Some of the touches, indeed, when the tint has been mixed with much water, have been laid in little drops or ponds, so that the pigment might crystallize hard at the edge. It is the head of a parrot with a little flower in his beak from a picture of Carpathius, one of his series of the life of Saint George. Then he comes to the beak of it. The brown ground beneath is left, for the most part.. One touch of black is put for the hollow. Two delicate lines of dark grey define the outer curve, and one little quivering touch of white draws the inner edge of the mandible."
+          }
+        ]
+      }
+    },
+    "ultra": {
+      "jargon": {
+        "clips": 120,
+        "wer": 8.78,
+        "punctF1": 100.0,
+        "names": 54.2,
+        "p50ms": 33,
+        "p90ms": 41,
+        "rtfx": 80.7,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Superbase migration before lunch?"
+          }
+        ]
+      },
+      "noise10": {
+        "clips": 80,
+        "wer": 11.08,
+        "punctF1": 98.8,
+        "names": 49.1,
+        "p50ms": 35,
+        "p90ms": 40,
+        "rtfx": 78.8,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Suitabase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the logs."
+          }
+        ]
+      },
+      "noise5": {
+        "clips": 80,
+        "wer": 16.02,
+        "punctF1": 97.4,
+        "names": 38.4,
+        "p50ms": 30,
+        "p90ms": 46,
+        "rtfx": 83.4,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the syncabase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the locks."
+          }
+        ]
+      },
+      "whisper": {
+        "clips": 40,
+        "wer": 33.53,
+        "punctF1": 81.1,
+        "names": 26.8,
+        "p50ms": 32,
+        "p90ms": 37,
+        "rtfx": 77.4,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "You push this super base migration before lunch."
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the logs."
+          },
+          {
+            "ref": "Ask Priya to review the Kubernetes config tomorrow.",
+            "hyp": "Ask Bria to review the Cooper as convict tomorrow."
+          }
+        ]
+      },
+      "ls-clean": {
+        "clips": 300,
+        "wer": 1.92,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 41,
+        "p90ms": 73,
+        "rtfx": 154.3,
+        "examples": [
+          {
+            "ref": "THEN YOU CAN ASK HIM QUESTIONS ON THE CATECHISM DEDALUS",
+            "hyp": "then you can ask him questions on the catechism, Daedalus."
+          },
+          {
+            "ref": "BROTHER MAC ARDLE BROTHER KEOGH",
+            "hyp": "Brother McArdle, Brother Keoph,"
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS",
+            "hyp": "You will find me continually speaking of four men Titian, Holbein, Turner, and Tinteret, in almost the same terms."
+          }
+        ]
+      },
+      "ls-other": {
+        "clips": 300,
+        "wer": 3.65,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 38,
+        "p90ms": 63,
+        "rtfx": 146.4,
+        "examples": [
+          {
+            "ref": "THERE'S IRON THEY SAY IN ALL OUR BLOOD AND A GRAIN OR TWO PERHAPS IS GOOD BUT HIS HE MAKES ME HARSHLY FEEL HAS GOT A LITTLE TOO MUCH OF STEEL ANON",
+            "hyp": "There's iron, they say, in all our blood, and a grain or two perhaps is good, but his, he makes me harshly feel, Has got a little too much of steel. Anonon."
+          },
+          {
+            "ref": "ONE AFTERNOON SHE MET BESSY HIGGINS IN THE STREET AND STOPPED TO SPEAK TO HER",
+            "hyp": "One afternoon she met Bessie Higgins in the street and stopped to speak to her."
+          },
+          {
+            "ref": "BESSY WAS SILENT IN HER TURN FOR A MINUTE OR TWO THEN SHE REPLIED",
+            "hyp": "Bessie was silent, in her turn, for a minute or two. Then she replied,"
+          }
+        ]
+      },
+      "long": {
+        "clips": 10,
+        "wer": 2.26,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 350,
+        "p90ms": 416,
+        "rtfx": 214.0,
+        "examples": [
+          {
+            "ref": "HE HOPED THERE WOULD BE STEW FOR DINNER TURNIPS AND CARROTS AND BRUISED POTATOES AND FAT MUTTON PIECES TO BE LADLED OUT IN THICK PEPPERED FLOUR FATTENED SAUCE STUFF IT INTO YOU HIS BELLY COUNSELLED HIM AFTER EARLY NIGHTFALL THE YELLOW LAMPS WOULD LIGHT UP HERE AND THERE THE SQUALID QUARTER OF THE BROTHELS HELLO BERTIE ANY GOOD IN YOUR MIND NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS THE DULL LIGHT FELL MORE FAINTLY UPON THE PAGE WHEREON ANOTHER EQUATION BEGAN TO UNFOLD ITSELF SLOWLY AND TO SPREAD ABROAD ITS WIDENING TAIL A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+            "hyp": "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce. Stuff it into you, his belly counseled him. After early nightfall the yellow lamps would light up here and there the squalid quarter of the brothels. Hello, Bertie, any good in your mind? Number ten. Fresh Nelly is waiting on you. Good night, husband. The music came nearer, and he recalled the words, the words of Shelley's fragment upon the moon wandering companionless, pale for weariness. The dull light fell more faintly upon the page whereon another equation began to unfold itself slowly and to spread abroad its widening tale. A cold, lucid indifference reigned in his soul."
+          },
+          {
+            "ref": "HE COULD WAIT NO LONGER FOR A FULL HOUR HE HAD PACED UP AND DOWN WAITING BUT HE COULD WAIT NO LONGER HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE THE UNIVERSITY PRIDE AFTER SATISFACTION UPLIFTED HIM LIKE LONG SLOW WAVES WHOSE FEET ARE AS THE FEET OF HARTS AND UNDERNEATH THE EVERLASTING ARMS THE PRIDE OF THAT DIM IMAGE BROUGHT BACK TO HIS MIND THE DIGNITY OF THE OFFICE HE HAD REFUSED SOON THE WHOLE BRIDGE WAS TREMBLING AND RESOUNDING",
+            "hyp": "He could wait no longer. For a full hour he had paced up and down, waiting, but he could wait no longer. He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrack and was safe. The university pride after satisfaction uplifted him like long slow waves, whose feet are as the feet of hearts and underneath the everlasting arms. The pride of that dim image brought back to his mind the dignity of the office he had refused. Soon the whole bridge was trembling and resounding."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS THEY UNITE EVERY QUALITY AND SOMETIMES YOU WILL FIND ME REFERRING TO THEM AS COLORISTS SOMETIMES AS CHIAROSCURISTS BY BEING STUDIOUS OF COLOR THEY ARE STUDIOUS OF DIVISION AND WHILE THE CHIAROSCURIST DEVOTES HIMSELF TO THE REPRESENTATION OF DEGREES OF FORCE IN ONE THING UNSEPARATED LIGHT THE COLORISTS HAVE FOR THEIR FUNCTION THE ATTAINMENT OF BEAUTY BY ARRANGEMENT OF THE DIVISIONS OF LIGHT MY FIRST AND PRINCIPAL REASON WAS THAT THEY ENFORCED BEYOND ALL RESISTANCE ON ANY STUDENT WHO MIGHT ATTEMPT TO COPY THEM THIS METHOD OF LAYING PORTIONS OF DISTINCT HUE SIDE BY SIDE SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE IT IS THE HEAD OF A PARROT WITH A LITTLE FLOWER IN HIS BEAK FROM A PICTURE OF CARPACCIO'S ONE OF HIS SERIES OF THE LIFE OF SAINT GEORGE THEN HE COMES TO THE BEAK OF IT THE BROWN GROUND BENEATH IS LEFT FOR THE MOST PART ONE TOUCH OF BLACK IS PUT FOR THE HOLLOW TWO DELICATE LINES OF DARK GRAY DEFINE THE OUTER CURVE AND ONE LITTLE QUIVERING TOUCH OF WHITE DRAWS THE INNER EDGE OF THE MANDIBLE",
+            "hyp": "You will find me continually speaking of four men, Titian, Holbein, Turner, and Tinteret, in almost the same terms. They unite every quality, and sometimes you will find me referring to them as colorists, sometimes as chiaroscurists. By being studious of color they are studious of division, and while the chiroscurist devotes himself to the representation of degrees of force in one thing, unseparated light, the colourists have for their function the attainment of beauty by arrangement of the divisions of light. My first and principal reason was that they enforced, beyond all resistance, on any student who might attempt to copy them, this method of laying portions of distinct hue side by side. Some of the touches, indeed, when the tint has been mixed with much water, have been laid in little drops or ponds, so that the pigment might crystallize hard at the edge. It is the head of a parrot with a little flower in his beak from a picture of Carpaccios, one of his series of the life of Saint George. Then he comes to the beak of it. The brown ground beneath is left, for the most part,. One touch of black is put for the hollow, two delicate lines of dark grey define the outer curve, and one little quivering touch of white draws the inner edge of the mandible."
+          }
+        ]
+      }
+    },
+    "unified": {
+      "jargon": {
+        "clips": 120,
+        "wer": 7.98,
+        "punctF1": 86.1,
+        "names": 56.0,
+        "p50ms": 36,
+        "p90ms": 54,
+        "rtfx": 65.0,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the super base migration before lunch"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the superbase migration before lunch?"
+          }
+        ]
+      },
+      "noise10": {
+        "clips": 80,
+        "wer": 11.68,
+        "punctF1": 83.7,
+        "names": 47.3,
+        "p50ms": 48,
+        "p90ms": 139,
+        "rtfx": 44.2,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the suit the base migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push a super base migration before lunch"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The versal deploy failed again, so check the logs."
+          }
+        ]
+      },
+      "noise5": {
+        "clips": 80,
+        "wer": 16.92,
+        "punctF1": 82.3,
+        "names": 38.4,
+        "p50ms": 36,
+        "p90ms": 52,
+        "rtfx": 69.8,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the Syncase migration before launch?"
+          },
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "Can you push the super base migration before lunch"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal DeFoy failed again, so check the logs."
+          }
+        ]
+      },
+      "whisper": {
+        "clips": 40,
+        "wer": 29.64,
+        "punctF1": 76.2,
+        "names": 39.3,
+        "p50ms": 39,
+        "p90ms": 66,
+        "rtfx": 45.3,
+        "examples": [
+          {
+            "ref": "Can you push the Supabase migration before lunch?",
+            "hyp": "You push the super base migration before lunch"
+          },
+          {
+            "ref": "The Vercel deploy failed again, so check the logs.",
+            "hyp": "The Versal deploy failed again, so check the logs."
+          },
+          {
+            "ref": "I moved the cache from Redis to Postgres last week.",
+            "hyp": "I moved the cache from Redis to Past last week."
+          }
+        ]
+      },
+      "ls-clean": {
+        "clips": 300,
+        "wer": 1.82,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 46,
+        "p90ms": 94,
+        "rtfx": 131.1,
+        "examples": [
+          {
+            "ref": "THEN YOU CAN ASK HIM QUESTIONS ON THE CATECHISM DEDALUS",
+            "hyp": "Then you can ask him questions on the Catechism, Daedalus."
+          },
+          {
+            "ref": "BROTHER MAC ARDLE BROTHER KEOGH",
+            "hyp": "Brother MacArdle Brother Kioff"
+          },
+          {
+            "ref": "AGAIN AGAIN",
+            "hyp": "again"
+          }
+        ]
+      },
+      "ls-other": {
+        "clips": 300,
+        "wer": 3.06,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 40,
+        "p90ms": 77,
+        "rtfx": 137.9,
+        "examples": [
+          {
+            "ref": "THERE'S IRON THEY SAY IN ALL OUR BLOOD AND A GRAIN OR TWO PERHAPS IS GOOD BUT HIS HE MAKES ME HARSHLY FEEL HAS GOT A LITTLE TOO MUCH OF STEEL ANON",
+            "hyp": "There's iron, they say, in all our blood And a grain or two perhaps is good But his he makes me harshly feel Has got a little too much of steel Anon Anon."
+          },
+          {
+            "ref": "DICKIE ALWAYS REMEMBERED THAT MOMENT",
+            "hyp": "Dicky always remembered that moment,"
+          },
+          {
+            "ref": "NO I NEVER SAID DICKIE ERE'S THE STEEVER",
+            "hyp": "No, I never, said Dicky ye's the steever"
+          }
+        ]
+      },
+      "long": {
+        "clips": 10,
+        "wer": 3.78,
+        "punctF1": null,
+        "names": null,
+        "p50ms": 343,
+        "p90ms": 561,
+        "rtfx": 187.4,
+        "examples": [
+          {
+            "ref": "HE HOPED THERE WOULD BE STEW FOR DINNER TURNIPS AND CARROTS AND BRUISED POTATOES AND FAT MUTTON PIECES TO BE LADLED OUT IN THICK PEPPERED FLOUR FATTENED SAUCE STUFF IT INTO YOU HIS BELLY COUNSELLED HIM AFTER EARLY NIGHTFALL THE YELLOW LAMPS WOULD LIGHT UP HERE AND THERE THE SQUALID QUARTER OF THE BROTHELS HELLO BERTIE ANY GOOD IN YOUR MIND NUMBER TEN FRESH NELLY IS WAITING ON YOU GOOD NIGHT HUSBAND THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS THE DULL LIGHT FELL MORE FAINTLY UPON THE PAGE WHEREON ANOTHER EQUATION BEGAN TO UNFOLD ITSELF SLOWLY AND TO SPREAD ABROAD ITS WIDENING TAIL A COLD LUCID INDIFFERENCE REIGNED IN HIS SOUL",
+            "hyp": "He hoped there would be stew for dinner, turnips and carrots and bruised potatoes, and fat mutton pieces to be ladled out in thick, peppered, flour fattened sauce. Stuff it into you his belly counselled him. After early nightfall the yellow lamps would light up here and there the squalid quarter of the brothels. Hello, Bertie any good in your mind? Number ten Fresh Nelly is waiting on you. Good night, husband The music came nearer, and he recalled the words the words of Shelley's fragment upon the moon wandering companionless, pale for weariness. The dull light fell more faintly upon the page whereon another equation began to unfold itself slowly and to spread abroad its widening tale. A cold, lucid indifference reigned in his soul"
+          },
+          {
+            "ref": "HE COULD WAIT NO LONGER FOR A FULL HOUR HE HAD PACED UP AND DOWN WAITING BUT HE COULD WAIT NO LONGER HE SET OFF ABRUPTLY FOR THE BULL WALKING RAPIDLY LEST HIS FATHER'S SHRILL WHISTLE MIGHT CALL HIM BACK AND IN A FEW MOMENTS HE HAD ROUNDED THE CURVE AT THE POLICE BARRACK AND WAS SAFE THE UNIVERSITY PRIDE AFTER SATISFACTION UPLIFTED HIM LIKE LONG SLOW WAVES WHOSE FEET ARE AS THE FEET OF HARTS AND UNDERNEATH THE EVERLASTING ARMS THE PRIDE OF THAT DIM IMAGE BROUGHT BACK TO HIS MIND THE DIGNITY OF THE OFFICE HE HAD REFUSED SOON THE WHOLE BRIDGE WAS TREMBLING AND RESOUNDING",
+            "hyp": "He could wait no longer for a full hour he had paced up and down, waiting but he could wait no longer. He set off abruptly for the bull, walking rapidly lest his father's shrill whistle might call him back, and in a few moments he had rounded the curve at the police barrack and was safe. The university bride after satisfaction uplifted him like long slow waves, whose feet are as the feet of hearts and underneath the everlasting arms. The pride of that dim image brought back to his mind the dignity of the office he had refused. Soon the whole bridge was trembling and resounding."
+          },
+          {
+            "ref": "YOU WILL FIND ME CONTINUALLY SPEAKING OF FOUR MEN TITIAN HOLBEIN TURNER AND TINTORET IN ALMOST THE SAME TERMS THEY UNITE EVERY QUALITY AND SOMETIMES YOU WILL FIND ME REFERRING TO THEM AS COLORISTS SOMETIMES AS CHIAROSCURISTS BY BEING STUDIOUS OF COLOR THEY ARE STUDIOUS OF DIVISION AND WHILE THE CHIAROSCURIST DEVOTES HIMSELF TO THE REPRESENTATION OF DEGREES OF FORCE IN ONE THING UNSEPARATED LIGHT THE COLORISTS HAVE FOR THEIR FUNCTION THE ATTAINMENT OF BEAUTY BY ARRANGEMENT OF THE DIVISIONS OF LIGHT MY FIRST AND PRINCIPAL REASON WAS THAT THEY ENFORCED BEYOND ALL RESISTANCE ON ANY STUDENT WHO MIGHT ATTEMPT TO COPY THEM THIS METHOD OF LAYING PORTIONS OF DISTINCT HUE SIDE BY SIDE SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE IT IS THE HEAD OF A PARROT WITH A LITTLE FLOWER IN HIS BEAK FROM A PICTURE OF CARPACCIO'S ONE OF HIS SERIES OF THE LIFE OF SAINT GEORGE THEN HE COMES TO THE BEAK OF IT THE BROWN GROUND BENEATH IS LEFT FOR THE MOST PART ONE TOUCH OF BLACK IS PUT FOR THE HOLLOW TWO DELICATE LINES OF DARK GRAY DEFINE THE OUTER CURVE AND ONE LITTLE QUIVERING TOUCH OF WHITE DRAWS THE INNER EDGE OF THE MANDIBLE",
+            "hyp": "You will find me continually speaking of four men Titian, Holbein, Turner, and Tintorette in almost the same terms they unite every quality and sometimes you will find me referring to them as colorists, sometimes as chiaroscurists. By being studious of colour they are studious of division and while the chiroscurist devotes himself to the representation of degrees of force in one thing, unseparated light, the colorists have for their function the attainment of beauty by arrangement of the divisions of light. My first and principal reason was that they enforced, beyond all resistance, on any student who might attempt to copy them this method of laying portions of distinct hue side by side. Some of the touches, indeed, when the tint has been mixed with much water, have been laid in little drops or ponds, so that the pigment might crystallize hard at the edge. It is the head of a parrot with a little flower in his beak from a picture of Carpaccios, one of his series of the life of St. George. Then he comes to the beak of it. The brown ground beneath is left for the most part. One touch of black is put for the hollow, two delicate lines of dark gray define the outer curve, and one little quivering touch of white draws the inner edge of the mandible."
+          }
+        ]
+      }
+    }
+  }
+}

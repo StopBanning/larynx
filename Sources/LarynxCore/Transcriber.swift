@@ -15,16 +15,38 @@ public enum LarynxError: Error, CustomStringConvertible {
     }
 }
 
-/// Which speech model to run. All are Parakeet TDT 0.6B variants on the Neural Engine.
+/// Which speech model to run. All are Parakeet 0.6B family models on the Neural Engine.
 public enum Engine: String, CaseIterable, Sendable {
     /// Parakeet TDT v3: verbatim, 25 European languages.
     case parakeet
     /// Underdog Bark 3.0 Clean: English only; drops fillers, false starts and repeated words as it transcribes.
     case clean
+    /// Underdog Bark 3.0: English, verbatim (keeps "um", repeats).
+    case bark3
+    /// Parakeet Ultra: moondream's post-training of v3, same 25 languages, more accurate on FluidAudio's benchmarks.
+    case ultra
+    /// Parakeet Unified 0.6B: English with punctuation and capitals from the model itself.
+    case unified
 
-    var version: AsrModelVersion { self == .clean ? .bark3Clean : .v3 }
-    public var folder: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
-    public var other: Engine { self == .clean ? .parakeet : .clean }
+    var version: AsrModelVersion {
+        switch self {
+        case .clean: return .bark3Clean
+        case .bark3: return .bark3
+        case .ultra: return .ultra
+        case .parakeet, .unified: return .v3
+        }
+    }
+    public var folder: String {
+        switch self {
+        case .clean: return "bark-3.0-clean"
+        case .bark3: return "bark-3.0"
+        case .ultra: return "parakeet-ultra"
+        case .parakeet: return "parakeet-tdt-0.6b-v3"
+        case .unified: return "parakeet-unified-en-0.6b"  // the folder FluidAudio downloads it into
+        }
+    }
+    /// The second-chance model when this one hears nothing.
+    public var other: Engine { self == .parakeet ? .clean : .parakeet }
 
     /// True when this model is already on disk, so using it never triggers a download.
     public func isDownloaded(in modelsDir: URL?) -> Bool {
@@ -33,12 +55,13 @@ public enum Engine: String, CaseIterable, Sendable {
         return ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).contains { $0.hasSuffix(".mlmodelc") }
     }
 
-    public var modelName: String { self == .clean ? "bark-3.0-clean" : "parakeet-tdt-0.6b-v3" }
+    public var modelName: String { folder }
 }
 
 /// Runs NVIDIA Parakeet TDT v3 (25 European languages) on the Neural Engine through FluidAudio. Fully offline after the first model download.
 public actor Transcriber {
     private var manager: AsrManager?
+    private var unified: UnifiedAsrManager?
     private var boosting: VocabularyBoostingSession?
     public private(set) var vocabularySize = 0
     /// Terms the user chose (vocabulary.txt, the dictionary, things learned, their project folders). Only these may
@@ -47,11 +70,17 @@ public actor Transcriber {
 
     public init() {}
 
-    public var isLoaded: Bool { manager != nil }
+    public var isLoaded: Bool { manager != nil || unified != nil }
 
     /// Downloads the model on first run (about 500 MB), then loads it from `modelsDir` or FluidAudio's default folder.
     public func load(modelsDir: URL? = nil, engine: Engine = .parakeet) async throws {
-        guard manager == nil else { return }
+        guard manager == nil, unified == nil else { return }
+        if engine == .unified {
+            let u = UnifiedAsrManager()
+            try await u.loadModels(to: modelsDir)
+            unified = u
+            return
+        }
         // FluidAudio treats the path as the model's own folder, so give it a subfolder of modelsDir.
         let target = modelsDir?.appendingPathComponent(engine.folder, isDirectory: true)
         let models = try await AsrModels.downloadAndLoad(to: target, version: engine.version)
@@ -73,10 +102,15 @@ public actor Transcriber {
 
     /// Returns the transcript for 16 kHz mono samples. Clips shorter than a quarter second come back empty.
     public func transcribe(_ samples: [Float]) async throws -> String {
-        guard let manager else { throw LarynxError.notLoaded }
+        guard manager != nil || unified != nil else { throw LarynxError.notLoaded }
         guard samples.count >= Int(Recorder.sampleRate / 4) else { return "" }
-        var state = try TdtDecoderState()
-        let result = try await manager.transcribe(samples, decoderState: &state)
+        let result: ASRResult
+        if let unified {
+            result = try await unified.transcribeDetailed(samples)
+        } else {
+            var state = try TdtDecoderState()
+            result = try await manager!.transcribe(samples, decoderState: &state)
+        }
         var text = result.text
         if let boosting, let timings = result.tokenTimings, !timings.isEmpty,
            let out = await boosting.rescore(text: text, tokenTimings: timings, audioSamples: samples), out.wasModified {

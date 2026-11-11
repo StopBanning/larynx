@@ -34,7 +34,7 @@ let usage = """
     larynx mcp                                 MCP server for agents (transcribe_file, clean_text, add_dictionary_word, status)
 
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
-    --engine parakeet|clean   clean = English-only model that drops ums, false starts and repeats
+    --engine clean|parakeet|bark3|ultra|unified   speech model (clean = English, drops ums; see docs/BENCHMARKS.md)
     --mode ai|correspondence|standard   how much to polish (listen picks it from the front app)
     --verbatim            skip the tidy-up rules
     --rewrite auto|off    AI rewrite for corrections, numbers and verbal tics, only when needed (Apple's on-device model)

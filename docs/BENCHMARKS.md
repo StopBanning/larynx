@@ -1,0 +1,23 @@
+# Benchmarks
+
+Speech models measured with `python3 bench/run.py` (audio from `bench/make_sets.py`, kept in `~/work/scratch/larynx-bench`).
+Speech model only: cleanup, vocabulary and AI rewrite off. Apple M6, 16 GB, macOS 27.2. Nov 11, 2026, commit c4808c2.
+Raw numbers: `bench/results/bench-2026-11-11-c4808c2.json`.
+
+Word error rate (lower is better):
+
+| Model | jargon (120) | noise 10 dB (80) | noise 5 dB (80) | whisper (40) | LibriSpeech clean (300) | LibriSpeech other (300) | long 60-120 s (10) | names spelled right | p90 latency, short clips |
+|---|---|---|---|---|---|---|---|---|---|
+| `clean` Bark 3.0 Clean (default today) | 15.57 | 18.41 | 24.10 | 44.01 | 2.38 | 4.26 | 2.20 | 26% | 38 ms |
+| `parakeet` Parakeet TDT v3 | 8.68 | 13.92 | 20.21 | 34.43 | 2.25 | 3.86 | 2.43 | 52% | 46 ms |
+| `bark3` Bark 3.0 (verbatim) | 15.87 | 18.41 | 25.90 | 39.82 | 2.72 | 4.71 | 2.65 | 5% | 33 ms |
+| `ultra` Parakeet Ultra | 8.78 | **11.08** | **16.02** | 33.53 | 1.92 | 3.65 | 2.26 | 54% | 41 ms |
+| `unified` Parakeet Unified | **7.98** | 11.68 | 16.92 | **29.64** | **1.82** | **3.06** | 3.78 | **56%** | 54 ms |
+
+Punctuation F1 on the punctuated sets: clean 73-75, parakeet 83-100, ultra 81-100, unified 76-86, bark3 11-37.
+
+**Decision rule (master plan 1.4):** lowest mean WER over jargon + noise + LibriSpeech other, if its cleanup-suite
+score is within 2 points of Bark Clean's (264/300), p90 latency on short clips is at most 200 ms, and punctuation F1
+is not lower than Bark Clean's. Means: ultra 9.88, unified 9.91, parakeet 11.67, clean 15.59, bark3 16.22. Ultra and
+Unified both pass latency and punctuation. **Pending:** the cleanup suite with each (`bench/results/suite-ultra.log`,
+`suite-unified.log`); the default changes only after that gate.

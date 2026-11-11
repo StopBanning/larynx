@@ -38,7 +38,7 @@ public final class Settings: @unchecked Sendable {
 
         fileprivate func valid(_ value: String) -> Bool {
             switch self {
-            case .engine: return ["clean", "parakeet"].contains(value)
+            case .engine: return ["clean", "parakeet", "bark3", "ultra", "unified"].contains(value)
             case .rewrite: return ["auto", "off"].contains(value)
             case .vocabulary, .devTerms, .preview, .learn, .history, .debugText, .handsFree: return ["on", "off"].contains(value)
             case .pillPosition: return ["auto", "bottom"].contains(value)
