@@ -628,6 +628,19 @@ developer program (C1).
 | 8.1 | started | Windows plan in docs/WINDOWS.md. W0 feasibility: LarynxText builds and passes its tests on Windows and Linux in CI (`portable.yml`); Parakeet v3 int8 transcribes the fixture exactly on a Windows CPU via sherpa-onnx in CI (RTF 0.147 on a 4-core VM). |
 | 7.x, 8.0, 8.2-8.4 | not started | |
 
+Follow-ups found in real use (Nov 11), each already belongs to a task above:
+- Homophones the speech model can't tell apart by sound: "reel" heard as "real"/"wheel". Phrase entries are in
+  Colin's dictionary for now; the real fix is screen context (2.2: "reel" all over the chat means reel).
+- Stray commas from the speech model ("something that actually, is", "if, Opus 5.5, did it"): needs the engine with
+  native punctuation (1.4, Parakeet Unified) or spoken-formatting work (3.1), not more rules.
+- Garbled mumbles ("it should what would turn us"): the doubtful-result second opinion (1.3).
+- Misheard names ("OpenS" for Opus): model names are now in the vocabulary; screen context (2.2) and self-learning
+  from repeats cover the rest.
+- The AI rewrite is still triggered by number words in Mail/Messages even though the numbers stage handles them:
+  drop `numberCues` from `Cleaner.reason` after rerunning the rewrite benchmark through the full pipeline (1.1, 1.5).
+- Hands-free: auto-finish on silence and "Undo cancel" for an accidental Esc (4.1).
+- Learning from edits: confirm it fires in real use now that it samples every second (1.6).
+
 Baseline before any work (Nov 10, commit 8927727): rules 43/43, rewrite 26/26, spoken 264/300; real use p50
 111 ms, p90 336 ms, 447 dictations.
 
