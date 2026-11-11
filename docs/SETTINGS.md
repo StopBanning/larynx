@@ -31,6 +31,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `preview` | `on` | `on` or `off`; live preview pill. |
 | `pillPosition` | `auto` | `auto` puts the pill just above the text field you are dictating into (when the app says where it is and the field is not a tall document area), else at the bottom of the screen; `bottom` always uses the bottom of the screen. |
 | `pillGlass` | `25` | 0-100: how see-through the pill is. 0 is no glass at all (the icon, waveform and words float over the window), 25 is clear Liquid Glass, 50 is frosted, 100 is solid. The Glass slider in the menu sets it and shows the pill while you drag. |
+| `doubtHint` | `on` | `on` or `off`. When the speech model was very unsure of a word (or wrote a word no dictionary knows), the pill says "Not sure about “…”" for 2 seconds after the paste and the dictation is flagged `doubtful` in history. Nothing in the text is changed. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
 | `handsFree` | `on` | `on` or `off`; double-tap a talk key to keep recording with no key held. The next press of a talk key finishes, Esc cancels, and it stops by itself after 30 minutes. |

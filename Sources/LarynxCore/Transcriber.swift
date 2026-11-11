@@ -58,6 +58,20 @@ public enum Engine: String, CaseIterable, Sendable {
     public var modelName: String { folder }
 }
 
+/// What the speech model heard, with how sure it was.
+public struct Heard: Sendable {
+    public var text: String
+    public var confidence: Float
+    public var words: [WordConfidence]
+    public init(text: String, confidence: Float, words: [WordConfidence]) { self.text = text; self.confidence = confidence; self.words = words }
+}
+
+public struct WordConfidence: Sendable, Codable, Equatable {
+    public var word: String
+    public var confidence: Float
+    public init(word: String, confidence: Float) { self.word = word; self.confidence = confidence }
+}
+
 /// Runs NVIDIA Parakeet TDT v3 (25 European languages) on the Neural Engine through FluidAudio. Fully offline after the first model download.
 public actor Transcriber {
     private var manager: AsrManager?
@@ -101,9 +115,13 @@ public actor Transcriber {
     }
 
     /// Returns the transcript for 16 kHz mono samples. Clips shorter than a quarter second come back empty.
-    public func transcribe(_ samples: [Float]) async throws -> String {
+    public func transcribe(_ samples: [Float]) async throws -> String { try await transcribeDetailed(samples).text }
+
+    /// The transcript with the model's confidence: overall, and per word (the lowest token confidence in the word),
+    /// taken before vocabulary swaps.
+    public func transcribeDetailed(_ samples: [Float]) async throws -> Heard {
         guard manager != nil || unified != nil else { throw LarynxError.notLoaded }
-        guard samples.count >= Int(Recorder.sampleRate / 4) else { return "" }
+        guard samples.count >= Int(Recorder.sampleRate / 4) else { return Heard(text: "", confidence: 1, words: []) }
         let result: ASRResult
         if let unified {
             result = try await unified.transcribeDetailed(samples)
@@ -121,7 +139,24 @@ public actor Transcriber {
                 text = Transcriber.swap(r.originalWord, for: term, in: text, personal: personal)
             }
         }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Heard(text: text.trimmingCharacters(in: .whitespacesAndNewlines), confidence: result.confidence,
+                     words: Transcriber.words(from: result.tokenTimings ?? []))
+    }
+
+    /// Joins sentencepiece tokens into words ("▁Com" "paq" -> "Compaq"), keeping each word's lowest confidence.
+    static func words(from timings: [TokenTiming]) -> [WordConfidence] {
+        var out: [WordConfidence] = []
+        for t in timings {
+            let starts = t.token.hasPrefix("▁") || t.token.hasPrefix(" ")
+            let piece = t.token.replacingOccurrences(of: "▁", with: "").trimmingCharacters(in: .whitespaces)
+            if starts || out.isEmpty {
+                if !piece.isEmpty { out.append(WordConfidence(word: piece, confidence: t.confidence)) }
+            } else if !piece.isEmpty {
+                out[out.count - 1].word += piece
+                out[out.count - 1].confidence = min(out[out.count - 1].confidence, t.confidence)
+            }
+        }
+        return out
     }
 
     /// Replaces one word with a vocabulary term when they sound alike: same first letter and nearly the same consonants

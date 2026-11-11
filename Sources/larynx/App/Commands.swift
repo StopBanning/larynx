@@ -66,6 +66,17 @@ func runTranscribe() async {
         let loadStart = Date()
         try await Loader.shared.task.value
         log("model ready in \(ms(since: loadStart)) ms")
+        // --words: what the model heard with its confidence per word (for calibrating doubt), then exit.
+        // Several files: every audio path among the arguments, one line each ("path<TAB>confidence<TAB>words").
+        if args.contains("--words") {
+            let files = args.dropFirst().filter { ["wav", "flac", "m4a", "aiff", "mp3"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) && FileManager.default.fileExists(atPath: $0) }
+            for file in files {
+                let heard = try await transcriber.transcribeDetailed(try loadAudioFile(URL(fileURLWithPath: file)))
+                let words = heard.words.map { $0.word + String(format: ":%.2f", $0.confidence) }.joined(separator: " ")
+                print(files.count > 1 ? "\(file)\t\(String(format: "%.3f", heard.confidence))\t\(words)" : String(format: "%.3f", heard.confidence) + "  " + words)
+            }
+            exit(0)
+        }
         let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard)
         log("\(result.audioSeconds) s of audio, speech \(result.asrMs) ms, total \(result.totalMs) ms")
         print(result.text)
@@ -306,6 +317,10 @@ case "golden":
             found.append((a, b.text, "repeat"))
         }
         for f in found { print("\(f.row.id)  [\(f.source)]\n   typed:  \(f.row.text)\n   meant:  \(f.text)") }
+        // The model was unsure of a word: worth a reference (larynx golden add <id> --text "..."), never added blind.
+        let unsure = withAudio.filter { r in r.flags.contains("doubtful") && !found.contains { $0.row.id == r.id } }
+        if !unsure.isEmpty { print("\nNot sure what was said (add with --text once you know):") }
+        for r in unsure { print("\(r.id)  [doubtful]  \(r.text)") }
         if args.contains("--apply") {
             for f in found { _ = try? Golden.add(f.row, text: f.text, source: f.source) }
             print("added \(found.count); golden set: \(Golden.load().count) clips")

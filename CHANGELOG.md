@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **"Not sure about …"** When the speech model was very unsure of a word, the pill names it for 2 seconds after the
+  paste (so a glance catches "Robus" before you send), and the dictation is flagged in history. Nothing in your text
+  is changed. Calibrated on real recordings; `doubtHint: off` turns it off. Each result now carries the model's own
+  confidence. (A second speech model swapping in words where the first was unsure was measured and rejected: it
+  fixed almost nothing. See docs/BENCHMARKS.md.)
+- "Fable" is in the built-in AI model names.
 - **Shadow mode you can read.** `larynx mine --shadow [stage]` lists what a stage set to `shadow` would have
   changed. New risky cleanup rules start as shadow rules: they run on every dictation and record their proposal in
   history without touching your text (first one: dropping a cut-off letter, "who f will actually" → "who will

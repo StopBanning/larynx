@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import Foundation
 import LarynxCore
+import LarynxText
 
 // MARK: - Engine
 
@@ -54,15 +55,15 @@ final class FallbackLoader: @unchecked Sendable {
 
 /// Retries an empty transcript with the other model when the clip is long and loud enough to be speech
 /// and that model is already downloaded. `LARYNX_FORCE_FALLBACK=1` treats every first pass as empty, for testing.
-func transcribeWithFallback(_ samples: [Float]) async throws -> (text: String, engine: String) {
+func transcribeWithFallback(_ samples: [Float]) async throws -> (heard: Heard, engine: String) {
     let forced = ProcessInfo.processInfo.environment["LARYNX_FORCE_FALLBACK"] == "1"
-    let first = forced ? "" : try await transcriber.transcribe(samples)
-    guard first.isEmpty else { return (first, engine.rawValue) }
+    let first = forced ? Heard(text: "", confidence: 1, words: []) : try await transcriber.transcribeDetailed(samples)
+    guard first.text.isEmpty else { return (first, engine.rawValue) }
     let seconds = Double(samples.count) / Recorder.sampleRate, level = Recorder.rms(samples)
     guard seconds >= 0.5, level >= 0.01 || forced, engine.other.isDownloaded(in: modelsDir) else { return (first, engine.rawValue) }
     try await FallbackLoader.shared.task.value
-    let second = try await fallbackTranscriber.transcribe(samples)
-    logTranscript("fallback engine: \(engine.other.rawValue) (\(String(format: "%.1f", seconds)) s, rms \(String(format: "%.3f", level))): \(second.isEmpty ? "also empty" : "heard \(second.split(separator: " ").count) words")", text: second)
+    let second = try await fallbackTranscriber.transcribeDetailed(samples)
+    logTranscript("fallback engine: \(engine.other.rawValue) (\(String(format: "%.1f", seconds)) s, rms \(String(format: "%.3f", level))): \(second.text.isEmpty ? "also empty" : "heard \(second.text.split(separator: " ").count) words")", text: second.text)
     return (second, engine.other.rawValue)
 }
 
@@ -76,7 +77,8 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
     let started = Date()
     try await Loader.shared.task.value
     if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
-    let (raw, usedEngine) = try await transcribeWithFallback(samples)
+    let (heard, usedEngine) = try await transcribeWithFallback(samples)
+    let raw = heard.text
     let asrMs = ms(since: started)
     let input = Transcript(text: raw, raw: raw, engine: usedEngine, mode: mode,
                            audioSeconds: (Double(samples.count) / Recorder.sampleRate * 100).rounded() / 100,
@@ -87,6 +89,10 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
                                    snippets: tidy ? Snippets.load() : [:], dictionary: tidy ? Dictionary.load() : [:],
                                    caseTerms: vocabularyCache.terms, settings: settings)
     var result = await Pipeline().run(input, context: context)
+    result.confidence = (Double(heard.confidence) * 1000).rounded() / 1000
+    let doubtful = Doubt.words(heard.words.map { ($0.word, $0.confidence) }, finalText: result.text,
+                               isKnown: { word in Vocabulary.isEnglish(word) || vocabularyCache.terms.contains { $0.lowercased() == word } })
+    result.doubtful = doubtful.isEmpty ? nil : doubtful
     result.totalMs = ms(since: started)
     return result
 }

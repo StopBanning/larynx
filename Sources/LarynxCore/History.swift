@@ -102,7 +102,7 @@ public final class History: @unchecked Sendable {
         let row = Row(id: pending.id, time: pending.time, app: pending.app, mode: transcript.mode.rawValue,
                       engine: transcript.engine, raw: transcript.raw, text: transcript.text, steps: transcript.steps,
                       audioSeconds: transcript.audioSeconds, totalMs: transcript.totalMs, delivery: delivery,
-                      audioPath: audioPath, flags: flags)
+                      audioPath: audioPath, flags: flags + (transcript.doubtful == nil || flags.contains("doubtful") ? [] : ["doubtful"]))
         do { try insert(row) } catch { return nil }
         prune()
         return row

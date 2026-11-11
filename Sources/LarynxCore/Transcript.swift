@@ -28,8 +28,10 @@ public struct Transcript: Codable, Equatable, Sendable {
     public var totalMs: Int
     public var rewrite: String
     public var rewritten: Bool
-    /// Unavailable until the speech engine exposes it; never invent a score.
+    /// The speech model's own confidence for the whole clip (0-1).
     public var confidence: Double?
+    /// Words the model probably misheard (very low confidence, or unknown to the dictionary), still in the text.
+    public var doubtful: [String]?
     public var steps: [Step]
     public var snippet: String?
     public var delivered: String?
@@ -38,7 +40,7 @@ public struct Transcript: Codable, Equatable, Sendable {
 
     public init(text: String, raw: String, engine: String, mode: CleanupMode, audioSeconds: Double,
                 asrMs: Int, rewriteMs: Int, totalMs: Int, rewrite: String, rewritten: Bool,
-                confidence: Double? = nil, steps: [Step] = [], snippet: String? = nil,
+                confidence: Double? = nil, doubtful: [String]? = nil, steps: [Step] = [], snippet: String? = nil,
                 delivered: String? = nil, pasted: Bool? = nil, pasteError: String? = nil) {
         self.text = text
         self.raw = raw
@@ -51,6 +53,7 @@ public struct Transcript: Codable, Equatable, Sendable {
         self.rewrite = rewrite
         self.rewritten = rewritten
         self.confidence = confidence
+        self.doubtful = doubtful
         self.steps = steps
         self.snippet = snippet
         self.delivered = delivered
@@ -60,7 +63,7 @@ public struct Transcript: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case text, raw, engine, mode, audioSeconds, asrMs, rewriteMs, totalMs, rewrite, rewritten
-        case confidence, steps, snippet, delivered, pasted, pasteError
+        case confidence, doubtful, steps, snippet, delivered, pasted, pasteError
     }
 
     /// Also accepts the original serve result records, which predate steps and confidence.
@@ -77,6 +80,7 @@ public struct Transcript: Codable, Equatable, Sendable {
                   rewrite: try c.decode(String.self, forKey: .rewrite),
                   rewritten: try c.decode(Bool.self, forKey: .rewritten),
                   confidence: try c.decodeIfPresent(Double.self, forKey: .confidence),
+                  doubtful: try c.decodeIfPresent([String].self, forKey: .doubtful),
                   steps: try c.decodeIfPresent([Step].self, forKey: .steps) ?? [],
                   snippet: try c.decodeIfPresent(String.self, forKey: .snippet),
                   delivered: try c.decodeIfPresent(String.self, forKey: .delivered),

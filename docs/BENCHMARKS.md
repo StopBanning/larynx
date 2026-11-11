@@ -60,3 +60,32 @@ favours Ultra, especially on punctuation, so this baseline is a regression gate 
 may raise its golden WER), not yet a fair comparison between engines. References from the author's own fixes (edits to a
 pasted dictation and repeats with a word changed are now recorded automatically) will replace that bias as they
 accumulate; the target is 100 clips.
+
+## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
+
+The speech model's per-word confidence (lowest token confidence in the word) against what was really said, on the
+golden set with Parakeet Ultra: 842 right words, 17 wrong.
+
+| Flag words under | Wrong words caught | Right words flagged |
+| --- | --- | --- |
+| 0.4 | 2 of 17 | 1 of 842 (0.1%) |
+| 0.5 | 2 | 8 (1.0%) |
+| 0.6 | 3 | 26 (3.1%) |
+| 0.7 | 5 | 40 (4.8%) |
+| 0.9 | 6 | 96 (11.4%) |
+
+The two it catches at 0.4 are real mishearings ("Robus" 0.34, "Presume" 0.36); "Compaq" was 0.51. Most of the
+rest were heard with high confidence ("clod" 0.95, "doc" 0.96), so no confidence threshold finds them: they need
+context (milestone C).
+
+**Swapping in a second engine where Ultra was unsure: no-go.** Simulated on golden + jargon + noise: where Ultra
+had a word under the threshold (or one the macOS spell checker doesn't know) and the second engine was surer by a
+margin about known words, take the second engine's words for that stretch only. Best setting (Unified, under 0.4,
+margin 0.2): golden 1.63% → 1.51% (one swap), jargon 8.78% → 8.78%, noise10 11.08% → 11.23%, noise5 16.02% → 15.72%.
+Bark Clean as the second engine: within ±0.3 points everywhere. The bar was 10% fewer errors; this is noise, at
+the cost of a second model in memory. Real misses are either shared by every engine ("Two opus", "Presume") or
+heard confidently ("clod", "doc").
+
+**Shipped instead:** words under 0.4, or under 0.8 when no dictionary knows them (lowercase only), are flagged:
+the dictation is marked `doubtful` in history and the pill says "Not sure about “…”" for 2 s (`doubtHint`).
+Nothing in the text changes. `larynx golden candidates` lists doubtful dictations as needing a reference.

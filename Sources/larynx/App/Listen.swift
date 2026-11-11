@@ -116,6 +116,7 @@ extension Hotkey.Key {
                 guard session.state.deliver() else { return }
                 let delivery = await Inserter.deliver(text, to: app)
                 let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label)
+                if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }
                 MenuController.shared.remember(text)
                 // Said it again with a word fixed? Learn the fix (never from password fields or snippets).
                 let learned = session.privateField || result.snippet != nil ? { Relearn.reset(); return [] }()
@@ -142,6 +143,11 @@ extension Hotkey.Key {
                         log("learned from a repeat: " + Relearn.describe(learned))
                         Task { await reloadVocabulary() }
                         if session.shouldPresent { Pill.shared.message("Learned " + Relearn.describe(learned), symbol: "sparkles", seconds: 2.5) }
+                    } else if let doubtful = result.doubtful, session.shouldPresent, !session.privateField,
+                              Settings.shared.string(.doubtHint) != "off" {
+                        // The model was unsure of a word: say which, so a glance catches it before sending.
+                        Pill.shared.message("Not sure about " + doubtful.prefix(2).map { "\u{201C}\($0)\u{201D}" }.joined(separator: ", "),
+                                            symbol: "questionmark.circle", tint: .systemYellow, seconds: 2)
                     }
                 }
                 logTranscript("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(logNote(result.rewrite)) (\(result.rewriteMs) ms), \(text.split(separator: " ").count) words, \(pending.persists ? pending.id : "not saved")", text: text)
