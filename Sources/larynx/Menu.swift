@@ -125,32 +125,33 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
-    /// "Glass" with a slider from clear (left) to solid (right); the pill appears while you drag.
+    /// "Pill Glass": Clear on the left, Solid on the right; the pill appears while you drag.
     private func glassSliderItem() -> NSMenuItem {
         let item = NSMenuItem()
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 46))
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 48))
         let title = NSTextField(labelWithString: "Pill Glass")
         title.font = .menuFont(ofSize: 0)
-        title.frame = NSRect(x: 20, y: 26, width: 200, height: 16)
+        title.frame = NSRect(x: 20, y: 28, width: 220, height: 16)
+        let left = NSTextField(labelWithString: "Clear")
+        let right = NSTextField(labelWithString: "Solid")
+        for label in [left, right] { label.font = .systemFont(ofSize: 10); label.textColor = .secondaryLabelColor }
+        left.frame = NSRect(x: 20, y: 7, width: 34, height: 14)
+        right.frame = NSRect(x: 214, y: 7, width: 34, height: 14)
         let slider = NSSlider(value: Double(Settings.shared.string(.pillGlass)) ?? 0, minValue: 0, maxValue: 100,
                               target: self, action: #selector(glassChanged(_:)))
         slider.isContinuous = true
-        slider.frame = NSRect(x: 18, y: 4, width: 150, height: 20)
-        slider.setAccessibilityLabel("Pill glass: clear to solid")
-        let ends = NSTextField(labelWithString: "Clear · Solid")
-        ends.font = .systemFont(ofSize: 10)
-        ends.textColor = .secondaryLabelColor
-        ends.frame = NSRect(x: 172, y: 7, width: 64, height: 14)
-        for v in [title, slider, ends] { view.addSubview(v) }
+        slider.frame = NSRect(x: 54, y: 5, width: 156, height: 20)
+        slider.setAccessibilityLabel("Pill glass, from clear to solid")
+        for v in [title, left, slider, right] { view.addSubview(v) }
         item.view = view
         return item
     }
 
     @objc func glassChanged(_ sender: NSSlider) {
         let value = Int(sender.doubleValue.rounded())
+        // Saved on every change (a tiny atomic write): inside a menu the end of a drag isn't reliably reported.
+        save(String(value), for: .pillGlass)
         Task { @MainActor in Pill.shared.previewGlass(Double(value) / 100) }
-        // Save when the drag ends (or on each click) rather than on every pixel.
-        if NSApp.currentEvent?.type != .leftMouseDragged { save(String(value), for: .pillGlass) }
     }
 
     private func toggle(_ title: String, on: Bool, _ action: Selector) -> NSMenuItem {
