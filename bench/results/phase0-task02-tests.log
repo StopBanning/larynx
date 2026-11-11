@@ -1,0 +1,29 @@
+Building for debugging...
+[1 / 4]
+[2 / 7] LarynxTextTests-product
+[4 / 9] LarynxTextTests-product
+[9 / 13] LarynxTextTests-product
+Build complete! (0.67 sec)
+Test Suite 'All tests' started at 2026-11-10 22:26:40.822.
+Test Suite 'All tests' passed at 2026-11-10 22:26:40.822.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+◇ Test run started.
+↳ Testing Library Version: 2403
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Test unsafeRewritesAreRejected() started.
+◇ Test bundledEnglishSpelling() started.
+◇ Test ordinarySentencesStayUnchanged() started.
+◇ Test rewriteGuardExpectations() started.
+◇ Test portableSnippetsRequireWholeUtterance() started.
+◇ Test fixtureContract() started.
+◇ Test textRules() started.
+◇ Test portableDictionaryPreservesBoundariesAndLiteralText() started.
+✔ Test portableSnippetsRequireWholeUtterance() passed after 0.001 seconds.
+✔ Test fixtureContract() passed after 0.001 seconds.
+✔ Test portableDictionaryPreservesBoundariesAndLiteralText() passed after 0.001 seconds.
+✔ Test unsafeRewritesAreRejected() passed after 0.001 seconds.
+✔ Test rewriteGuardExpectations() passed after 0.001 seconds.
+✔ Test bundledEnglishSpelling() passed after 0.021 seconds.
+✔ Test textRules() passed after 0.280 seconds.
+✔ Test ordinarySentencesStayUnchanged() passed after 1.904 seconds.
+✔ Test run with 8 tests in 0 suites passed after 1.904 seconds.

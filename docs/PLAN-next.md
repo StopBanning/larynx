@@ -29,7 +29,12 @@ to work with Colin, lessons learned. Read README.md for the feature list and how
   it is not an all-green suite. Logs and all spoken results are under `bench/results/phase0-*`.
 - Tests live in lowercase `tests/LarynxTextTests` with an explicit package path because this repository already
   uses `tests/`; this avoids a case-sensitive checkout problem. See its README for fixture semantics.
-- No production source changed and no install/restart was needed. Next task: 0.2, extract LarynxText.
+- Task 0.2 is complete: portable LarynxText contains Tidy, CleanupMode, CodeWords, Dictionary, Snippets and
+  RewriteGuard. LarynxCore re-exports the text API and keeps frontmost-app lookup and Mac spelling.
+  WordList abstraction defaults to the same NSSpellChecker behavior; the portable fallback has 56,372 SCOWL
+  entries and bundled upstream notices. `make-app.sh` now includes the resource bundle.
+- Task 0.2 checks: independent text-target build, 8 Swift tests, release build, and 343/343 release CLI text
+  checks pass. See `bench/results/phase0-task02-*`. Next task: 0.3, typed Transcript.
 
 ## Where things stand
 

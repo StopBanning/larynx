@@ -1,3 +1,4 @@
+import LarynxText
 import AppKit
 import ApplicationServices
 

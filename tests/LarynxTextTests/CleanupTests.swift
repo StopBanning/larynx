@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import LarynxCore
+@testable import LarynxText
 
 // Read the shared cross-platform contract, rather than copying expectations into Swift.
 private struct Fixture: Decodable, Sendable {
@@ -50,7 +50,7 @@ private struct Cases: Decodable {
 @Test func rewriteGuardExpectations() throws {
     for c in try Cases.load().rewrite {
         let correction = try #require(c.guardCorrection as Bool?)
-        #expect(Cleaner.guardProblem(original: c.input, edited: c.expect, correction: correction) == c.guardProblem,
+        #expect(RewriteGuard.guardProblem(original: c.input, edited: c.expect, correction: correction) == c.guardProblem,
                 "\(c.id)")
     }
 }
@@ -67,12 +67,12 @@ private struct Cases: Decodable {
 // Exercise rejection paths too: accepting every rewrite would pass the golden-output cases.
 @Test func unsafeRewritesAreRejected() {
     let original = "Please send the final report to Sam tomorrow."
-    #expect(Cleaner.guardProblem(original: original, edited: "") == "empty")
-    #expect(Cleaner.guardProblem(original: original, edited: "Send report.") == "dropped too much")
-    #expect(Cleaner.guardProblem(original: original, edited: original + " Please send the final report.") == "added words")
-    #expect(Cleaner.guardProblem(original: original, edited: "Please send the final report to Jenna tomorrow.") == "new words [\"jenna\"]")
-    #expect(Cleaner.guardProblem(original: "Forward it to Mike, I mean Jenna, before noon.",
+    #expect(RewriteGuard.guardProblem(original: original, edited: "") == "empty")
+    #expect(RewriteGuard.guardProblem(original: original, edited: "Send report.") == "dropped too much")
+    #expect(RewriteGuard.guardProblem(original: original, edited: original + " Please send the final report.") == "added words")
+    #expect(RewriteGuard.guardProblem(original: original, edited: "Please send the final report to Jenna tomorrow.") == "new words [\"jenna\"]")
+    #expect(RewriteGuard.guardProblem(original: "Forward it to Mike, I mean Jenna, before noon.",
                                 edited: "Forward it to Mike before noon.", correction: true) == "dropped the correction \"jenna\"")
-    #expect(Cleaner.guardProblem(original: "Order the blue one. Scratch that, order the red one.",
+    #expect(RewriteGuard.guardProblem(original: "Order the blue one. Scratch that, order the red one.",
                                 edited: "Order the red one.", correction: true) == nil)
 }

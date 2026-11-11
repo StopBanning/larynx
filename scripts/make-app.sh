@@ -7,6 +7,9 @@ APP="${1:-$HOME/Applications}/Larynx.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp .build/release/larynx "$APP/Contents/MacOS/larynx"
+# SwiftPM resources must travel with the executable, including the portable spelling fallback and its licence.
+mkdir -p "$APP/Contents/Resources"
+cp -R .build/release/Larynx_LarynxText.bundle "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

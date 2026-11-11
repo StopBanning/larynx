@@ -26,4 +26,6 @@ This does not change the system developer directory.
 
 The first build compiles FluidAudio dependencies and takes longer than the
 10-second test budget. Measure a warm `swift test` separately. The target depends
-on LarynxCore until Phase Zero task 0.2 extracts LarynxText.
+only on LarynxText; it does not compile or link FluidAudio, AppKit, or the Apple
+model call. Portable tests also exercise the bundled spelling resource and the
+extracted snippet/dictionary boundaries.

@@ -608,7 +608,8 @@ developer program (C1).
 | Task | State | Notes / evidence |
 |---|---|---|
 | 0.1 | done | Swift Testing covers all 43 text cases, 26 rewrite guard expectations, 100 unchanged sentences in all 3 modes, and unsafe rewrite rejection. Warm run: 3.36 s wall, 1.955 s tests. Use full Xcode via per-command DEVELOPER_DIR on this Mac; CLT cannot load Testing macros. See tests/LarynxTextTests/README.md and bench/results/phase0-task01-warm-test.log. |
-| 0.2 - 0.9 | not started | Next: extract LarynxText. |
+| 0.2 | done | LarynxText builds independently with Foundation only; rules, dictionary, snippets and RewriteGuard extracted. WordList policy preserves NSSpellChecker on Mac; portable fallback bundles 56,372 SCOWL entries and notices. 8 Swift tests pass; release CLI 343/343 text checks; release build passes. See phase0-task02-* evidence. |
+| 0.3 - 0.9 | not started | Next: typed Transcript and wire compatibility checks. |
 | 1.1 - 1.8 | not started | |
 | 2.1 - 2.5 | not started | |
 | 4.1 - 4.6 | not started | |

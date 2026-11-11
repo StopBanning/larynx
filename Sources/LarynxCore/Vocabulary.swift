@@ -1,3 +1,4 @@
+import LarynxText
 import AppKit
 
 /// Words the speech model should listen for: your project names, your dictionary, and anything you add to
@@ -87,9 +88,7 @@ public enum Vocabulary {
     public static func caseTerms(_ terms: [String]) -> [String] { terms.filter { !isEnglish($0) } }
 
     /// Ordinary English according to macOS's spell checker ("chat", "jobs", "coding"), so they aren't boosted.
-    public static func isEnglish(_ word: String) -> Bool {
-        let checker = NSSpellChecker.shared
-        return checker.checkSpelling(of: word.lowercased(), startingAt: 0, language: "en", wrap: false,
-                                     inSpellDocumentWithTag: 0, wordCount: nil).location == NSNotFound
+    public static func isEnglish(_ word: String, using wordList: any WordList = MacWordList()) -> Bool {
+        wordList.contains(word)
     }
 }

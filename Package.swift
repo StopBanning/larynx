@@ -5,6 +5,7 @@ let package = Package(
     name: "Larynx",
     platforms: [.macOS(.v15)],
     products: [
+        .library(name: "LarynxText", targets: ["LarynxText"]),
         .library(name: "LarynxCore", targets: ["LarynxCore"]),
         .executable(name: "larynx", targets: ["larynx"]),
     ],
@@ -13,13 +14,18 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "LarynxText",
+            resources: [.process("Resources")],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(
             name: "LarynxCore",
-            dependencies: [.product(name: "FluidAudio", package: "FluidAudio")],
+            dependencies: ["LarynxText", .product(name: "FluidAudio", package: "FluidAudio")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
             name: "LarynxTextTests",
-            dependencies: ["LarynxCore"],
+            dependencies: ["LarynxText"],
             path: "tests/LarynxTextTests",
             exclude: ["README.md"],
             swiftSettings: [.swiftLanguageMode(.v5)]
