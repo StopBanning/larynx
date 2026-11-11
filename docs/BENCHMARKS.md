@@ -89,3 +89,21 @@ heard confidently ("clod", "doc").
 **Shipped instead:** words under 0.4, or under 0.8 when no dictionary knows them (lowercase only), are flagged:
 the dictation is marked `doubtful` in history and the pill says "Not sure about “…”" for 2 s (`doubtHint`).
 Nothing in the text changes. `larynx golden candidates` lists doubtful dictations as needing a reference.
+
+### Third opinion from a big model: LFM3-Audio-2B (Nov 11): no-go
+
+Liquid AI's 2B audio language model through FluidAudio (Core ML build, int8, speech recognition only), on the same
+clips, raw output against the references:
+
+| Set | LFM3-Audio-2B | Parakeet Ultra | LFM3 p50 / p90 |
+| --- | --- | --- | --- |
+| golden (48) | 4.30% | 1.63% | 479 / 1291 ms |
+| jargon (120) | 10.28% | 8.78% | 246 / 290 ms |
+| noise10 (80) | 13.47% | 11.08% | 229 / 267 ms |
+| noise5 (80) | 24.40% | 16.02% | 229 / 274 ms |
+
+(Golden favours Ultra, whose text the references started from; jargon and noise are neutral, and it loses there
+too.) Of the author's known mishearings it fixed "Compaq" → "compact" and "clod" → "Claude", but not "Robus", "Two
+opus", "Presume" (→ "To zoom") or "doc". The rule was to keep it only if it fixes a third of the doubtful rows
+within 1 s; it fixed none of them. First load took 12 minutes (download plus GPU compile, ~3 GB of cache); peak use
+fits in memory. Not kept; files removed.
