@@ -68,7 +68,14 @@ rules' job. For the first 200 real dictations, read every raw -> text pair. Each
 rules miss, a repeat, a false start, odd capitals) becomes a rule case plus a must-not-change case.
 Rollback rule: if words are lost, or p90 goes over 350 ms across 100 dictations, set `"engine": "clean"` in his
 settings.json, restart with `restart-app.sh`, and write down why.
-Done when: 200 dictations read, findings fixed or filed, no rollback.
+**Real-voice check (audio is kept since Nov 11):** once 200 recordings exist, run every one through `ultra`,
+`clean`, `unified` and `parakeet` (`larynx transcribe <file> --engine <e>`) and list each clip where Ultra differs
+from what the other three agree on. First sample, Nov 11: "compact to pass off to Opus" came out of Ultra as
+"Compaq to pass off Robus" while the other three wrote "Compact ... for Opus". If Ultra is the odd one out more
+often than Bark Clean is, switch the default back to `clean` and bring B4's consensus pass forward: it would have
+caught this one.
+Done when: 200 dictations read, the four-engine comparison is in BENCHMARKS.md (counts only), findings fixed or
+filed, and the default is whichever engine his own voice supports.
 
 **A2. Close Ultra's cleanup gaps.** Suite misses today: false starts 10/20, self-corrections 29/40, repeats 55/60,
 trailing off 8/10 (see `bench/results/suite2-ultra.log`). Rules only, no model. Done when: spoken >= 280/300 with
@@ -324,3 +331,6 @@ Slips seen in real dictation, filed under the task that fixes them:
 - "come in" for "come on", "make us, the best" (stray comma from the model) -> watch under A1 with Ultra; if they
   persist, B4's consensus pass and E3.
 - "reel" as "real", "OpenS", "Russ", "Logus" -> C2, C3, C7.
+- Ultra only: "Compaq" for compact, "Robus" for "to Opus" (dictionary entries added for him) -> A1 real-voice check,
+  B4 consensus. "Two opus" for "To Opus" in a 1.4 s clip: every engine wrote it; needs context -> C1.
+- Several short dictations into one field run together with no space ("time.Are we") -> C4; do it early.
