@@ -64,6 +64,14 @@ legacy defaults keys use the dotted names shown in the table. Example:
 The stage order is snippet → dictionary → vocabularyCase → tidy → numbers → rewrite.
 `on` runs and applies a stage; `off` skips it; `shadow` computes a candidate and
 records a Step without feeding the candidate to subsequent stages or delivery.
+`larynx mine --shadow` counts what each shadowed stage would have changed in your history;
+`larynx mine --shadow <stage>` lists them (before and after).
+
+Shadow rules are the same idea for a single new cleanup rule: they run after tidy on every dictation and record a
+`shadow:<name>` step, but never change the text. `larynx mine --shadow lone-letter` lists one; `larynx tidy
+--shadow "<text>"` shows what each would do. A rule is moved into the live rules only after its proposals on real
+dictations have been read. Current shadow rules: `lone-letter` (drops a cut-off letter: "someone who f will
+actually fix it" → "someone who will actually fix it").
 Each reached stage records `stage`, `before`, `after`, `applied`. `applied` means
 the stage ran in `on` mode, including an identity transformation. Skipped stages
 have identical before/after and `applied: false`. A matched `on` snippet ends the

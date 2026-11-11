@@ -99,6 +99,25 @@ case "history":
         }
     }
     exit(0)
+case "mine" where args.contains("--shadow"):
+    // What shadowed stages and shadow rules would have changed, newest first. larynx mine --shadow [stage] [--limit n]
+    // Stages: tidy, numbers, rewrite... (set "stages.<name>": "shadow" in settings.json); rules: shadow:<name>.
+    let wanted = option("--shadow").flatMap { $0.hasPrefix("--") ? nil : $0 }
+    var counts: [String: Int] = [:]
+    var shown = 0
+    let limit = Int(option("--limit") ?? "") ?? 50
+    for row in History.shared.recent(limit: 5000) {
+        for step in row.steps where !step.applied && step.before != step.after {
+            counts[step.stage, default: 0] += 1
+            guard let wanted, step.stage == wanted || step.stage == "shadow:" + wanted, shown < limit else { continue }
+            shown += 1
+            print("\(row.id)  [\(step.stage)]\n   now:   \(step.before)\n   would: \(step.after)")
+        }
+    }
+    if counts.isEmpty { print("No shadow proposals in history.") }
+    for (stage, n) in counts.sorted(by: { $0.key < $1.key }) { print("\(stage): \(n) dictation\(n == 1 ? "" : "s") would change") }
+    if wanted == nil, !counts.isEmpty { print("larynx mine --shadow <stage> lists them") }
+    exit(0)
 case "mine":
     // Finds repeats with a word fixed in your history (and, with --log, in old Larynx.log lines that still have
     // text) and prints what would be learned. --apply saves the safe lessons. larynx mine [--log path] [--apply]
@@ -299,7 +318,13 @@ case "golden":
     exit(0)
 case "tidy":
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
-    print(Tidy.apply(args.last ?? "", mode: mode)); exit(0)
+    let tidied = Tidy.apply(args.last ?? "", mode: mode)
+    print(tidied)
+    // --shadow: also what each shadow rule would make of it.
+    if args.contains("--shadow") {
+        for rule in Tidy.shadowRules { let p = rule.apply(tidied); if p != tidied { print("shadow:\(rule.name): \(p)") } }
+    }
+    exit(0)
 default: print(usage); exit(args.isEmpty || args.first == "--help" || args.first == "-h" ? 0 : 2)
 }
 }

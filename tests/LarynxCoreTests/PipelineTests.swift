@@ -144,3 +144,19 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
     #expect(Cleaner.reason(for: "Sales went up fifteen percent.", mode: .correspondence) == nil)
     #expect(Cleaner.reason(for: "Get two pizzas, make that three.", mode: .correspondence) == "correction")
 }
+
+@Test func shadowRulesRecordProposalsButNeverChangeTheText() async {
+    let input = "But I'll ask someone who f will actually fix it."
+    let result = await Pipeline().run(transcript(input, mode: .ai), context: .init(rewrite: false))
+    #expect(result.text == input)
+    let shadow = result.steps.first { $0.stage == "shadow:lone-letter" }
+    #expect(shadow?.applied == false)
+    #expect(shadow?.after == "But I'll ask someone who will actually fix it.")
+    // Nothing to propose: no shadow step at all.
+    let plain = await Pipeline().run(transcript("We should go with plan b because it is cheaper.", mode: .ai), context: .init(rewrite: false))
+    #expect(!plain.steps.contains { $0.stage.hasPrefix("shadow:") })
+    for keep in ["Take vitamin d daily for a week.", "Press k to keep it.", "It is in the b branch, so check that branch.", "x and y are both broken."] {
+        let r = await Pipeline().run(transcript(keep, mode: .ai), context: .init(rewrite: false))
+        #expect(!r.steps.contains { $0.stage.hasPrefix("shadow:") }, "\(keep)")
+    }
+}

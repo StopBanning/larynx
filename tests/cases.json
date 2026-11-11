@@ -1672,6 +1672,26 @@
       "id": "keep-restart-04",
       "in": "I talked to her about it, to be honest.",
       "expect": "I talked to her about it, to be honest."
+    },
+    {
+      "id": "keep-comma-tag-01",
+      "in": "It's possible that Blender isn't the best bet, but it probably is, let's be honest.",
+      "expect": "It's possible that Blender isn't the best bet, but it probably is, let's be honest."
+    },
+    {
+      "id": "keep-comma-tag-02",
+      "in": "This is a template we could do a lot with, okay? Lock in.",
+      "expect": "This is a template we could do a lot with, okay? Lock in."
+    },
+    {
+      "id": "keep-comma-tag-03",
+      "in": "Bring the charger with, though.",
+      "expect": "Bring the charger with, though."
+    },
+    {
+      "id": "keep-comma-tag-04",
+      "in": "The plan is, so far, working.",
+      "expect": "The plan is, so far, working."
     }
   ],
   "numbers": {

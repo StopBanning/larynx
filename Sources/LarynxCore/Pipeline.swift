@@ -54,6 +54,15 @@ public struct Pipeline {
                 result.rewriteMs = proposed.rewriteMs
             }
             result.steps.append(Step(stage: stage.name, before: before, after: proposed.text, applied: mode == .on))
+            // Shadow rules see what tidy produced and record what they would change; the text stays as it is.
+            if stage.name == "tidy", mode != .off {
+                for rule in Tidy.shadowRules {
+                    let proposal = rule.apply(result.text)
+                    if proposal != result.text {
+                        result.steps.append(Step(stage: "shadow:" + rule.name, before: result.text, after: proposal, applied: false))
+                    }
+                }
+            }
             // Matched snippets are literal saved text: no later stage, including rewrite, may touch them.
             if result.snippet != nil { break }
         }

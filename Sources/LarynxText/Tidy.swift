@@ -35,6 +35,34 @@ public enum Tidy {
     static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
     /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
     static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
+    // MARK: Shadow rules
+
+    /// Experimental rules that run on every dictation but change nothing: each proposal is recorded in history as a
+    /// `shadow:<name>` step, and `larynx mine --shadow` lists them. A rule moves into `apply` once its proposals on
+    /// real dictations have been read and are right (PLAN-v1 B1: every risky rule goes through here first).
+    public static let shadowRules: [(name: String, apply: (String) -> String)] = [
+        ("lone-letter", loneLetterRestarts),
+    ]
+
+    /// A lone lowercase letter that starts a word said a little later: "someone who f will actually fucking do it"
+    /// drops the "f". Not when it labels something ("plan b", "vitamin d", "the letter s") or the word follows at once
+    /// ("the b branch").
+    static func loneLetterRestarts(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+((?:[\\w']+\\s+){1,2})(?=\\1[a-z])") else { return text }
+        let labels: Set<String> = ["plan", "vitamin", "letter", "option", "grade", "type", "class", "section", "part", "step",
+                                   "row", "column", "size", "model", "version", "level", "tier", "group", "team", "line", "the", "a",
+                                   "press", "hit", "tap", "key", "type", "and", "or"]
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let letter = Range(m.range(at: 1), in: s) else { continue }
+            let before = s[..<letter.lowerBound].split(whereSeparator: \.isWhitespace).last.map { $0.lowercased() } ?? ""
+            if labels.contains(before) { continue }
+            guard let whole = Range(NSRange(location: m.range.location, length: m.range(at: 1).length + 1), in: s) else { continue }
+            s.removeSubrange(whole)
+        }
+        return s
+    }
+
     /// Verbs a speaker restarts a sentence with ("I went to the, I drove"); "I phone", "I beam" are not restarts.
     static let restartVerbs = "[a-z]+ed|drove|went|was|think|thought|want|need|have|had|got|get|said|say|mean|guess|told|saw|see|did|do|don't|didn't|put|took|take|made|make|can|could|will|would|just|really|also|bought|came|come|left|ran|found|know|knew|love|like|wanna|gotta|gonna"
     /// Small words a speaker goes back to when correcting the next word ("from your uh from our", "the cat um the dog").
@@ -43,7 +71,9 @@ public enum Tidy {
     /// What may follow "on," / "in," when the comma is a leftover: a determiner, a number, or a capitalized name.
     static let clauseFollowers = "(?:(?i:the|a|an|my|your|our|their|his|her|its)\\b|\\d|(?i:one|two|three|four|five|six|seven|eight|nine|ten)\\b|(?!I\\b|I')[A-Z])"
     /// The subject of a new clause, after which "is," keeps its comma.
-    static let clauseStarts = "(?i:i|i'm|i'll|i've|i'd|we|we're|we'll|you|you're|they|they're|he|she|it|it's|there|there's|that's|this)\\b"
+    static let clauseStarts = "(?i:i|i'm|i'll|i've|i'd|we|we're|we'll|you|you're|they|they're|he|she|it|it's|there|there's|that's|this|let's|so|then|because|'cause|honestly|actually|okay|ok)\\b"
+    /// Words after a comma that close or tag a phrase ("a lot with, okay?"); the comma before them is real.
+    static let tagWords = "(?i:okay|ok|right|yeah|yes|though|too|honestly|man|dude|bro|then|please|lol)\\b"
 
     public static func apply(_ text: String, mode: CleanupMode) -> String {
         var s = text
@@ -101,7 +131,7 @@ public enum Tidy {
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, whip up"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
-        s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .regularExpression)
         // "The thing is, we need more time": a be-verb keeps its comma before a new clause's subject.
         s = s.replacingOccurrences(of: "\\b([Ii]s|[Ww]as|[Aa]re|[Ww]ere|[Bb]e),\\s+(?!\(clauseStarts))(?=\\w)", with: "$1 ",

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Shadow mode you can read.** `larynx mine --shadow [stage]` lists what a stage set to `shadow` would have
+  changed. New risky cleanup rules start as shadow rules: they run on every dictation and record their proposal in
+  history without touching your text (first one: dropping a cut-off letter, "who f will actually" → "who will
+  actually"). `larynx tidy --shadow` shows them on any text.
+- Commas before a tag or a new clause are kept: "a lot with, okay?", "it probably is, let's be honest".
 - **Golden set: your own voice as the benchmark.** `larynx golden add <id> [--text "what you said"]` keeps a
   dictation's recording with what you meant to type, in `golden/` on your Mac only; `larynx golden list`,
   `remove`, and `candidates [--apply]`, which offers dictations whose right text is known because you fixed them:
