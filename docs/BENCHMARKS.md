@@ -19,5 +19,9 @@ Punctuation F1 on the punctuated sets: clean 73-75, parakeet 83-100, ultra 81-10
 **Decision rule (master plan 1.4):** lowest mean WER over jargon + noise + LibriSpeech other, if its cleanup-suite
 score is within 2 points of Bark Clean's (264/300), p90 latency on short clips is at most 200 ms, and punctuation F1
 is not lower than Bark Clean's. Means: ultra 9.88, unified 9.91, parakeet 11.67, clean 15.59, bark3 16.22. Ultra and
-Unified both pass latency and punctuation. **Pending:** the cleanup suite with each (`bench/results/suite-ultra.log`,
-`suite-unified.log`); the default changes only after that gate.
+Unified both pass latency and punctuation. **Cleanup gate (Nov 11):** spoken cleanup suite (`bench/results/suite-ultra.log`, `suite-unified.log`):
+Bark Clean 264/300, Ultra 257/300, Unified 252/300. Both miss the 2-point bar, almost entirely on **false starts
+(0/10 vs 10/10)** and repeats, which Bark Clean removes inside the model. Ultra keeps more sentences intact (must
+not change 111/120 vs 95/120). **Decision: the default stays Bark Clean for now.** To switch, the tidy rules must
+remove false starts and repeats from a verbatim model's output until Ultra reaches 262+ (the plan's route when a
+verbatim engine wins on accuracy), or try the consensus pass (Clean's cleanup + Ultra's words).

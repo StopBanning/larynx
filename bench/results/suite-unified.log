@@ -1,0 +1,60 @@
+
+TEXT RULES  51/51 exact
+
+AI REWRITE (Apple on-device, correspondence mode)
+  26/26 match
+
+SPOKEN (unified, rewrite auto, 5 voices x 2 speeds)  252/300 pass, excluding known gaps
+  false starts         0/10
+  fillers             62/80
+  must not change    103/120
+  real-world          29/30
+  repeats             58/60
+  known gaps (need the AI rewrite layer):
+    false starts       6/20
+    numbers           10/10
+    self-corrections  30/40
+    trailing off      10/10
+    verbal tics       30/30
+  of the failures, 16 are the speech model mishearing (not cleanup)
+
+FAILURES (case: voice/speed -> output)
+  filler-start  (2 of 10)  want: Can you send me the report?
+     Karen/175: Come, can you send me the report?   [WER 0.17]   raw: Come, can you send me the report?
+     Karen/230: Come, can you send me the report?   [WER 0.17]   raw: Come, can you send me the report?
+  filler-end  (2 of 10)  want: The numbers look good.
+     Samantha/230: Numbers look good,   [WER 0.25]   raw: Numbers look good, um
+     Moira/230: Numbers look good.   [WER 0.25]   raw: Numbers look good.
+  filler-er  (6 of 10)  want: The total is about $400.
+     Samantha/175: The total is er, about $400   [fillers left: ['er']; WER 0.20]   raw: The total is, er, about $400
+     Samantha/230: The total is er, about $400.   [fillers left: ['er']; WER 0.20]   raw: The total is, er, about $400.
+     Karen/175: The total is er, about $400.   [fillers left: ['er']; WER 0.20]   raw: The total is, er, about $400.
+  filler-every-word  (6 of 10)  want: I need the keys.
+     Samantha/175: Ah, I a need a keys.   [WER 0.75]   raw: Ah, I a need a keys.
+     Samantha/230: Ah, I, ah, need, ah, the ah, keys.   [WER 1.00]   raw: Ah, I, ah, need, ah, the ah, keys.
+     Daniel/175: I need the please.   [WER 0.25]   raw: Uh I uh need uh the uh please.
+  filler-uhm  (2 of 10)  want: Yeah, that works for me.
+     Karen/175: Come, you air, that works for me   [WER 0.60]   raw: Come, you air, that works for me
+     Karen/230: Come, you air, that works for me.   [WER 0.60]   raw: Come, you air, that works for me.
+  repeat-three-words  (2 of 10)  want: I want to thank everyone for coming.
+     Daniel/175: I want to I want to thank everyone for coming.   [WER 0.43]   raw: I want to I want to thank everyone for coming.
+     Daniel/230: I want to vote. I want to thank everyone for coming.   [WER 0.57]   raw: I want to vote. I want to thank everyone for coming.
+  false-start-1  (10 of 10)  want: I drove to the store after work.
+     Samantha/175: I went to the I drove to the store after work   [WER 0.57]   raw: I went to the, I drove to the store after work
+     Samantha/230: I went to the I drove to the store after work   [WER 0.57]   raw: I went to the, I drove to the store after work
+     Daniel/175: I went to the I drove to the store after work.   [WER 0.57]   raw: I went to the I drove to the store after work.
+  keep-hummus  (1 of 10)  want: We ordered hummus and humble pie.
+     Moira/230: We ordered Thomas and Humble Pie   [speech model misheard: ['hummus']]   raw: We ordered Thomas and Humble Pie
+  keep-uh-huh  (4 of 10)  want: Uh-huh, I agree with that.
+     Daniel/175: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+     Daniel/230: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+     Karen/175: Aha, I agree with that.   [speech model misheard: ['huh']]   raw: Aha, I agree with that.
+  keep-no-no  (10 of 10)  want: No, no, that's not what I meant.
+     Samantha/175: No, that's not what I meant.   [speech model misheard: ['no no']]   raw: no, that's not what I meant.
+     Samantha/230: No, that's not what I meant   [speech model misheard: ['no no']]   raw: no, that's not what I meant
+     Daniel/175: No, that's not what I meant.   [speech model misheard: ['no no']]   raw: no, that's not what I meant.
+  keep-names  (2 of 10)  want: Ask Priya and Mateo to join the call.
+     Rishi/230: Asked Priyar and Mateo to join the call.   [WER 0.25]   raw: asked Priyar and Mateo to join the call.
+     Moira/230: Ask Priyo and Mateo to join the call   [speech model misheard: ['priya']]   raw: Ask Priyo and Mateo to join the call
+  code-prompt  (1 of 10)  want: Can you fix the bug in the login function and add a test for it?
+     Karen/175: Come, can you fix the bug in the login function n and add a test for root?   [WER 0.20]   raw: Come, can you fix the bug in the uh login function n and add a test for root?
