@@ -1,0 +1,48 @@
+
+TEXT RULES  45/45 exact
+
+AI REWRITE (Apple on-device, correspondence mode)
+  26/26 match
+
+SPOKEN (clean, rewrite auto, 5 voices x 2 speeds)  264/300 pass, excluding known gaps
+  false starts        10/10
+  fillers             72/80
+  must not change     95/120
+  real-world          30/30
+  repeats             57/60
+  known gaps (need the AI rewrite layer):
+    false starts      10/20
+    numbers            9/10
+    self-corrections  38/40
+    trailing off      10/10
+    verbal tics       30/30
+  of the failures, 25 are the speech model mishearing (not cleanup)
+
+FAILURES (case: voice/speed -> output)
+  filler-every-word  (6 of 10)  want: I need the keys.
+     Samantha/175: I, need, a the keys.   [WER 0.25]   raw: I, need, a, the, keys.
+     Samantha/230: I, need, a the keys.   [WER 0.25]   raw: I, need, a, the, keys.
+     Daniel/175: I, need, the please.   [WER 0.25]   raw: I, need, the, please.
+  filler-uhm  (2 of 10)  want: Yeah, that works for me.
+     Karen/175: You ear that works for me   [WER 0.40]   raw: you ear that works for me
+     Karen/230: Come you that works for me   [WER 0.40]   raw: come you that works for me
+  repeat-word  (1 of 10)  want: Can you send the invoice today?
+     Daniel/230: Can you send her the invoice today.   [WER 0.17]   raw: can you send her the invoice today.
+  repeat-pronoun  (2 of 10)  want: I really appreciate it.
+     Moira/175: I really appreciate this.   [WER 0.25]   raw: I, I, I really appreciate this.
+     Moira/230: I really appreciate this.   [WER 0.25]   raw: I really appreciate this.
+  keep-hummus  (5 of 10)  want: We ordered hummus and humble pie.
+     Samantha/175: We ordered Hamas and Humble pie.   [speech model misheard: ['hummus']]   raw: We ordered Hamas and Humble pie.
+     Samantha/230: We order Thomas and Humble Pie.   [speech model misheard: ['hummus']]   raw: We order Thomas and Humble Pie.
+     Karen/230: We ordered hummus and hamble pie.   [speech model misheard: ['humble']]   raw: We ordered hummus and hamble pie.
+  keep-uh-huh  (10 of 10)  want: Uh-huh, I agree with that.
+     Samantha/175: Aha I agree with that   [speech model misheard: ['huh']]   raw: aha I agree with that
+     Samantha/230: Aha I agree with that   [speech model misheard: ['huh']]   raw: aha I agree with that
+     Daniel/175: Aha I agree with that   [speech model misheard: ['huh']]   raw: aha I agree with that
+  keep-no-no  (2 of 10)  want: No, no, that's not what I meant.
+     Daniel/175: No that's not what I meant   [speech model misheard: ['no no']]   raw: no that's not what I meant
+     Karen/175: No that's not what I meant   [speech model misheard: ['no no']]   raw: no that's not what I meant
+  keep-names  (8 of 10)  want: Ask Priya and Mateo to join the call.
+     Daniel/175: Ask prio and mateo to join the call   [speech model misheard: ['priya']]   raw: ask prio and mateo to join the call
+     Daniel/230: Ask prio and mateo to join the call   [speech model misheard: ['priya']]   raw: ask prio and mateo to join the call
+     Karen/175: Ask prior and mateo to join the call   [speech model misheard: ['priya']]   raw: ask prior and mateo to join the call

@@ -239,6 +239,14 @@ case "rewrite":
         log("\(outcome.used ? "rewrote" : "kept") in \(ms(since: started)) ms: \(outcome.note)")
         print(outcome.text); exit(0)
     }
+case "numbers":
+    // Spoken numbers to digits, for testing: larynx numbers "<text>", or lines on stdin (prints only lines it changes).
+    if args.count >= 2 { print(Numbers.apply(args[1])); exit(0) }
+    while let line = readLine() {
+        let out = Numbers.apply(line)
+        if out != line { print("- \(line)\n+ \(out)\n") }
+    }
+    exit(0)
 case "tidy":
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
     print(Tidy.apply(args.last ?? "", mode: mode)); exit(0)

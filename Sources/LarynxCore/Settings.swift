@@ -18,6 +18,7 @@ public final class Settings: @unchecked Sendable {
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
         case tidyStage = "stages.tidy"
+        case numbersStage = "stages.numbers"
         case rewriteStage = "stages.rewrite"
 
         public var defaultValue: String {

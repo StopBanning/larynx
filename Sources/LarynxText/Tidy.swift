@@ -63,6 +63,8 @@ public enum Tidy {
         s = CodeWords.apply(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?=\\w)", with: "$1 ", options: .regularExpression)
+        // 3b. "if, Opus did it": a comma after "if" is a pause, not punctuation, unless it opens an aside ("if, say, it rains").
+        s = s.replacingOccurrences(of: "(?i)\\bif,\\s+(?!(?:\(ifAsides))\\b)", with: "if ", options: .regularExpression)
         // 4. Spacing and doubled punctuation.
         s = s.replacingOccurrences(of: "\\s*,\\s*,+", with: ",", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\s+([,!?;:]|\\.(?![A-Za-z]))", with: "$1", options: .regularExpression)  // but not ".env"
@@ -78,6 +80,9 @@ public enum Tidy {
     }
 
     static let questionOpeners = "can|could|will|would|should|do|did|shall"
+    /// Asides that keep their commas after "if": "if, say, it rains", "if, you know, you want".
+    static let ifAsides = "say|you know|honestly|though|i mean|of course|for example|for instance|like|basically|frankly|"
+        + "perhaps|maybe|by chance|god forbid|heaven forbid|anything|anyway|in fact|for some reason|somehow|necessary|possible|needed|not|so"
 
     static let correctionKinds = [
         "(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight)",

@@ -7,6 +7,9 @@ private func transcript(_ text: String, mode: CleanupMode = .standard) -> Transc
                asrMs: 2, rewriteMs: 0, totalMs: 0, rewrite: "off", rewritten: false)
 }
 
+/// The tidy-era contract: everything except the numbers stage, which deliberately changes "42 dollars" to "$42".
+private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
+
 @Test func pipelinePreservesExistingTextContract() async throws {
     let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     let data = try Data(contentsOf: root.appendingPathComponent("tests/cases.json"))
@@ -17,14 +20,14 @@ private func transcript(_ text: String, mode: CleanupMode = .standard) -> Transc
         let input = try #require(c["in"])
         let modeName = try #require(c["mode"])
         let mode = try #require(CleanupMode(rawValue: modeName))
-        let result = await Pipeline().run(transcript(input, mode: mode), context: .init(rewrite: false))
+        let result = await Pipeline().run(transcript(input, mode: mode), context: .init(rewrite: false, settings: withoutNumbers))
         #expect(result.text == c["expect"], "\(c["id"] ?? "")")
         #expect(result.raw == input)
     }
     for c in unchanged {
         let input = try #require(c["in"])
         for mode in [CleanupMode.standard, .ai, .correspondence] {
-            let result = await Pipeline().run(transcript(input, mode: mode), context: .init(rewrite: false))
+            let result = await Pipeline().run(transcript(input, mode: mode), context: .init(rewrite: false, settings: withoutNumbers))
             #expect(result.text == input, "\(c["id"] ?? "") \(mode.rawValue)")
         }
     }
@@ -35,7 +38,7 @@ private func transcript(_ text: String, mode: CleanupMode = .standard) -> Transc
                                    dictionary: ["lynx": "prisma"], caseTerms: ["Prisma"])
     let result = await Pipeline().run(transcript("the the lynx"), context: context)
     #expect(result.text == "The Prisma")
-    #expect(result.steps.map(\.stage) == ["snippet", "dictionary", "vocabularyCase", "tidy", "rewrite"])
+    #expect(result.steps.map(\.stage) == ["snippet", "dictionary", "vocabularyCase", "tidy", "numbers", "rewrite"])
     #expect(result.steps[1].before == "the the lynx")
     #expect(result.steps[1].after == "the the prisma")
     #expect(result.steps[2].after == "the the Prisma")
@@ -63,7 +66,7 @@ private func transcript(_ text: String, mode: CleanupMode = .standard) -> Transc
         snippets: ["my link": "expanded"], settings: .init(values: [.snippetStage: "shadow"])))
     #expect(snippet.text == "My link")
     #expect(snippet.snippet == nil)
-    #expect(snippet.steps.count == 5)
+    #expect(snippet.steps.count == 6)
     #expect(snippet.steps[0].after == "expanded")
 }
 
@@ -120,4 +123,17 @@ private func transcript(_ text: String, mode: CleanupMode = .standard) -> Transc
     #expect(!transition8)
     let transition9 = next.start()
     #expect(transition9)
+}
+
+@Test func numbersStageRunsInEveryModeIncludingAIApps() async {
+    for mode in [CleanupMode.ai, .standard, .correspondence] {
+        let result = await Pipeline().run(transcript("we have fable at ninety-four and opus five point five", mode: mode),
+                                          context: .init(rewrite: false))
+        #expect(result.text.contains("94") && result.text.contains("5.5"), "\(mode.rawValue): \(result.text)")
+        #expect(result.steps.first { $0.stage == "numbers" }?.applied == true)
+    }
+    let shadow = await Pipeline().run(transcript("it was ninety-four"), context: .init(rewrite: false,
+        settings: .init(values: [.numbersStage: "shadow"])))
+    #expect(shadow.text == "It was ninety-four")
+    #expect(shadow.steps.first { $0.stage == "numbers" }?.after == "It was 94")
 }

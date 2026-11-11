@@ -65,6 +65,7 @@ public enum Vocabulary {
     /// Tools and services developers name all the time. Only distinctive names: short or everyday-sounding ones
     /// ("Rust", "React", "Linear") would risk swapping real words. `defaults write ... devTerms off` removes them.
     static let developerTerms = [
+        "Opus", "Sonnet", "Haiku", "Anthropic", "OpenAI", "Gemini", "Llama", "Mistral", "Ollama",
         "Supabase", "MongoDB", "Vercel", "PostgreSQL", "Postgres", "Redis", "Kubernetes", "Docker", "Terraform", "Nginx",
         "GraphQL", "Prisma", "Tailwind", "Svelte", "Webpack", "Django", "FastAPI", "Laravel", "Firebase", "Netlify",
         "Cloudflare", "Heroku", "Twilio", "Datadog", "Grafana", "Kafka", "RabbitMQ", "Elasticsearch", "DynamoDB", "SQLite",

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Numbers as digits, in every app:** "Opus five point five" → "Opus 5.5", "Fable at ninety-four" → "94", "three
+  percent" → "3%", "two hundred K" → "200K", "Max twenty X" → "20x", "seven thirty tonight" → "7:30", "twenty
+  twenty-six" → "2026". Rules, not an AI model, so it's instant and works in Claude and terminals too. Small numbers
+  stay words ("two things", "one of them") unless a unit or label makes them numbers ("3%", "step 2"). Checked
+  against 574 real dictations before turning on.
+- A comma after "if" before a word is dropped ("if, Opus did it" → "if Opus did it"); asides keep theirs
+  ("if, say, it rains").
+- Claude and other AI model names (Opus, Sonnet, Haiku, Gemini...) are in the built-in vocabulary.
+
 - **Hands-free:** double-tap the talk key to keep recording with no key held; the next press finishes, Esc cancels.
   A Hands-Free Key (menu) starts and stops with one press each, for a second macro-pad button.
 - Learning from edits no longer learns capital-letter tidy-ups of ordinary words.

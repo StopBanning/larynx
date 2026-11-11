@@ -87,6 +87,12 @@ public struct Pipeline {
             if context.tidy { result.text = Tidy.apply(input.text, mode: input.mode) }
             return result
         },
+        // Spoken numbers to digits in every mode, AI apps included ("Opus five point five" -> "Opus 5.5").
+        Stage(name: "numbers", setting: .numbersStage, enabled: { $0.tidy }) { input, context in
+            var result = input
+            if context.tidy { result.text = Numbers.apply(input.text) }
+            return result
+        },
         Stage(name: "rewrite", setting: .rewriteStage, enabled: { $0.rewrite || $0.forceRewrite }) { input, context in
             var result = input
             let started = Date()

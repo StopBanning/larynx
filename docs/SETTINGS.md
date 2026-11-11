@@ -44,6 +44,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `stages.dictionary` | `on` | `off`, `shadow`, `on`; personal dictionary replacements. |
 | `stages.vocabularyCase` | `on` | `off`, `shadow`, `on`; distinctive vocabulary spelling/case. |
 | `stages.tidy` | `on` | `off`, `shadow`, `on`; deterministic cleanup rules. |
+| `stages.numbers` | `on` | `off`, `shadow`, `on`; spoken numbers to digits ("ninety-four" -> 94, "five point two" -> 5.2, "three percent" -> 3%), in every mode. Small numbers stay words unless a unit or label follows ("3%", "step 2"). |
 | `stages.rewrite` | `on` | `off`, `shadow`, `on`; Apple-model rewrite, still gated by `rewrite`, mode, and rewrite triggers. |
 
 `stages.*` keys are nested inside a JSON `stages` object. The corresponding
@@ -60,7 +61,7 @@ legacy defaults keys use the dotted names shown in the table. Example:
 }
 ```
 
-The stage order is snippet → dictionary → vocabularyCase → tidy → rewrite.
+The stage order is snippet → dictionary → vocabularyCase → tidy → numbers → rewrite.
 `on` runs and applies a stage; `off` skips it; `shadow` computes a candidate and
 records a Step without feeding the candidate to subsequent stages or delivery.
 Each reached stage records `stage`, `before`, `after`, `applied`. `applied` means

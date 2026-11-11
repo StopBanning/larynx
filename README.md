@@ -68,7 +68,10 @@ about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite
   clipboard too.
 - **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
 - **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
-  spoken numbers, all on-device.
+  all on-device.
+- **Numbers as digits everywhere**, AI chats included: "Opus five point five" → "Opus 5.5", "three percent" → "3%",
+  "two hundred K" → "200K", "seven thirty tonight" → "7:30". Small numbers stay words ("two things") unless a unit
+  or label makes them numbers ("step 2").
 - **Knows your words**: project names from `~/work` (one-word folders like "larynx", and the unusual part of names
   like "govee-lights"), your dictionary, and anything in `~/Library/Application Support/Larynx/vocabulary.txt`.
   A small keyword model (Parakeet CTC 110M, downloaded once) listens for them after each transcript and swaps a
