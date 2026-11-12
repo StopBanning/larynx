@@ -14,7 +14,7 @@ import argparse, json, os, re, signal, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run import ALL_ENGINES, Engine, ROOT  # noqa: E402
+from run import Engine, ROOT  # noqa: E402
 
 DATA = Path(os.environ.get("LARYNX_DATA_DIR") or Path.home() / "Library/Application Support/Larynx").expanduser()
 PENDING = DATA / "golden" / "pending.jsonl"
@@ -50,9 +50,13 @@ def main():
     # when-idle.sh stops us with SIGTERM the moment you touch the keyboard: exit through finally (closes serve, saves).
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--binary", default=str(ROOT / ".build/release/larynx"))
+    # The installed app's own binary: its bundle id already has your engine and the backup compiled for the Neural
+    # Engine, so those start in seconds instead of minutes (the compile cache is per bundle id).
+    installed = Path.home() / "Applications/Larynx.app/Contents/MacOS/larynx"
+    ap.add_argument("--binary", default=str(installed if installed.exists() else ROOT / ".build/release/larynx"))
     ap.add_argument("--models-dir", default=str(DATA / "models"))
-    ap.add_argument("--engines", default=",".join(ALL_ENGINES))
+    # Already-compiled engines first, so an interrupted run still leaves two opinions per clip.
+    ap.add_argument("--engines", default="ultra,clean,parakeet,unified,bark3")
     a = ap.parse_args()
 
     items = [json.loads(l) for l in PENDING.read_text().splitlines() if l.strip()] if PENDING.exists() else []
