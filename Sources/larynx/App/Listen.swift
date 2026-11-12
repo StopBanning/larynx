@@ -78,7 +78,19 @@ extension Hotkey.Key {
         ListenSession.current = session
         session.privateField = Privacy.isPrivate(app: session.target)
         // Have the app build its accessibility tree while you speak, so the paste can be checked (R2).
-        if inApp, !session.privateField { let target = session.target; DispatchQueue.global(qos: .userInitiated).async { Inserter.wake(target) } }
+        if inApp, !session.privateField {
+            let target = session.target
+            DispatchQueue.global(qos: .userInitiated).async { Inserter.wake(target) }
+            // Keep it on for as long as you talk: a 30 s dictation outlasts the 25 s switch-off and found the tree off
+            // at paste time (3 of 18 on Nov 12, all over 25 s).
+            Task { @MainActor [weak session] in
+                while true {
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    guard let session, session.state.phase == .recording, ListenSession.current === session else { return }
+                    DispatchQueue.global(qos: .userInitiated).async { Inserter.wake(target) }
+                }
+            }
+        }
         NSSound(named: "Tink")?.play()
         setStatus("Listening...", recording: true)
         log("recording... [\(session.target?.bundleIdentifier ?? "?")] mic \(micMs) ms")

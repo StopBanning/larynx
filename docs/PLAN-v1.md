@@ -474,7 +474,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | F1-F5 | not started | |
 | G | not chosen | Q5 |
 | R1 | built Nov 12, collecting | History column `timing` (schema 2): mic, tail, wait, asr, clean, key-up to paste, deliver, idle gap, load, accessibility off at the press, preview running, reason code. Same on the log line; `larynx review` prints the split and reasons by app. Done when one day of use explains the slow and unconfirmed dictations. |
-| R2 | (a) built Nov 12, checking | Cause confirmed from history before any change: Claude dictations 25 s or more after the previous one were unconfirmed 66 of 68 times after `0bff612`, 19 of 155 before. Fix: `Inserter.wake` at key-down so the tree builds while you speak; a read waits up to 1.5 s after switch-on. (b) late check and (c) longer hold not built; decide on the next 100 Claude dictations. |
+| R2 | (a) built Nov 12, checking | Cause confirmed from history before any change: Claude dictations 25 s or more after the previous one were unconfirmed 66 of 68 times after `0bff612`, 19 of 155 before. Fix: `Inserter.wake` at key-down so the tree builds while you speak; a read waits up to 1.5 s after switch-on. First 18 dictations with it: 15 confirmed; with the tree off at the press 9 of 12 confirmed, and the 3 misses were all dictations over 25 s (the tree switched off mid-dictation). Now refreshed every 10 s while recording. (b) late check and (c) longer hold not built; decide on the next 100 Claude dictations. |
 | R3-R8 | not started (planned Nov 12) | Evidence table at the top of section R. |
 | W1-W7 | not started | W0 done (docs/WINDOWS.md) |
 
