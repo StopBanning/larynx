@@ -126,14 +126,24 @@ public enum Inserter {
         catch { copyOnly(text); return .copied("\(error)") }
         guard focus.editable == true else { return .pastedAndCopied(focus.role) }
         guard let element, let before, Settings.shared.string(.verifyPaste) != "off" else { return .inserted }
-        // Only a field that is readable and still exactly the same after 0.6 s counts as a paste that didn't arrive:
-        // anything else (it changed, or can't be read) is left alone, so text is never inserted twice.
-        if await changes(element, from: before, within: 0.6) { return .inserted }
-        if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success,
-           await changes(element, from: before, within: 0.3) { return .insertedBy("accessibility") }
-        if await changes(element, from: before, within: 0) == false {
+        // Only a field that is readable, still the same field, and still exactly the same text after 0.6 s counts as
+        // a paste that didn't arrive. Anything else (it changed, can't be read, or the app replaced the field, as
+        // Claude does right after a message is sent) is left alone, so text is never inserted twice.
+        let app = target ?? NSWorkspace.shared.frontmostApplication
+        switch await outcome(element, in: app, from: before, within: 0.6) {
+        case .changed, .unknown: return .inserted
+        case .unchanged: break
+        }
+        if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
+            switch await outcome(element, in: app, from: before, within: 0.3) {
+            case .changed: return .insertedBy("accessibility")
+            case .unknown: return .inserted
+            case .unchanged: break
+            }
+        }
+        if case .unchanged = await outcome(element, in: app, from: before, within: 0) {
             typeUnicode(text)
-            if await changes(element, from: before, within: 0.5) { return .insertedBy("typing") }
+            if case .changed = await outcome(element, in: app, from: before, within: 0.5) { return .insertedBy("typing") }
         }
         copyOnly(text)
         return .copied("the paste didn't arrive in the field")
@@ -168,6 +178,23 @@ public enum Inserter {
     static func value(of element: AXUIElement) -> String? {
         var v: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &v) == .success ? v as? String : nil
+    }
+
+    enum FieldOutcome { case changed, unchanged, unknown }
+
+    /// Checks every 50 ms for `seconds`, always against the field that has focus now: `.changed` once its text
+    /// differs from `before`; `.unknown` when it can't be read or focus moved to another element (the app rebuilt
+    /// the field); `.unchanged` only if the same field still holds exactly `before`.
+    static func outcome(_ element: AXUIElement, in app: NSRunningApplication?, from before: String, within seconds: Double) async -> FieldOutcome {
+        let deadline = Date().addingTimeInterval(seconds)
+        repeat {
+            guard let now = focusedElement(in: app), CFEqual(now, element) else { return .unknown }
+            guard let text = value(of: now) else { return .unknown }
+            if text != before { return .changed }
+            if seconds == 0 { return .unchanged }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        } while Date() < deadline
+        return .unchanged
     }
 
     /// Whether the field's text differs from `before` at some point within `seconds` (checked every 50 ms).
