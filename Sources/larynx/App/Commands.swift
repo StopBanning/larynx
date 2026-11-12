@@ -479,7 +479,9 @@ case "golden":
         // r plays it again, s skips, x drops the clip, q stops. Accepted clips join the set as source "random".
         var waiting = Golden.loadPending()
         if waiting.isEmpty { print("nothing waiting; larynx golden sample first"); exit(0) }
-        waiting.sort { ($0.agreed != nil ? 0 : 1, $0.id) < ($1.agreed != nil ? 0 : 1, $1.id) }
+        // Easiest first: the clips where most engines agree go quickest.
+        let votesFor = { (p: Golden.Pending) in Golden.proposal(heard: p.heard, typed: "").votes }
+        waiting.sort { (-votesFor($0), $0.audioSeconds, $0.id) < (-votesFor($1), $1.audioSeconds, $1.id) }
         var done = 0
         func play(_ path: String) -> Process? {
             if args.contains("--no-play") { return nil }  // tests
@@ -487,12 +489,28 @@ case "golden":
             p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
             return (try? p.run()) != nil ? p : nil
         }
+        var position = 0
         labelling: for item in waiting {
             guard let row = rows.first(where: { $0.id == item.id }) else { continue }
-            let proposal = item.agreed ?? row.text
-            print("\n[\(done + 1)/\(waiting.count)] \(String(format: "%.1f", item.audioSeconds)) s, \(item.agreed != nil ? "all engines agree" : item.heard.isEmpty ? "not pre-labelled" : "engines differ")")
-            if item.agreed == nil { for (engine, text) in item.heard.sorted(by: { $0.key < $1.key }) { print("   \(engine): \(text)") } }
-            print("   typed: \(row.text)\n > \(proposal)")
+            let (proposal, votes) = item.heard.isEmpty ? (row.text, 0) : Golden.proposal(heard: item.heard, typed: row.text)
+            let n = item.heard.count
+            let status = n == 0 ? "not pre-labelled" : votes == n ? "all \(n) engines agree" : votes > 0 ? "\(votes) of \(n) engines agree"
+                : "engines differ; starting from what was typed"
+            position += 1
+            print("\n[\(position)/\(waiting.count)] \(String(format: "%.1f", item.audioSeconds)) s, \(status)")
+            print(" > \(proposal)")
+            // Only the spots where an engine heard something else, so you know what to listen for.
+            var spots: [(spot: String, engines: [String])] = []
+            for (engine, text) in item.heard.sorted(by: { $0.key < $1.key }) {
+                let fillers: Set<String> = ["uh", "um", "uhm", "er", "erm", "ah", "hmm", "mm"]  // cleanup drops these on purpose
+                for d in Golden.differences(proposal, text) {
+                    if (d.base + " " + d.other).split(separator: " ").allSatisfy({ fillers.contains(String($0)) }) { continue }
+                    let spot = "\"\(d.base.isEmpty ? "-" : d.base)\" or \"\(d.other.isEmpty ? "-" : d.other)\""
+                    if let k = spots.firstIndex(where: { $0.spot == spot }) { spots[k].engines.append(engine) } else { spots.append((spot, [engine])) }
+                }
+            }
+            for s in spots.prefix(12) { print("   \(s.spot)  (\(s.engines.joined(separator: ", ")))") }
+            if spots.count > 12 { print("   ...and \(spots.count - 12) more") }
             var player = play(item.audio)
             while true {
                 print("Return keeps it, or type what was said (r again, s skip, x drop, q quit): ", terminator: "")

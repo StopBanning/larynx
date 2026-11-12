@@ -133,6 +133,39 @@ public enum Golden {
         return picked
     }
 
+    /// The best label to start from and how many engines heard exactly those words: all of them agreeing beats a
+    /// majority (3 or more), which beats the typed text. Returns the typed text with 0 votes when no 3 agree.
+    public static func proposal(heard: [String: String], typed: String) -> (text: String, votes: Int) {
+        let groups = Swift.Dictionary(grouping: heard.keys.sorted(), by: { normalized(heard[$0] ?? "") })
+            .filter { !$0.key.isEmpty }
+        guard let best = groups.max(by: { ($0.value.count, $1.key) < ($1.value.count, $0.key) }), best.value.count >= min(3, heard.count),
+              best.value.count >= 2 else { return (typed, 0) }
+        let text = normalized(typed) == best.key ? typed : heard[best.value[0]] ?? typed
+        return (text, best.value.count)
+    }
+
+    /// Where `other` differs from `base`, word for word: [("cloud", "Claude"), ("", "really")]. Empty when the words match.
+    public static func differences(_ base: String, _ other: String) -> [(base: String, other: String)] {
+        let a = normalized(base).split(separator: " ").map(String.init), b = normalized(other).split(separator: " ").map(String.init)
+        // Longest common subsequence table, then walk it to collect the runs that differ.
+        var t = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in stride(from: a.count - 1, through: 0, by: -1) {
+            for j in stride(from: b.count - 1, through: 0, by: -1) {
+                t[i][j] = a[i] == b[j] ? t[i + 1][j + 1] + 1 : max(t[i + 1][j], t[i][j + 1])
+            }
+        }
+        var out: [(base: String, other: String)] = []
+        var i = 0, j = 0, x: [String] = [], y: [String] = []
+        func flush() { if !x.isEmpty || !y.isEmpty { out.append((x.joined(separator: " "), y.joined(separator: " "))); x = []; y = [] } }
+        while i < a.count || j < b.count {
+            if i < a.count, j < b.count, a[i] == b[j] { flush(); i += 1; j += 1 }
+            else if j < b.count, i == a.count || t[i][j + 1] >= t[i + 1][j] { y.append(b[j]); j += 1 }
+            else { x.append(a[i]); i += 1 }
+        }
+        flush()
+        return out
+    }
+
     /// Words only: lower case, no punctuation, hyphens as spaces ("Larynx, re-run." -> "larynx re run").
     public static func normalized(_ text: String) -> String {
         text.lowercased().replacingOccurrences(of: "-", with: " ")

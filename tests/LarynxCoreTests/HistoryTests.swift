@@ -261,3 +261,17 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     let mode = try FileManager.default.attributesOfItem(atPath: Golden.pendingFile(root: folder).path)[.posixPermissions] as? Int
     #expect(mode == 0o600)
 }
+
+@Test func labelProposalsTakeTheMajorityAndShowOnlyWhereEnginesDiffer() {
+    let typed = "Send the draft to Priya tonight."
+    let heard = ["a": "send the draft to priya tonight", "b": "send the draft to priya tonight", "c": "Send the draft to Priya tonight.",
+                 "d": "send the graph to priya tonight", "e": "send draft to maria tonight"]
+    #expect(Golden.proposal(heard: heard, typed: typed) == (typed, 3))
+    #expect(Golden.proposal(heard: ["a": "one two", "b": "one too", "c": "won two", "d": "one to"], typed: typed) == (typed, 0))
+    #expect(Golden.proposal(heard: ["a": "water the plants", "b": "water the plants"], typed: "Water the plants.") == ("Water the plants.", 2))
+    let d = Golden.differences(typed, heard["e"]!)
+    #expect(d.map(\.base) == ["the", "priya"] && d.map(\.other) == ["", "maria"])
+    #expect(Golden.differences(typed, heard["d"]!).map { "\($0.base)>\($0.other)" } == ["draft>graph"])
+    #expect(Golden.differences(typed, "send the draft to priya tonight").isEmpty)
+    #expect(Golden.differences("a b", "a b c").map(\.other) == ["c"])
+}
