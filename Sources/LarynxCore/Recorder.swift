@@ -17,6 +17,9 @@ public final class Recorder: @unchecked Sendable {
     /// instantly and includes `preRoll` from just before the press; a cold one takes 150-300 ms, enough to lose the
     /// first syllable. While warm, audio only passes through a `preRoll`-long ring in memory and is never kept.
     public var warmSeconds: () -> Double = { 0 }
+    /// The microphone to use (a CoreAudio device UID, `micDevice`); empty or unplugged means the system default.
+    public var deviceUID: () -> String = { "" }
+    private var activeUID = ""
     public static let preRoll: Double = 0.15
     private var ring: [Float] = []
     private var cooling: DispatchWorkItem?
@@ -41,6 +44,8 @@ public final class Recorder: @unchecked Sendable {
             return
         }
         cooling?.cancel(); cooling = nil
+        // A different microphone was picked while the engine stayed warm: start over on the new one.
+        if engine.isRunning, deviceUID() != activeUID { coolDownNow() }
         if engine.isRunning {
             // Still warm from the last dictation: start at once, with the moment just before the press.
             lock.withLock { samples = ring; ring.removeAll(keepingCapacity: true); isRecording = true }
@@ -48,6 +53,13 @@ public final class Recorder: @unchecked Sendable {
         }
         lock.lock(); samples.removeAll(keepingCapacity: true); ring.removeAll(); lock.unlock()
         let input = engine.inputNode
+        // Point the input at the chosen microphone before reading its format (system default if it's gone).
+        let uid = deviceUID()
+        if !uid.isEmpty, var device = AudioDevices.id(forUID: uid), let unit = input.audioUnit {
+            AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &device,
+                                 UInt32(MemoryLayout<AudioDeviceID>.size))
+        }
+        activeUID = uid
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0 else { throw LarynxError.noMicrophone }
         converter = AVAudioConverter(from: format, to: target)
@@ -76,6 +88,12 @@ public final class Recorder: @unchecked Sendable {
         }
         lock.lock(); defer { lock.unlock() }
         return samples
+    }
+
+    private func coolDownNow() {
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        lock.withLock { ring.removeAll() }
     }
 
     /// Closes the microphone now (unless a dictation started meanwhile).

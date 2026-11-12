@@ -66,6 +66,7 @@ extension Hotkey.Key {
     // The menu bar app keeps the microphone open for `micWarm` seconds after a dictation, so the next press starts
     // instantly (a cold start loses the first 150-300 ms). Command-line tools and serve close it at once.
     if inApp { recorder.warmSeconds = { Double(Settings.shared.string(.micWarm)) ?? 30 } }
+    recorder.deviceUID = { Settings.shared.string(.micDevice) }
     let hotkey = Hotkey(keys: keys, onDown: {
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
         let micStart = Date()

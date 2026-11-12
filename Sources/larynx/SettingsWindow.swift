@@ -162,6 +162,10 @@ private struct SpeechPane: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Microphone") {
+                Picker("Microphone", selection: setting(.micDevice)) {
+                    Text("System default").tag("")
+                    ForEach(AudioDevices.inputs(), id: \.uid) { Text($0.name).tag($0.uid) }
+                }
                 Picker("Keep the microphone open after a dictation", selection: setting(.micWarm)) {
                     Text("Off (close it at once)").tag("0")
                     Text("10 seconds").tag("10")

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Pick your microphone** (Settings → Speech → Microphone, or `micDevice`): any input macOS knows, by name;
+  an unplugged one falls back to the system default. `larynx mics` lists them.
 - **Settings window** (menu: Settings…, ⌘,): talk keys, hands-free, pill, speech model, microphone, vocabulary,
   cleanup and stages, history and recordings, screen context, your words. Same settings.json as the menu.
 - **Setup window** on a fresh install (or menu: Setup…): the three permissions with live status and buttons to the

@@ -382,6 +382,12 @@ case "ax-release":
         }
     }
     exit(0)
+case "mics":
+    // The microphones macOS knows about; the UID is what `micDevice` in settings.json takes.
+    let chosen = Settings.shared.string(.micDevice)
+    for m in AudioDevices.inputs() { print("\(m.uid == chosen ? "*" : " ") \(m.name)    \(m.uid)") }
+    if chosen.isEmpty { print("(using the system default)") }
+    exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
     MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60, prefill: option("--prefill") ?? "") }

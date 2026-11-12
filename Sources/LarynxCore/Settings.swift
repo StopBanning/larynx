@@ -13,7 +13,7 @@ public final class Settings: @unchecked Sendable {
 
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
-        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded
+        case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded, micDevice
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -26,7 +26,7 @@ public final class Settings: @unchecked Sendable {
             case .engine: return "ultra"
             case .rewrite: return "auto"
             case .vocabularyRoots: return "~/work"
-            case .keys, .toggleKeys: return ""
+            case .keys, .toggleKeys, .micDevice: return ""
             case .loginItemSet: return "false"
             case .historyDays: return "30"
             case .keepAudio, .debugText: return "off"
@@ -51,7 +51,7 @@ public final class Settings: @unchecked Sendable {
             case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
             case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet, .onboarded: return ["true", "false"].contains(value)
-            case .keys, .vocabularyRoots, .toggleKeys: return true
+            case .keys, .vocabularyRoots, .toggleKeys, .micDevice: return true
             default: return StageMode(rawValue: value) != nil
             }
         }
