@@ -73,7 +73,22 @@ public enum Tidy {
         ("lone-letter", loneLetterRestarts),
         ("spoken-list", spokenList),
         ("counted-list", countedList),
+        ("spoken-punctuation", spokenPunctuation),
     ]
+
+    /// "Send it tomorrow question mark" -> "Send it tomorrow?": a punctuation name said right after a word becomes
+    /// the mark. Not after a determiner or number ("the period of time", "a comma", "two colons"), and only where the
+    /// name ends the phrase (end, or another mark or word follows it).
+    static func spokenPunctuation(_ text: String) -> String {
+        let marks: [(String, String)] = [("question mark", "?"), ("exclamation mark", "!"), ("exclamation point", "!"),
+                                         ("full stop", "."), ("period", "."), ("comma", ","), ("semicolon", ";"), ("colon", ":")]
+        var s = text
+        for (name, mark) in marks {
+            let pattern = "(?i)(?<![\\w'])(?!(?:the|a|an|this|that|one|two|three|every|each|no)\\s)([A-Za-z0-9']+)[,.]?\\s+" + name + "[.,!?]?(?=\\s|$)"
+            s = s.replacingOccurrences(of: pattern, with: "$1" + mark, options: .regularExpression)
+        }
+        return s
+    }
 
     /// "There are three things I want from you. I want you to provide the report, get it back, ship it off." An
     /// announced count followed by exactly that many comma-separated items (each two words or more) becomes a

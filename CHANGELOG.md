@@ -24,7 +24,8 @@
   shoes" is left alone.
 - Spoken lists ("Number one, flights. Number two, hotels.") are being tried in shadow: proposals are recorded
   (`larynx mine --shadow spoken-list`), your text isn't changed yet. So are announced lists: "three things … X, Y,
-  Z" with exactly three items (`counted-list`).
+  Z" with exactly three items (`counted-list`), and spoken punctuation ("…tomorrow question mark" → "…tomorrow?";
+  "a period of time" stays) as `spoken-punctuation`.
 - **Dictations fit what's already in the field.** Several dictations into one message no longer run together
   ("lunch.Are we" → "lunch. Are we"), and a dictation that continues a sentence starts lowercase ("Hey Sam, can
   you…"). Names, "I", acronyms and your vocabulary keep their capitals; empty fields, new lines and a selection

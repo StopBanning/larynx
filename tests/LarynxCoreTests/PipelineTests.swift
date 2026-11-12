@@ -170,3 +170,13 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
     let story = await Pipeline().run(transcript("We tried three things, but none of them worked.", mode: .ai), context: .init(rewrite: false))
     #expect(!story.steps.contains { $0.stage == "shadow:counted-list" })
 }
+
+@Test func spokenPunctuationIsProposedInShadowOnly() async {
+    let r = await Pipeline().run(transcript("Can you send it tomorrow question mark", mode: .ai), context: .init(rewrite: false))
+    #expect(r.text == "Can you send it tomorrow question mark")
+    #expect(r.steps.first { $0.stage == "shadow:spoken-punctuation" }?.after == "Can you send it tomorrow?")
+    for keep in ["It happened over a period of time.", "Put a comma after the name.", "The question mark goes at the end."] {
+        let k = await Pipeline().run(transcript(keep, mode: .ai), context: .init(rewrite: false))
+        #expect(!k.steps.contains { $0.stage == "shadow:spoken-punctuation" }, "\(keep)")
+    }
+}
