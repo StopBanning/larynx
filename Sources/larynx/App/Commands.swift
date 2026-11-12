@@ -369,6 +369,19 @@ case "idle":
     let session = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: any)
     print("\(Int(hardware)) \(Int(session))")
     exit(0)
+case "ax-release":
+    // Turns off the accessibility modes Chrome/Electron apps keep while asked (larynx ax-release [--app <bundle id>],
+    // default Claude). For cleaning up after an older Larynx that left them on.
+    let id = option("--app") ?? "com.anthropic.claudefordesktop"
+    for app in NSWorkspace.shared.runningApplications where app.bundleIdentifier == id {
+        let element = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.5)
+        for attribute in ["AXManualAccessibility", "AXEnhancedUserInterface"] {
+            let r = AXUIElementSetAttributeValue(element, attribute as CFString, kCFBooleanFalse)
+            print("\(id) pid \(app.processIdentifier): \(attribute) off (\(r == .success ? "ok" : "error \(r.rawValue)"))")
+        }
+    }
+    exit(0)
 case "capture-window":
     // Runs AppKit's event loop on the main thread itself (not inside a task, which would block the main actor).
     MainActor.assumeIsolated { CaptureWindow.shared.run(seconds: Double(option("--seconds") ?? "") ?? 60, prefill: option("--prefill") ?? "") }

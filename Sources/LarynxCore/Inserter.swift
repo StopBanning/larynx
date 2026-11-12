@@ -259,8 +259,7 @@ public enum Inserter {
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(appElement, 0.25)  // a hung or sleeping app must not stall delivery
         // Chrome and Electron apps (Claude, Slack, VS Code) only build their accessibility tree when asked.
-        AXUIElementSetAttributeValue(appElement, "AXManualAccessibility" as CFString, kCFBooleanTrue)
-        AXUIElementSetAttributeValue(appElement, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+        AccessibilityModes.enable(appElement, pid: app.processIdentifier)
         var value: CFTypeRef?
         let err = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value)
         if err == .noValue {
@@ -321,5 +320,54 @@ public enum Inserter {
             }
             return kVK_ANSI_V
         }
+    }
+}
+
+
+/// Chrome and Electron apps (Claude, Slack, VS Code) only build their accessibility tree when asked, through two
+/// attributes. Left on, the app keeps that tree up to date for as long as it runs, which costs it real work on a very
+/// long page (suspected in two Claude freezes, Nov 11). So Larynx turns them on only for the apps it reads, and turns
+/// them back off `holdSeconds` after the last use, unless they were already on before it came (VoiceOver, say).
+public enum AccessibilityModes {
+    static let attributes = ["AXManualAccessibility", "AXEnhancedUserInterface"]
+    public static let holdSeconds: TimeInterval = 25
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var enabledByUs: [pid_t: [String]] = [:]
+    nonisolated(unsafe) private static var release: [pid_t: DispatchWorkItem] = [:]
+
+    static func enable(_ appElement: AXUIElement, pid: pid_t) {
+        lock.lock(); defer { lock.unlock() }
+        if enabledByUs[pid] == nil {
+            var turnedOn: [String] = []
+            for attribute in attributes {
+                var value: CFTypeRef?
+                let wasOn = AXUIElementCopyAttributeValue(appElement, attribute as CFString, &value) == .success && (value as? Bool) == true
+                if !wasOn, AXUIElementSetAttributeValue(appElement, attribute as CFString, kCFBooleanTrue) == .success {
+                    turnedOn.append(attribute)
+                }
+            }
+            enabledByUs[pid] = turnedOn
+        }
+        // Each use pushes the switch-off back: it happens once the app has gone `holdSeconds` without Larynx.
+        release[pid]?.cancel()
+        let work = DispatchWorkItem { AccessibilityModes.disable(pid: pid) }
+        release[pid] = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + holdSeconds, execute: work)
+    }
+
+    /// Turns off what Larynx turned on in that app (nothing it found already on).
+    public static func disable(pid: pid_t) {
+        lock.lock(); defer { lock.unlock() }
+        release[pid] = nil
+        guard let attrs = enabledByUs.removeValue(forKey: pid), !attrs.isEmpty else { return }
+        let appElement = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(appElement, 0.25)
+        for attribute in attrs { AXUIElementSetAttributeValue(appElement, attribute as CFString, kCFBooleanFalse) }
+    }
+
+    /// At quit: switch everything back off.
+    public static func disableAll() {
+        lock.lock(); let pids = Array(enabledByUs.keys); lock.unlock()
+        for pid in pids { disable(pid: pid) }
     }
 }
