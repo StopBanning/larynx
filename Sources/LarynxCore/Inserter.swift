@@ -131,13 +131,16 @@ public enum Inserter {
         // Claude does right after a message is sent) is left alone, so text is never inserted twice.
         let app = target ?? NSWorkspace.shared.frontmostApplication
         switch await outcome(element, in: app, from: before, within: 0.6) {
-        case .changed, .unknown: return .inserted
+        case .changed: return .inserted
+        // Can't tell (the app replaced the field, or it can't be read): never paste again, but leave the words on
+        // the clipboard too, so a paste that missed is one ⌘V away instead of gone.
+        case .unknown: copyOnly(text); return .pastedAndCopied("couldn't confirm the paste")
         case .unchanged: break
         }
         if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
             switch await outcome(element, in: app, from: before, within: 0.3) {
             case .changed: return .insertedBy("accessibility")
-            case .unknown: return .inserted
+            case .unknown: copyOnly(text); return .pastedAndCopied("couldn't confirm the insert")
             case .unchanged: break
             }
         }
