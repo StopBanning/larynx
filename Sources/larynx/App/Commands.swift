@@ -467,16 +467,17 @@ func runFeed(_ path: String) async {
             let saved: [[(NSPasteboard.PasteboardType, Data)]] = (board.pasteboardItems ?? []).map { item in
                 item.types.compactMap { type in item.data(forType: type).map { (type, $0) } }
             }
+            let countBefore = board.changeCount
             let started = Date()
             // The same fit-to-field as live dictation (Listen passes the vocabulary terms the same way).
             await Loader.shared.vocabulary.value
             let terms = Set(vocabularyCache.terms)
             delivery = await Inserter.deliver(result.text, to: target, keepsCapital: { terms.contains($0) }).label
             deliveredMs = ms(since: started)
-            // A paste restores the clipboard itself after 0.5 s; the copy fallback leaves the words there. Either way,
-            // if the test's words are still on the clipboard after that, put back what was there before.
+            // A test must leave the clipboard exactly as it found it: after the paste's own restore (0.5 s), if
+            // anything changed it, put back what was there before (the copy fallbacks leave the words there).
             try? await Task.sleep(nanoseconds: 800_000_000)
-            if board.string(forType: .string) == result.text {
+            if board.changeCount != countBefore {
                 board.clearContents()
                 board.writeObjects(saved.map { pairs -> NSPasteboardItem in
                     let item = NSPasteboardItem()

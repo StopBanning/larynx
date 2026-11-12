@@ -130,7 +130,7 @@ public enum Inserter {
         // a paste that didn't arrive. Anything else (it changed, can't be read, or the app replaced the field, as
         // Claude does right after a message is sent) is left alone, so text is never inserted twice.
         let app = target ?? NSWorkspace.shared.frontmostApplication
-        switch await outcome(element, in: app, from: before, within: 0.6) {
+        switch await outcome(element, in: app, from: before, text: text, within: 0.6) {
         case .changed: return .inserted
         // Can't tell (the app replaced the field, or it can't be read): never paste again, but leave the words on
         // the clipboard too, so a paste that missed is one ⌘V away instead of gone.
@@ -138,15 +138,15 @@ public enum Inserter {
         case .unchanged: break
         }
         if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
-            switch await outcome(element, in: app, from: before, within: 0.3) {
+            switch await outcome(element, in: app, from: before, text: text, within: 0.3) {
             case .changed: return .insertedBy("accessibility")
             case .unknown: copyOnly(text); return .pastedAndCopied("couldn't confirm the insert")
             case .unchanged: break
             }
         }
-        if case .unchanged = await outcome(element, in: app, from: before, within: 0) {
+        if case .unchanged = await outcome(element, in: app, from: before, text: text, within: 0) {
             typeUnicode(text)
-            if case .changed = await outcome(element, in: app, from: before, within: 0.5) { return .insertedBy("typing") }
+            if case .changed = await outcome(element, in: app, from: before, text: text, within: 0.5) { return .insertedBy("typing") }
         }
         copyOnly(text)
         return .copied("the paste didn't arrive in the field")
@@ -185,19 +185,31 @@ public enum Inserter {
 
     enum FieldOutcome { case changed, unchanged, unknown }
 
-    /// Checks every 50 ms for `seconds`, always against the field that has focus now: `.changed` once its text
-    /// differs from `before`; `.unknown` when it can't be read or focus moved to another element (the app rebuilt
-    /// the field); `.unchanged` only if the same field still holds exactly `before`.
-    static func outcome(_ element: AXUIElement, in app: NSRunningApplication?, from before: String, within seconds: Double) async -> FieldOutcome {
+    /// Checks every 50 ms for `seconds`, always against the field that has focus now. `.changed`: the same field's
+    /// text differs from `before`, or the focused field (even a rebuilt one, as Claude makes after a message is sent)
+    /// now contains the dictated words. `.unchanged`: the same field still holds exactly `before`. `.unknown`: neither
+    /// could be established by the deadline (unreadable, or a different field without the words).
+    static func outcome(_ element: AXUIElement, in app: NSRunningApplication?, from before: String, text: String,
+                        within seconds: Double) async -> FieldOutcome {
         let deadline = Date().addingTimeInterval(seconds)
+        let needle = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(60))
+        var result = FieldOutcome.unknown
         repeat {
-            guard let now = focusedElement(in: app), CFEqual(now, element) else { return .unknown }
-            guard let text = value(of: now) else { return .unknown }
-            if text != before { return .changed }
-            if seconds == 0 { return .unchanged }
+            if let now = focusedElement(in: app), let value = value(of: now) {
+                if CFEqual(now, element) {
+                    if value != before { return .changed }
+                    result = .unchanged
+                } else {
+                    if !needle.isEmpty, value.contains(needle) { return .changed }
+                    result = .unknown
+                }
+            } else {
+                result = .unknown
+            }
+            if seconds == 0 { return result }
             try? await Task.sleep(nanoseconds: 50_000_000)
         } while Date() < deadline
-        return .unchanged
+        return result
     }
 
     /// Whether the field's text differs from `before` at some point within `seconds` (checked every 50 ms).
