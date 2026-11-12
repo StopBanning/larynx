@@ -7,131 +7,152 @@
 ![Swift 6.1](https://img.shields.io/badge/Swift-6.1-orange)
 
 **Free, open-source, fully offline dictation for the Mac.** Hold a key, speak, let go: clean, punctuated text lands
-wherever your cursor is, in about a tenth of a second. Speech runs on the Neural Engine with NVIDIA's Parakeet
-models through [FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing you say ever leaves your Mac.
-No account, no subscription, no word limits.
+wherever your cursor is, in about 0.15 s. It works in every app, with no account, no subscription and no word
+limits. Speech runs on your Mac's Neural Engine with NVIDIA's Parakeet models through
+[FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing you say ever leaves your Mac.
 
-<p align="center"><b>0.1 s</b> from letting go of the key to text &nbsp;·&nbsp; <b>0 bytes</b> of your voice sent anywhere &nbsp;·&nbsp; <b>$0</b>, no limits</p>
+<p align="center"><b>0.15 s</b> from letting go of the key to text &nbsp;·&nbsp; <b>0 bytes</b> of your voice sent anywhere &nbsp;·&nbsp; <b>$0</b>, no limits</p>
 
 <p align="center">
   <img src="docs/images/pill-demo.gif" alt="The Larynx pill in clear Liquid Glass over colour stripes: the app icon, a waveform moving with the voice, and the words appearing as they are spoken" width="640">
 </p>
-<p align="center"><sub>The pill, in Liquid Glass: where your words are going, a waveform that moves with your voice, and the
-words as you say them. The menu's Pill Glass slider goes from fully see-through to clear glass, frosted and solid:</sub></p>
-<p align="center">
-  <img src="docs/images/pill-glass-frosted.png" alt="The pill frosted" width="380">
-  <img src="docs/images/pill-glass-solid.png" alt="The pill solid" width="380">
-</p>
-
-## Why it exists
-
-Cloud dictation apps are excellent, and they send your voice to a server. Larynx sets out to match them feature for
-feature while staying local and free. Where it stands (measured from daily use and the test suite in this repo):
-
-| | Larynx | Typical cloud dictation app |
-| --- | --- | --- |
-| Where your audio goes | Stays on your Mac ([PRIVACY.md](docs/PRIVACY.md)) | Its servers |
-| Works offline | Yes | No |
-| Price, limits | Free, unlimited, MIT | Free tier with weekly limits, paid plans |
-| Key-up to text | 0.11 s median, 0.25 s p90 (205 real dictations) | Network round trip |
-| Cleanup | Fillers, stutters, false starts, self-corrections ("Tuesday, no Wednesday"), code by voice | Similar |
-| Numbers as digits | "five point five" → 5.5, "three percent" → 3%, in every app, instantly (rules, no AI call) | Yes |
-| Hands-free | Double-tap the key, or a one-press Hands-Free Key; up to 30 min | Yes |
-| History | 30 days on your Mac, full-text search, audio optional; password fields never kept | Yes |
-| Learns your words | From repeats and from your edits, with Undo | From your edits |
-| Never loses a dictation | Crash spool + clipboard fallback + target-app lock | Varies |
-| Scriptable | CLI, JSON-lines API, MCP server | Limited |
-
-The full roadmap, with a row-by-row scoreboard and the evidence for each row, is [docs/MASTER-PLAN.md](docs/MASTER-PLAN.md).
-Windows is in progress: the text engine and the speech model already run on Windows in CI ([docs/WINDOWS.md](docs/WINDOWS.md)).
-
-Built to stand alone and to be embedded: apps such as [Locust](https://locust.lol) drive it over JSON lines (see
-[docs/INTEGRATION.md](docs/INTEGRATION.md)).
-
-## Status
-
-Daily-driver quality on Apple Silicon, macOS 15+ (the AI rewrite needs macOS 26). Measured on an M6 Mac mini:
-about 0.1 s from releasing the key to text, about 0.3 s more when the AI rewrite runs.
-
-- **Hold to talk** with Fn, Right Option or Right Command (or a macro-pad button that sends one); pressing another key
-  while holding cancels, so shortcuts still work.
-- **Hands-free**: double-tap the talk key and keep talking with nothing held (a lock shows in the pill); press it
-  again to finish, Esc to cancel. Or pick a Hands-Free Key in the menu (a second macro-pad button, say): one press
-  starts, the next finishes. Stops by itself after 30 minutes.
-- **Live preview in Liquid Glass**: while you talk, a small glass orb shows the icon of the app your words are going
-  to and a waveform that moves with your voice; your words appear in a bubble that grows out of it. When you let go
-  the two melt into one shape while the transcript is made. It sits just above the text box you're dictating into
-  (or at the bottom of the screen when the app doesn't say where that is), never takes focus, warns you if the mic
-  hears nothing, and shows a lock when you're in a password field (nothing saved). The menu's Pill Glass slider sets
-  how see-through it is, from no glass at all to clear glass, frosted and solid, and shows the pill while you drag. Turn it off from the menu
-  (Live Preview); `larynx pill-demo` plays it for a screenshot (`LARYNX_DEMO_BACKDROP=1` adds colour stripes behind it, `=dark` a dark window).
-- **Never lands in the wrong app**: the target app is captured when you press the key. Switch apps mid-sentence and
-  Larynx brings the original back before pasting.
-- **Never loses a transcript**: before pasting, Larynx asks macOS whether a text field has focus. If nothing can take
-  the text (no text box clicked, a password field, missing permission), it stays on your clipboard and the pill says
-  "Copied, press ⌘V to paste". When an app won't say what has focus, Larynx pastes and keeps the text on the
-  clipboard too.
-- **Second chance**: if the main speech model hears nothing in a clip that clearly has speech, the other model tries.
-- **Cleanup for messages**: fillers, stutters, self-corrections ("Tuesday, no Wednesday" becomes "Wednesday"),
-  all on-device.
-- **Numbers as digits everywhere**, AI chats included: "Opus five point five" → "Opus 5.5", "three percent" → "3%",
-  "two hundred K" → "200K", "seven thirty tonight" → "7:30". Small numbers stay words ("two things") unless a unit
-  or label makes them numbers ("step 2").
-- **Knows your words**: project names from `~/work` (one-word folders like "larynx", and the unusual part of names
-  like "govee-lights"), your dictionary, and anything in `~/Library/Application Support/Larynx/vocabulary.txt`.
-  A small keyword model (Parakeet CTC 110M, downloaded once) listens for them after each transcript and swaps a
-  misheard word only when it sounds like the term ("macropod" becomes "Macropad"). `larynx vocab` lists them; change
-  the folders with `defaults write com.automatedworkflow.larynx vocabularyRoots ~/work,~/code`; turn it off with
-  `defaults write com.automatedworkflow.larynx vocabulary off`.
-- **Teaches itself your words**, two ways, and the pill says "Learned" when it does:
-  - *Say it again.* If you repeat a sentence within 90 seconds with one word changed ("Tell Logus to start" ...
-    "Tell Locust to start"), Larynx learns the fix. A made-up word the speech model produced goes into your
-    dictionary (always safe: it can't change a real word); a new name goes into your vocabulary. When both are real
-    words ("send"/"sent") it's probably a change of mind, so it's only saved as a suggestion.
-  - *Fix it in place.* For 20 seconds after a paste, Larynx watches the text field (works in Messages and Claude).
-    If you change a word to one that sounds like what it heard ("Gavy" to "Govee"), it learns that too.
-  - The menu has **Undo Learned** for the last thing it learned; `larynx mine` lists what your history would teach.
-    Turn learning off with `learn: off`.
-- **Snippets**: say a cue on its own ("my calendar link") and Larynx types the saved text. Edit them from the menu
-  (`snippets.json`, `{"cue": "text"}`).
-- **Code by voice**: "camel case user id" becomes `userId`; also snake, kebab, pascal and constant case ("all caps").
-  "main dot swift" becomes `main.swift`, "dot env" becomes `.env`, and API, JSON, URL, GitHub, iOS and friends get
-  their proper spelling. About 70 developer names (Supabase, Vercel, Postgres, Kubernetes...) are in the vocabulary
-  out of the box (`defaults write com.automatedworkflow.larynx devTerms off` removes them).
-- **25 languages**: the default model, Parakeet Ultra, covers 25 European languages with no switch.
-- **Menu bar settings**: Live Preview, AI Cleanup, Talk Key and Open at Login are checkboxes in the menu; Recent lists
-  your last 10 transcripts (click to copy). Opens at login by default.
-- **History that stays on your Mac**: dictations are kept for 30 days in a local database you can search with
-  `larynx history --search <words>`. Audio is not kept (unless you turn on `keepAudio`), and nothing typed into a
-  password field or a password manager is ever stored. `history: off` keeps everything in memory instead. See
-  [docs/PRIVACY.md](docs/PRIVACY.md).
-- **Survives a crash**: each recording is written to disk before it is transcribed, so if Larynx quits mid-way the
-  next launch finishes the job and shows it under Recent as "Recovered".
-- **Agents**: `larynx mcp` is an MCP server (see [docs/INTEGRATION.md](docs/INTEGRATION.md)).
+<p align="center"><sub>The pill: the app your words are going to, a waveform that moves with your voice, and the
+words as you say them.</sub></p>
 
 ## Install
 
-On an Apple Silicon Mac with macOS 15 or later, one line in Terminal:
+On an Apple Silicon Mac with macOS 15 or later, paste one line into Terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/install.sh | zsh
 ```
 
-It checks the Mac, fetches the source, builds `~/Applications/Larynx.app` (Apple's free command-line developer tools
-are needed; it opens their installer if they're missing) and opens it. A setup window walks you through the three
-permissions (Microphone, Input Monitoring, Accessibility), a microphone test and a box to try it. The speech model
-(about 500 MB) downloads once, on first launch. Run the same line again to update. Everything else is in
-Settings… in the menu (⌘,).
+It builds `~/Applications/Larynx.app` from source and opens it (a few minutes the first time). Apple's free
+command-line developer tools are needed; the script opens their installer if they are missing. A setup window then
+walks you through the three permissions (Microphone, Input Monitoring, Accessibility), a microphone test and a box
+to try a dictation in. The speech model (about 500 MB) downloads once, on first launch. Run the same line again to
+update.
 
-## Use
+Then hold **Fn**, **Right Option** or **Right Command**, speak, and let go. Everything else is in the menu bar icon
+and in Settings… (⌘,).
 
-The menu bar app: `./scripts/make-app.sh` builds `~/Applications/Larynx.app` from a checkout. Open it, allow
-Microphone, Input Monitoring and Accessibility when macOS asks, then hold Fn, Right Option or Right Command to talk (pressing another key while holding cancels, so shortcuts still work). Its model
-lives in `~/Library/Application Support/Larynx/models`; its log is `~/Library/Logs/Larynx.log`. Some keyboards (Keychron, for one) never send
-Fn to macOS. Change the keys with `defaults write com.automatedworkflow.larynx keys rightCommand` (comma-separated).
+<p align="center">
+  <img src="docs/images/setup.png" alt="The setup window: three permissions with live status, a microphone test, the speech model's state and a box to try a dictation" width="330">
+  <img src="docs/images/settings-general.png" alt="The Settings window, General pane: talk keys, hands-free, pill and login options" width="330">
+</p>
+
+There is no downloadable app yet: a signed, notarized build needs a paid Apple developer account. Building from
+source is the supported install for now.
+
+## What it does
+
+**Talking**
+
+- **Hold to talk** with Fn, Right Option or Right Command (or a macro-pad button that sends one). Pressing another
+  key while holding cancels, so your shortcuts still work.
+- **Hands-free**: double-tap the talk key and keep talking with nothing held; press again to finish, Esc to cancel.
+  Or pick a Hands-Free Key: one press starts, the next finishes. Stops by itself after 30 minutes.
+- **Live preview**: a small Liquid Glass pill sits just above the text box you are dictating into. It shows the
+  target app's icon, a waveform and your words as you say them, never takes focus, warns you if the microphone
+  hears nothing, and shows a lock in a password field. A slider sets how see-through it is.
+- **25 languages** with the default model (Parakeet Ultra), with no switch to flip.
+- **Pick your microphone** in Settings; an unplugged one falls back to the system default.
+
+**Never loses your words**
+
+- **The first word**: the microphone stays warm for 30 s after a dictation, so the next press starts instantly and
+  includes the 0.15 s before it.
+- **The last word**: if you let go of the key mid-word, Larynx keeps listening until the word ends (at most 0.3 s).
+- **The right app**: the target app is captured when you press the key. Switch apps mid-sentence and Larynx brings
+  the original back before pasting.
+- **A paste that can't silently fail**: where the text field can be read, Larynx checks that the words arrived. If
+  they did not, it inserts them through Accessibility, then by typing, then leaves them on the clipboard and says
+  so. When it can't tell, it keeps the words on the clipboard as well.
+- **A crash**: each recording is written to disk before it is transcribed, so if Larynx quits mid-way the next
+  launch finishes the job and lists it under Recent as "Recovered".
+- **A silent model**: if the main speech model hears nothing in a clip that clearly has speech, the backup model
+  tries.
+
+**Cleanup**
+
+- **Fillers, stutters and false starts** are removed ("I went to the, I drove" → "I drove"), and self-corrections
+  are applied ("Tuesday, no Wednesday" → "Wednesday"). All on your Mac.
+- **Numbers as digits** in every app: "five point five" → 5.5, "three percent" → 3%, "two hundred K" → 200K,
+  "seven thirty tonight" → 7:30. Small numbers stay words ("two things") unless a unit or label makes them numbers
+  ("step 2"). Rules, not an AI call, so it is instant.
+- **Fits what is already in the field**: several dictations into one message get the right space and capital
+  between them; one that continues a sentence starts lowercase.
+- **Layout by voice**: "new line" and "new paragraph" make real line breaks. In Mail and Outlook, a greeting and a
+  sign-off go on their own lines.
+- **Code by voice**: "camel case user id" → `userId` (also snake, kebab, pascal and constant case), "main dot
+  swift" → `main.swift`, and API, JSON, GitHub and about 70 developer names get their proper spelling.
+- **Snippets**: say a cue on its own ("my calendar link") and Larynx types the saved text.
+- **The app sets the tone**: a light touch for AI chats, terminals and editors; finished sentences for Mail, Slack,
+  Messages and Notes.
+
+**Your words**
+
+- **Knows your vocabulary**: your dictionary, a `vocabulary.txt` you can edit, and project names from the folders
+  you choose (`vocabularyRoots`, `~/work` by default). A small keyword model swaps a misheard word only when it
+  sounds like one of your terms ("macropod" → "Macropad").
+- **Teaches itself**, two ways, and the pill says "Learned" when it does. *Say it again*: repeat a sentence within
+  90 seconds with one word changed and Larynx learns the fix. *Fix it in place*: for 20 seconds after a paste,
+  Larynx watches the text field; change a word to one that sounds like what it heard and it learns that too. The
+  menu has Undo Learned.
+- **"Not sure about …"**: when the speech model was very unsure of a word, the pill names it for 2 seconds after
+  the paste, so a glance catches it before you send. Your text is not changed.
+- **"Scratch that"** said on its own within 30 seconds undoes the last dictation.
+
+**Private by design**
+
+- Audio and text never leave your Mac. There is no server, no account and no telemetry
+  ([docs/PRIVACY.md](docs/PRIVACY.md)).
+- **History stays local**: 30 days in a database on your Mac, searchable with `larynx history --search <words>`.
+  Audio is not kept unless you turn on `keepAudio`. Nothing said into a password field or a password manager is
+  ever stored. `history: off` keeps everything in memory only.
+
+**For scripts and agents**
+
+- A CLI (`larynx transcribe note.m4a`), a JSON-lines API for host apps (`larynx serve`) and an MCP server
+  (`larynx mcp`). See [docs/INTEGRATION.md](docs/INTEGRATION.md). Apps such as [Locust](https://locust.lol) embed
+  it this way.
+
+Every setting is listed in [docs/SETTINGS.md](docs/SETTINGS.md).
+
+## Compared with cloud dictation
+
+Cloud dictation apps are excellent, and they send your voice to a server. Larynx sets out to match them feature for
+feature while staying local and free.
+
+| | Larynx | Typical cloud dictation app |
+| --- | --- | --- |
+| Where your audio goes | Stays on your Mac | Its servers |
+| Works offline | Yes | No |
+| Price, limits | Free, unlimited, MIT | Free tier with weekly limits, paid plans |
+| Key-up to text | 0.14 s median over 285 real dictations (0.47 s at the 90th percentile; long dictations take longer) | Network round trip |
+| Cleanup | Fillers, stutters, false starts, self-corrections, numbers as digits, code by voice | Similar |
+| Hands-free | Yes, up to 30 min | Yes |
+| History | 30 days on your Mac, full-text search; password fields never kept | Yes |
+| Learns your words | From repeats and from your edits, with Undo | From your edits |
+| Never loses a dictation | Checked paste with three fallbacks, crash recovery, target-app lock | Varies |
+| Scriptable | CLI, JSON-lines API, MCP server | Limited |
+
+Not there yet: a downloadable signed app, rewriting selected text by voice, a history window, languages
+beyond the 25 European ones, and Windows (the text engine and the speech model already run on Windows in CI:
+[docs/WINDOWS.md](docs/WINDOWS.md)).
+
+## Build from a checkout
+
+```bash
+git clone https://github.com/StopBanning/larynx && cd larynx
+./scripts/make-app.sh                              # builds ~/Applications/Larynx.app
+```
+
 `make-app.sh` signs with your Apple Development identity if you have one (free with an Apple ID in Xcode), so
 rebuilds keep their permissions and Apple's on-device model works. Without one it signs ad hoc, and each rebuild
 makes macOS forget the permissions (`tccutil reset All com.automatedworkflow.larynx`, then allow them again).
+The model lives in `~/Library/Application Support/Larynx/models`; the log is `~/Library/Logs/Larynx.log`. Some
+keyboards (Keychron, for one) never send Fn to macOS: pick another talk key in Settings.
 
 From a terminal:
 
@@ -140,17 +161,17 @@ swift build -c release
 .build/release/larynx transcribe note.m4a          # print a transcript
 .build/release/larynx listen --key fn              # system-wide hold-to-talk
 .build/release/larynx history --search deploy      # search your dictation history
+.build/release/larynx review                       # the last day in numbers: speed, deliveries, cleanup
 .build/release/larynx serve                        # JSON lines for host apps
 .build/release/larynx mcp                          # MCP server for agents
 ```
 
 `listen` needs three macOS permissions, each granted by you in System Settings > Privacy & Security:
-Microphone, Accessibility (to paste) and Input Monitoring (to see the key). Keys: `fn`, `rightOption`,
-`rightCommand`, `rightControl`. `--models-dir <path>` keeps the model somewhere other than FluidAudio's default.
+Microphone, Accessibility (to paste) and Input Monitoring (to see the key). The AI rewrite layer needs macOS 26.
 
 ## Cleanup
 
-Three layers, cheapest first:
+Four layers, cheapest first:
 
 1. **Speech model.** The default, Parakeet Ultra (25 European languages), was picked by benchmark: about 37% fewer
    word errors than the previous default on jargon, noise and hard speech, and names spelled right twice as often
@@ -158,22 +179,24 @@ Three layers, cheapest first:
    false starts. `--engine clean` switches to Underdog Bark 3.0 Clean (English), which drops them as it listens.
 2. **Tidy rules.** Leftover fillers, stutters ("the the", "I, I"), stranded commas and capitals. Instant, never
    rewrites a word, and leaves real doubles alone ("very very", "had had").
-3. **AI rewrite, only when needed.** Self-corrections ("three, no wait, four"), verbal tics ("you know", "basically")
-   and spoken numbers go to Apple's on-device model (macOS 26+, free, about 0.3 s). It never runs for AI chats,
+3. **Numbers.** Spoken numbers, times and percentages become digits by rule, in every app.
+4. **AI rewrite, only when needed.** Self-corrections ("three, no wait, four") and verbal tics ("you know",
+   "basically") go to Apple's on-device model (macOS 26+, free, about 0.3 s). It never runs for AI chats,
    terminals or code editors, and a guard rejects any reply that adds a word or drops too much, falling back to
-   the tidied text. Turn it off with `--rewrite off` or `defaults write com.automatedworkflow.larynx rewrite off`.
+   the tidied text. Turn it off in Settings (Cleanup) or with `--rewrite off`.
 
 The app you are dictating into sets the mode: a light touch for AI chats, terminals and editors; text that ends like
 a sentence for Mail, Slack, Messages and Notes.
 
 ## Testing
 
-| Suite | What it checks | Latest (Nov 11, 2026) |
+| Suite | What it checks | Latest |
 | --- | --- | --- |
-| `swift test` | 39 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, the rewrite guard, the pipeline, settings, history, crash spool, privacy rules, self-learning | all pass |
-| `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
+| `swift test` | 56 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
+| `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | Nov 11: rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
+| `python3 bench/latency.py` | The speed gate, run before each release: 50 clips through the full pipeline; fails over 150 ms median or 350 ms at the 90th percentile | 80 ms median, 144 ms p90 (Nov 12) |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
 
@@ -197,32 +220,54 @@ into "32 it costs".
 
 ## How it works
 
+Three Swift targets: `LarynxText` (the text rules, Foundation only, builds on Windows and Linux), `LarynxCore`
+(audio, the speech and language models, Accessibility) and `larynx` (the CLI and the menu bar app).
+
 | File | Job |
 | --- | --- |
-| `Recorder.swift` | AVAudioEngine tap, resampled to 16 kHz mono |
-| `Transcriber.swift` | Loads Parakeet v3 once, transcribes a clip |
+| `Recorder.swift` | The microphone: 16 kHz mono, kept warm between dictations, with a short pre-roll and a tail |
+| `Transcriber.swift` | Loads the speech model once, transcribes a clip, reports each word's confidence |
 | `Hotkey.swift` | Event tap on one modifier; re-arms itself when macOS switches it off |
-| `Inserter.swift` | Clipboard plus Cmd+V mapped through the keyboard layout; restores your clipboard; brings the target app back; falls back to copy |
+| `Inserter.swift` | Paste into the target app, check it arrived, fall back to Accessibility, typing, then the clipboard |
+| `Pipeline.swift` | Runs the stages in order (snippet, dictionary, vocabulary, tidy, numbers, rewrite); each can be off, shadow or on |
 | `Tidy.swift` | Cleanup rules and the per-app mode |
-| `Cleaner.swift` | Optional Apple Foundation Models pass with a guard against answers |
-| `CodeWords.swift` | Spoken code: case commands, file names, acronyms |
-| `Snippets.swift` | Voice shortcuts |
-| `Learner.swift` | Learns words from your fixes |
-| `History.swift` | Local dictation history (SQLite, full-text search) and the crash spool |
-| `Privacy.swift` | Password fields and apps whose dictations are never stored |
-| `Vocabulary.swift` | Your words: project names, dictionary, vocabulary.txt |
-| `Pill.swift` | The live preview panel |
-| `Menu.swift` | The menu bar menu: recent transcripts and settings |
+| `Numbers.swift` | Spoken numbers, times, percentages and units as digits |
+| `Fit.swift` | Space and capital to match the text before the cursor |
+| `Cleaner.swift`, `RewriteGuard.swift` | Optional Apple Foundation Models pass, and the guard that rejects a reply that adds words |
+| `CodeWords.swift`, `Snippets.swift` | Spoken code and voice shortcuts |
+| `Vocabulary.swift`, `Learner.swift` | Your words, and learning new ones from your fixes |
+| `Doubt.swift` | Which words the model was unsure of |
+| `Context.swift`, `ContextWords.swift` | Names in the text field you are dictating into, to settle sound-alike words (shadow) |
+| `History.swift`, `Privacy.swift` | Local history (SQLite, full-text search), the crash spool, and what is never stored |
+| `Golden.swift` | Your own recordings with what you meant, as a private benchmark |
+| `Pill.swift`, `Menu.swift`, `SettingsWindow.swift`, `FirstRun.swift` | The pill, the menu bar menu, Settings and the setup window |
+| `App/` | The listen session, the engine, `serve`, and the CLI commands |
 | `MCP.swift` | The `mcp` command |
-| `main.swift` | The `transcribe`, `listen`, `serve`, `rewrite` and `tidy` commands, and the menu bar app |
+
+New cleanup rules start in **shadow**: they run on every dictation and record what they would have changed, without
+touching the text. A rule is switched on only after its proposals have been read (`larynx mine --shadow`).
+
+## How it was built
+
+One person directing Claude. The plan was written first, as tasks with acceptance tests
+([docs/PLAN-v1.md](docs/PLAN-v1.md), with a status table that records the evidence for each task); the code was
+then written against it, and every cleanup rule was replayed over the author's own dictations before it shipped.
+The record includes what was measured and rejected: a second speech model as a tie-breaker and a larger audio model
+both lost to the default and were dropped ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)). The author dictates
+everything through Larynx, including the directions that built it.
 
 ## Roadmap
 
-[docs/MASTER-PLAN.md](docs/MASTER-PLAN.md) has the whole plan as tasks with acceptance tests, and a status table.
-Done so far: tests and package split, typed pipeline with shadow mode, settings, history and crash recovery,
-self-learning, the Liquid Glass pill. Next: benchmarks against public speech sets, spoken numbers without the AI
-model, context from the screen for names, hands-free mode, spoken formatting and lists, voice edits on selected
-text, a settings window, 100+ languages, then Windows ([docs/WINDOWS.md](docs/WINDOWS.md)) and meeting notes.
+[docs/PLAN-v1.md](docs/PLAN-v1.md) is the road to 1.0, in order.
+
+- **Done**: the Parakeet Ultra model and its cleanup rules (0.5), then "Trust" (0.6): shadow mode, the live test
+  rig, word confidence, no clipped first or last word, checked paste, the speed gate, fitting the field, the
+  Settings and setup windows, the one-line install.
+- **Next**: screen context out of shadow, per-app profiles, a history window, editors for your dictionary and
+  snippets, a test that fails if the app ever opens a network connection, a signed download.
+- **Later**: streaming while you speak, spoken punctuation and lists out of shadow, writing styles, editing
+  selected text by voice, more languages, an open benchmark anyone can reproduce, then Windows
+  ([docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ## License
 

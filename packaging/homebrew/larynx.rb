@@ -3,7 +3,7 @@
 class Larynx < Formula
   desc "Free, offline dictation for macOS: hold a key, speak, text appears where you type"
   homepage "https://github.com/StopBanning/larynx"
-  url "https://github.com/StopBanning/larynx.git", tag: "v0.5.0"
+  url "https://github.com/StopBanning/larynx.git", tag: "v0.6.0"
   license "MIT"
   head "https://github.com/StopBanning/larynx.git", branch: "main"
 

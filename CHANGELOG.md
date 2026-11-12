@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.6.0 (Nov 12, 2026): "Trust"
+
+Never lose a word, never be confidently wrong, and installed with one line.
+
 - **Pick your microphone** (Settings → Speech → Microphone, or `micDevice`): any input macOS knows, by name;
   an unplugged one falls back to the system default. `larynx mics` lists them.
 - **Settings window** (menu: Settings…, ⌘,): talk keys, hands-free, pill, speech model, microphone, vocabulary,
@@ -11,12 +15,16 @@
 - **One-line install**: `curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/install.sh | zsh`
   builds and opens Larynx (Apple Silicon, macOS 15+); run it again to update. A Homebrew formula that builds from
   source is in `packaging/homebrew/`.
-- **Larynx reads what's on screen** (memory only, never kept): at each press it collects the names around the
-  cursor and in the window (about 25 ms in Claude, in the background) to settle words that sound the same, like
-  "doc" vs "Dock" when the Dock is on screen. Only a noun that sounds exactly like a name on screen is considered;
-  "make it so" never becomes "Mac". In shadow for now: suggestions are recorded (`larynx mine --shadow context`),
-  your text isn't changed until they've been checked. `context: off` turns it off; `larynx context` shows what it
-  finds without showing any text.
+- **Larynx reads the field you are dictating into** (memory only, never kept): at each press it collects the names
+  in the text around the cursor to settle words that sound the same, like "doc" vs "Dock". Only a noun that sounds
+  exactly like a name it found is considered; "make it so" never becomes "Mac". In shadow for now: suggestions are
+  recorded (`larynx mine --shadow context`), your text isn't changed until they've been checked. `context: on` also
+  reads the visible text of the window (off by default: walking a very long page may stall Chromium apps);
+  `context: off` turns it off; `larynx context` shows what it finds without showing any text.
+- Chromium and Electron apps only build their accessibility tree while something asks for it. Larynx now turns that
+  back off 25 s after it last used such an app, so it adds no lasting load to them.
+- Reads of another app's text field give up after 0.25 s, so a busy app can't hold up a dictation.
+- When Larynx can't tell whether a paste arrived, the words also stay on the clipboard.
 - **Email layout in Mail and Outlook.** "Hi Sam, thanks for… Thanks, Colin." comes out with the greeting on its own
   line, a blank line, the body, and the sign-off and name on their own lines. "Thanks for the help." stays a
   sentence (a sign-off needs a name after it).
