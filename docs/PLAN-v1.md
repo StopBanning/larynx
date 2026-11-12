@@ -51,6 +51,8 @@ evidence. Rows that cannot be won (compliance certificates) are stated plainly.
   `docs/BENCHMARKS.md`, apply the rule. Spikes are time-boxed to one working session and end in go or no-go.
 - **Speed is a feature.** Invariant 2 holds for every release: key-up to text p50 <= 150 ms, p90 <= 350 ms for
   dictations under 60 s. Real use on Nov 11: p50 109 ms, p90 266 ms. Anything slower has a deadline and a fallback.
+- **Order from Nov 12:** section R (real-use findings) comes next, before C5. Real use on Nov 12 broke invariant 2
+  in the app (see R's table); R3 restores it.
 - **Tracks that can run in parallel sessions** (they touch different files): the Windows track (section W) and the
   public-face task D7. Everything else runs in order in one session.
 - **Baselines at the start of this plan (commit of this file):** text rules 59/59, rewrite 26/26, spoken cleanup
@@ -166,6 +168,129 @@ Gate: golden baseline exists; B4 recovers the made-up-word cases; 0/50 clipped; 
 
 ---
 
+## R. v0.6.1 "Real use": fix what the first days of daily use showed
+
+Headline: every dictation into Claude is confirmed again, short dictations are back under budget, and the numbers
+Larynx publishes come from a real voice. **Do this section before C5.** It was added on Nov 12 after reading
+454 kept dictations (Nov 11-12, counts only):
+
+| What | Measured |
+|---|---|
+| Pastes Larynx could not confirm | Nov 11: 13 of 260 (5%). Nov 12: 87 of 194 (45%). All but 4 in Claude desktop. The jump starts in the hour after `0bff612` (accessibility modes switched off 25 s after use) was installed. |
+| Speed, dictations under 10 s (speech + cleanup) | Through Nov 11 15:00: median about 100 ms, p90 about 150. From Nov 11 20:00: median 141-217, p90 400-2,400 per hour. The `serve` gate is still fine (80 / 144 ms), so the model and rules are not the cause. |
+| Speed after an idle gap | Gap under 30 s: median 127. Gap 2-10 min: median 202, p90 768. |
+| Unconfirmed vs confirmed (Nov 12) | Unconfirmed: median 250, p90 1,196. Confirmed: median 163, p90 402. Both problems follow idle gaps. |
+| Learning from edits in place | 129 edit watches, 0 fixes. In 66 the dictation was no longer in the field (already sent). |
+| "Not sure about" | 13 dictations flagged. Its hit rate is unknown. |
+| Golden set | 48 clips, all picked because they were fixed or repeated, none at random. |
+| Outside installs | 0. A fresh clone builds (Nov 12), nothing more is proven. |
+
+Rule for this section and after: **the spoken suite and every benchmark run under `scripts/when-idle.sh`.** The
+executor's jobs share the Mac with Colin's dictation, and a build or benchmark running while he talks is itself a
+suspect for the slowdown above.
+
+**R1. Timing and reasons in the record** (instrument first; no behaviour change).
+- Each dictation records, in history and in the log line: speech ms, cleanup ms, delivery ms (paste sent to paste
+  confirmed or given up), tail ms, microphone start ms, and the machine's 1-minute load at key-up. Today `totalMs`
+  is measured inside `finish` and covers speech + cleanup only.
+- Every delivery that is not a confirmed insert records a reason code, never text: for example `unreadable-at-press`,
+  `field-replaced`, `read-timeout`, `words-not-found`, `no-field`. Each fallback insert records what the field held
+  before and after as lengths only.
+- `larynx review` prints the time split (median and p90 per part), the reasons per app, and the first dictation
+  after a 5-minute gap as its own line.
+- Done when one day of real use answers both "where does the time go" and "why was each paste unconfirmed".
+
+**R2. Confirm pastes in Claude again.** Working theory: once the accessibility tree has been switched off, the next
+press switches it on, Claude rebuilds it, and the field captured at key-down is gone or unreadable when the paste is
+checked. Confirm it with R1's reasons before changing anything. Then, smallest change first:
+- (a) Take the field and its "before" text right before the paste (key-up) instead of at key-down, and retry the
+  read for up to 150 ms while the tree builds. The target *app* is still captured at key-down.
+- (b) A late check: when the result is unknown, look once more after 1.5 s. If the words are there, record
+  `inserted` and put the earlier clipboard back.
+- (c) Hold accessibility on for the whole working session: switch off after 10 minutes without a dictation instead
+  of 25 s. First measure Claude's CPU with the tree on and off for 5 minutes each (idle and while it streams a
+  reply); keep 25 s if the tree costs more than 2% of a core.
+- The 6 fallback inserts on Nov 12 ("inserted by accessibility"): explain each from the record. If any followed a
+  paste that had in fact arrived (a message sent before the check), write that case into the live rig first, then
+  fix it. A fallback must never insert a second copy.
+- Live rig: two new cases in `tests/live.py`, the field replaced between press and paste, and accessibility off at
+  the press.
+- Done when unconfirmed pastes in Claude are under 5% over 100 real dictations, with no freeze of Claude in that
+  window. If Claude freezes, go back to 25 s, keep (a) and (b), and write the result here.
+
+**R3. Speed back under the budget in the app.** The budget (invariant 2) is median 150 ms, p90 350 ms.
+- Rule out the machine first: with R1's load figure, compare dictations made while a build or benchmark ran against
+  the rest.
+- Then find the part: 30 clips each through `listen --feed` into the capture window with one thing off at a time
+  (`context off`, `micWarm 0`, `verifyPaste off`, `doubtHint off`), under `when-idle.sh`. Suspects, in order: field
+  reads at key-down competing with the microphone start; the spell-check calls behind the doubt hint, which sit
+  inside the timer; the speech model cooling after a pause.
+- For the cold model: when the last dictation was more than 60 s ago, run a 0.2 s silent clip through the model at
+  key-down so it is warm by key-up. Keep it only if the after-gap p90 falls and nothing else rises.
+- A second gate beside `bench/latency.py`: `tests/live.py --latency`, 30 clips through the real listen and paste
+  path into the capture window, same budget, run before each release.
+- Done when 200 real dictations under 60 s show median <= 150 and p90 <= 350, and the first dictation after a
+  5-minute gap is <= 350 at p90.
+
+**R4. A random golden set of 100: his voice as the headline number.**
+- `larynx golden sample --n 60`: picks kept recordings at random, in three length bands (under 5 s, 5-15 s, over
+  15 s), skipping private apps and clips already in the set.
+- Pre-label: all four engines transcribe each clip. Where they agree after normalizing, the label is proposed as
+  agreed; the rest need him.
+- `larynx golden label`: plays a clip and shows the proposed text; Return accepts, typing corrects. About 10 s a
+  clip, so about 10 minutes of Colin's time (decision Q6). R5's window can host this.
+- `docs/BENCHMARKS.md` gets word error rate per engine on the random clips, kept apart from the 48 picked ones, and
+  a count per error class: sound-alike word, dropped word, added word, name, punctuation or cleanup.
+- The README's accuracy line quotes the random set. The synthetic suite stays as the regression guard.
+- Done when the set has 100 clips, at least 60 of them random, and the table is in BENCHMARKS.
+
+**R5. History window with "this was wrong"** (D3, moved up). Learning from edits in place cannot work for someone
+who sends right after dictating. Corrections today are found by the executor reading history by hand; this makes
+that a feature.
+- A window listing 30 days: search, copy, paste again, play the audio when kept, doubtful words marked.
+- "Fix…" on a row: edit the text. The change is saved as a correction and the clip joins the golden set with the
+  fixed text. A one-word change that sounds like the original proposes a lesson under the Learner's existing rules
+  (a made-up word goes to the dictionary; two real words are only a suggestion).
+- Menu: "Fix Last Dictation…" opens the newest row. After a "Not sure about" hint, clicking the pill does the same.
+- `larynx review` counts fixes made here.
+- Done when a fix in the window teaches the word (unit tests for the lesson; a rendered snapshot of the window), and
+  Colin has used it on 5 real slips.
+
+**R6. Confident mishearings: measure, then one time-boxed bet.**
+- On the random clips from R4: of the wrong words, how many did the doubt hint flag, and of the flags, how many
+  were wrong words. Tune the two thresholds on that, not on the picked clips.
+- The bet, in shadow, one working session: where a word is doubtful or the engines disagree at a position, ask
+  Apple's on-device model which of the *heard candidates* fits the sentence. It may only choose between words an
+  engine produced there, never write its own. This differs from the rejected second-opinion swap (B4), which
+  trusted the other engine's word without looking at the sentence.
+- Go only if, on the random clips, it fixes at least 3 wrong words for each right word it breaks, and costs nothing
+  on dictations where it doesn't run. Otherwise write the no-go into BENCHMARKS and stop.
+
+**R7. Privacy proof** (D6, moved up). The README says nothing leaves the Mac; a test must fail if that stops being
+true.
+- With the models already on disk, run `larynx transcribe`, one `serve` request and `listen --feed` under a sandbox
+  profile that denies all network access. All three must pass.
+- Prove the test once by adding a deliberate network call and watching it fail; record that here.
+- Run it in macOS CI if the model can be cached there; otherwise it joins the release checklist beside the two
+  latency gates. Link it from the README's privacy line.
+
+**R8. Other people can install it** (D5's gate on the no-cost path; Q1 stays "not yet").
+- `make-app.sh` takes `LARYNX_SIGN=adhoc` to ignore any signing identity.
+- `tests/install.py`: runs `scripts/install.sh` with HOME set to a new folder on the startup disk and
+  `LARYNX_SIGN=adhoc LARYNX_NO_WARM=1`; checks the bundle exists, is ad-hoc signed, runs, and starts un-onboarded.
+  Permissions cannot be tested this way.
+- macOS CI runs the same on GitHub's runner, a machine that has never seen Larynx.
+- An "Install report" issue template, and one install by someone who is not Colin, with what broke written here.
+- README wording follows the evidence: the self-learning section describes R5 once it works, and says plainly that
+  learning from in-place edits needs you to edit before sending.
+- Done when CI builds the bundle from `install.sh` on a clean runner and one outside person has it running.
+
+**Gate for 0.6.1:** unconfirmed pastes in Claude under 5%; both latency gates and 200 real dictations inside the
+budget; BENCHMARKS has the random-clip table; the privacy test runs with each release; CI installs from
+`install.sh`. Then release.
+
+---
+
 ## C. v0.7 "Context": it knows what you're looking at
 
 Headline: names and look-alike words come out right because Larynx reads them off the screen, locally.
@@ -211,14 +336,14 @@ no-cost path first; the signed download comes when he says the traction is there
 **D1. Settings window** (master 6.1), SwiftUI, same glass as the pill. The menu keeps quick toggles.
 **D2. First run** (master 6.2): permissions with live status, mic test, model download with progress and resume,
 pick the talk key, a try-it box. The 95 s first compile (A6) gets a progress screen here.
-**D3. History window** (master 6.3): search, copy, paste again, play audio when kept, "this is wrong" (teaches the
+**D3. History window** (master 6.3; moved up to R5): search, copy, paste again, play audio when kept, "this is wrong" (teaches the
 dictionary and adds to the golden set), stats computed locally.
 **D4. Dictionary, vocabulary and snippets editors** (master 6.5, the table editors and import only).
 **D5. Distribution** (master 6.7). With Q1 = yes: Developer ID, notarized DMG, Sparkle updates, Homebrew cask, all
 from a GitHub Actions release workflow. Colin does the signing-identity steps himself (the executor never changes
 it): write him the exact steps. Switching identity makes macOS ask for the three permissions once more: tell him
 before, not after. With Q1 = no: `scripts/install.sh` plus a Homebrew tap that builds from source.
-**D6. Privacy proof** (master 6.9): a test that fails if the app opens a socket; runs in CI; linked from README.
+**D6. Privacy proof** (master 6.9; moved up to R7): a test that fails if the app opens a socket; runs in CI; linked from README.
 **D7. Public face** (parallel track): README first screen, comparison table with a link to evidence per row,
 `docs/APPS.md`, an architecture page with one diagram, a GitHub Pages site built from the same files.
 **D8. Accessibility of the app itself** (master 6.8).
@@ -306,6 +431,7 @@ W7 (real-hardware numbers) needs decision Q3. Everything before it runs in CI.
 | Q3 | A real Windows machine for the final Windows tests | The old PC's C: drive, when W6 is reached | CI covers everything earlier. |
 | Q4 | Sign in to Wispr Flow for a measured head-to-head (master C3) | Decide at F2 | Not needed before then. |
 | Q5 | Which "beyond" features first | G1, G2, G3 | G1 fits how he works; G3 is nearly free. |
+| Q6 | About 10 minutes labelling random clips of his own dictation (R4) | Yes, once R4's label window exists | Without it the only real-voice number comes from 48 hand-picked clips. |
 
 None of these block A or B except Q2 for B3 (which has a weaker fallback).
 
@@ -347,6 +473,7 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 | E1, E2, E4-E8 | not started | |
 | F1-F5 | not started | |
 | G | not chosen | Q5 |
+| R1-R8 | not started (planned Nov 12) | Evidence table at the top of section R. |
 | W1-W7 | not started | W0 done (docs/WINDOWS.md) |
 
 Slips seen in real dictation, filed under the task that fixes them:
