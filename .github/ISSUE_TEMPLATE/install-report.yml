@@ -1,0 +1,43 @@
+name: Install report
+description: You installed Larynx (or tried to). Tell us what worked and what broke.
+title: "Install report: "
+labels: [install]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for trying Larynx. Please don't paste anything you dictated; describe it instead.
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: "MacBook Air M2, macOS 26.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How you installed it
+      options: [install.sh one-liner, Built from a checkout, Homebrew, Other]
+    validations:
+      required: true
+  - type: checkboxes
+    id: reached
+    attributes:
+      label: How far did you get?
+      options:
+        - label: The build finished
+        - label: Larynx appeared in the menu bar
+        - label: The setup window granted all three permissions
+        - label: The speech model downloaded
+        - label: Holding the key and speaking put text at the cursor
+  - type: textarea
+    id: broke
+    attributes:
+      label: What broke or confused you
+      description: Error messages, the step where it stopped, anything that took a second try.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: The last lines of ~/Library/Logs/Larynx.log. It can contain dictated text, so remove that first.
+      render: text

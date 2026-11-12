@@ -33,6 +33,8 @@ IDENTITY="-"
 security find-certificate -c "Larynx Local Signing" >/dev/null 2>&1 && IDENTITY="Larynx Local Signing"
 APPLE_ID=$(security find-identity -v -p codesigning | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"' || true)
 [ -n "$APPLE_ID" ] && IDENTITY="$APPLE_ID"
+# LARYNX_SIGN=adhoc ignores any identity on this Mac: what someone else's build looks like (tests/install.py, CI).
+[ "${LARYNX_SIGN:-}" = adhoc ] && IDENTITY="-"
 codesign --force --sign "$IDENTITY" --identifier com.automatedworkflow.larynx "$APP"
 echo "signed with: $IDENTITY"
 # The Neural Engine compiles a model the first time this bundle id loads it (about 95 s for Parakeet Ultra), and the

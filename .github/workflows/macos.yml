@@ -15,3 +15,10 @@ jobs:
       - run: swift --version
       - run: swift build -c release
       - run: swift test
+  install:
+    # What a stranger gets: scripts/install.sh into an empty home, ad-hoc signed, on a machine that has never seen
+    # Larynx (tests/install.py). Permissions and the speech model can't be tested here.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tests/install.py

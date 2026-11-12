@@ -4,7 +4,8 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/install.sh | zsh
 #
-# LARYNX_DIR picks where the source goes (default ~/.larynx-src). Run it again to update.
+# LARYNX_DIR picks where the source goes (default ~/.larynx-src). Run it again to update. LARYNX_SIGN=adhoc and
+# LARYNX_NO_WARM=1 pass through to make-app.sh; LARYNX_NO_OPEN=1 builds without opening (tests/install.py, CI).
 set -euo pipefail
 say() { print -P "%F{cyan}larynx:%f $*"; }
 fail() { print -P "%F{red}larynx:%f $*" >&2; exit 1; }
@@ -35,7 +36,11 @@ fi
 
 say "Building (a few minutes the first time)..."
 "$src/scripts/make-app.sh" | grep -E "speech model|Larynx.app$" || true
-if pgrep -x larynx >/dev/null; then
+if [[ -n "${LARYNX_NO_OPEN:-}" ]]; then
+  # Tests and CI: build only. Never restart or open anything (a second Larynx would fight the first for the talk key).
+  say "Built $HOME/Applications/Larynx.app (LARYNX_NO_OPEN: not opened)"
+  exit 0
+elif pgrep -x larynx >/dev/null; then
   say "Restarting Larynx on the new build (waits until you're not dictating)"
   "$src/scripts/restart-app.sh"
 else
