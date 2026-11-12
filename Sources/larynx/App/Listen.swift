@@ -77,6 +77,8 @@ extension Hotkey.Key {
         if let last = ListenSession.lastDelivered { session.timing.gapSeconds = Int(Date().timeIntervalSince(last)) }
         ListenSession.current = session
         session.privateField = Privacy.isPrivate(app: session.target)
+        // Have the app build its accessibility tree while you speak, so the paste can be checked (R2).
+        if inApp, !session.privateField { let target = session.target; DispatchQueue.global(qos: .userInitiated).async { Inserter.wake(target) } }
         NSSound(named: "Tink")?.play()
         setStatus("Listening...", recording: true)
         log("recording... [\(session.target?.bundleIdentifier ?? "?")] mic \(micMs) ms")

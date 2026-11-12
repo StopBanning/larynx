@@ -199,14 +199,18 @@ case "recover":
 case "serve": Task { await runServe() }
 case "mcp": Task { await runMCP() }
 case "focus":
-    // What has focus in the front app, after an optional delay: larynx focus [seconds]. Needs Accessibility.
+    // What has focus in the front app (or --app <bundle id>), after an optional delay: larynx focus [seconds].
+    // Needs Accessibility. Reads only; the time includes waiting for a tree that was just switched on.
     let wait = Double(args.dropFirst().first ?? "") ?? 0
     Thread.sleep(forTimeInterval: wait)
-    let app = NSWorkspace.shared.frontmostApplication
+    let app = option("--app").flatMap { id in NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == id } }
+        ?? NSWorkspace.shared.frontmostApplication
+    let started = Date()
     let f = Inserter.focusedField(in: app)
+    let took = ms(since: started)
     let readable = Learner.focusedTextElement(in: app).flatMap { Learner.text(of: $0) }
     print("\(app?.bundleIdentifier ?? "?"): editable=\(f.editable.map(String.init) ?? "unknown") role=\(f.role) "
-          + "text readable=\(readable.map { "yes (\($0.count) chars)" } ?? "no")")
+          + "text readable=\(readable.map { "yes (\($0.count) chars)" } ?? "no") in \(took) ms")
     exit(0)
 case "fixes":
     // What Larynx would learn if you pasted <before> and the field later said <after> (nothing is saved).

@@ -279,6 +279,15 @@ public enum Inserter {
 
     /// What has keyboard focus in `app`: `editable` is true for a text field, false for something that can't take
     /// text (a button, a list, the window itself, nothing at all), nil when the app doesn't say.
+    /// Asks the app to build its accessibility tree now (Chrome and Electron apps only do so when asked), so its
+    /// text field can be read by the time the words are pasted. Called at key-down; cheap when it's already on.
+    public static func wake(_ app: NSRunningApplication?) {
+        guard isTrusted, let app else { return }
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(appElement, 0.25)
+        AccessibilityModes.enable(appElement, pid: app.processIdentifier)
+    }
+
     public static func focusedField(in app: NSRunningApplication?) -> (editable: Bool?, role: String) {
         guard isTrusted, let app else { return (nil, "unknown") }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
@@ -286,7 +295,15 @@ public enum Inserter {
         // Chrome and Electron apps (Claude, Slack, VS Code) only build their accessibility tree when asked.
         AccessibilityModes.enable(appElement, pid: app.processIdentifier)
         var value: CFTypeRef?
-        let err = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value)
+        var err = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value)
+        // A tree switched on moments ago may not be built yet: the app reports no focus, or only its window. Wait
+        // until it has been on for `buildSeconds` at most (it is woken at key-down, so this rarely waits at all).
+        while err == .noValue || role(of: value) == kAXWindowRole,
+              let since = AccessibilityModes.secondsSinceTurnedOn(pid: app.processIdentifier), since < AccessibilityModes.buildSeconds {
+            usleep(30_000)
+            value = nil
+            err = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value)
+        }
         if err == .noValue {
             // Chrome can report no focused element even with a page open; only trust "nothing" when there's no window either.
             var window: CFTypeRef?
@@ -312,6 +329,12 @@ public enum Inserter {
         // Terminals and some custom editors take typing without looking like text fields.
         if ["AXScrollArea", "AXGroup", "AXUnknown", "AXWebArea"].contains(role) { return (nil, role) }
         return (false, role)
+    }
+
+    private static func role(of value: CFTypeRef?) -> String? {
+        guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        var role: CFTypeRef?
+        return AXUIElementCopyAttributeValue(value as! AXUIElement, kAXRoleAttribute as CFString, &role) == .success ? role as? String : nil
     }
 
     private static func sendCommandV() {
@@ -359,9 +382,21 @@ public enum AccessibilityModes {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var enabledByUs: [pid_t: [String]] = [:]
     nonisolated(unsafe) private static var release: [pid_t: DispatchWorkItem] = [:]
+    nonisolated(unsafe) private static var turnedOnAt: [pid_t: Date] = [:]
+    /// How long an app may take to build its tree after Larynx switched it on, before a read gives up waiting.
+    public static let buildSeconds: TimeInterval = 1.5
 
-    static func enable(_ appElement: AXUIElement, pid: pid_t) {
+    /// Seconds since Larynx switched the app's tree on (nil if it didn't, or it was already on).
+    public static func secondsSinceTurnedOn(pid: pid_t) -> TimeInterval? {
         lock.lock(); defer { lock.unlock() }
+        return turnedOnAt[pid].map { Date().timeIntervalSince($0) }
+    }
+
+    /// Returns true when it switched something on just now (the app's tree is still being built).
+    @discardableResult
+    static func enable(_ appElement: AXUIElement, pid: pid_t) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        var justTurnedOn = false
         if enabledByUs[pid] == nil {
             var turnedOn: [String] = []
             for attribute in attributes {
@@ -372,12 +407,15 @@ public enum AccessibilityModes {
                 }
             }
             enabledByUs[pid] = turnedOn
+            justTurnedOn = !turnedOn.isEmpty
+            if justTurnedOn { turnedOnAt[pid] = Date() }
         }
         // Each use pushes the switch-off back: it happens once the app has gone `holdSeconds` without Larynx.
         release[pid]?.cancel()
         let work = DispatchWorkItem { AccessibilityModes.disable(pid: pid) }
         release[pid] = work
         DispatchQueue.main.asyncAfter(deadline: .now() + holdSeconds, execute: work)
+        return justTurnedOn
     }
 
     /// Whether Larynx is holding the app's accessibility tree on right now (false: the next read finds it off,
@@ -391,6 +429,7 @@ public enum AccessibilityModes {
     public static func disable(pid: pid_t) {
         lock.lock(); defer { lock.unlock() }
         release[pid] = nil
+        turnedOnAt[pid] = nil
         guard let attrs = enabledByUs.removeValue(forKey: pid), !attrs.isEmpty else { return }
         let appElement = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(appElement, 0.25)
