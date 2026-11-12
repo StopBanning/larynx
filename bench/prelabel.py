@@ -41,6 +41,11 @@ def typed_texts(ids):
     return {r["id"]: r["text"] for r in json.loads(out) if r["id"] in ids}
 
 
+def save(items):
+    PENDING.write_text("".join(json.dumps(i, sort_keys=True) + "\n" for i in items))
+    os.chmod(PENDING, 0o600)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--binary", default=str(ROOT / ".build/release/larynx"))
@@ -68,6 +73,7 @@ def main():
                     i.setdefault("heard", {})[e] = out.get("raw") or out.get("text") or ""
         finally:
             eng.close()
+            save(items)  # after every engine, so an interrupted run (when-idle.sh) resumes where it stopped
         print(f"  {e}: {len(todo)} clips")
 
     typed = typed_texts({i["id"] for i in items})
@@ -75,8 +81,7 @@ def main():
         label = agreed(i.get("heard", {}), typed.get(i["id"], ""))
         if label: i["agreed"] = label
         else: i.pop("agreed", None)
-    PENDING.write_text("".join(json.dumps(i, sort_keys=True) + "\n" for i in items))
-    os.chmod(PENDING, 0o600)
+    save(items)
     n = sum(1 for i in items if i.get("agreed"))
     print(f"all engines agree on {n} of {len(items)}; the other {len(items) - n} need you (larynx golden label)")
 
