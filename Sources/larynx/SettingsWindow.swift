@@ -220,7 +220,7 @@ private struct PrivacyPane: View {
             }
             Section("Screen context") {
                 Picker("Read names on screen", selection: setting(.context)) {
-                    Text("Field and window").tag("on"); Text("Only the text field").tag("app-only"); Text("Off").tag("off")
+                    Text("Only the text field").tag("app-only"); Text("Field and window (may slow some apps)").tag("on"); Text("Off").tag("off")
                 }
                 Text("Used to spell names the way they appear on screen. Read at each press, kept in memory for that one dictation, never saved or logged. Password fields and password managers are never read.")
                     .font(.caption).foregroundStyle(.secondary)

@@ -43,6 +43,11 @@ if [ -z "${LARYNX_NO_WARM:-}" ]; then
   if "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav \
        --models-dir "$HOME/Library/Application Support/Larynx/models" >/dev/null 2>&1; then
     echo "speech model warm ($(( $(date +%s) - START )) s)"
+    # The backup model (tried when the main one hears nothing) compiles on first use too: a 160 s stall once.
+    for backup in clean parakeet; do
+      "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav --engine $backup \
+        --models-dir "$HOME/Library/Application Support/Larynx/models" >/dev/null 2>&1 && break
+    done
   else
     echo "speech model warm-up skipped (the app will compile it on first use)"
   fi

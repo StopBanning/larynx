@@ -33,7 +33,7 @@ public final class Settings: @unchecked Sendable {
             case .pillPosition: return "auto"
             case .pillGlass: return "25"
             case .micWarm: return "30"
-            case .context: return "on"
+            case .context: return "app-only"  // the window walk is opt-in: suspected in two Claude freezes (Nov 11)
             case .onboarded: return "false"
             default: return "on"
             }
