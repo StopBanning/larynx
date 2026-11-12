@@ -10,7 +10,7 @@ between the speech models themselves. Loading a model the CLI has never run comp
 first (one to three minutes), so run this when the Mac is otherwise idle (scripts/when-idle.sh). Nothing is printed
 but counts: the clips are your words.
 """
-import argparse, json, os, re, sys
+import argparse, json, os, re, signal, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -47,6 +47,8 @@ def save(items):
 
 
 def main():
+    # when-idle.sh stops us with SIGTERM the moment you touch the keyboard: exit through finally (closes serve, saves).
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     ap = argparse.ArgumentParser()
     ap.add_argument("--binary", default=str(ROOT / ".build/release/larynx"))
     ap.add_argument("--models-dir", default=str(DATA / "models"))
@@ -71,9 +73,10 @@ def main():
                 out = eng.transcribe(i["audio"])
                 if out.get("event") == "result":
                     i.setdefault("heard", {})[e] = out.get("raw") or out.get("text") or ""
+                    save(items)  # every clip, so an interrupted run (when-idle.sh) loses at most one
         finally:
             eng.close()
-            save(items)  # after every engine, so an interrupted run (when-idle.sh) resumes where it stopped
+            save(items)
         print(f"  {e}: {len(todo)} clips")
 
     typed = typed_texts({i["id"] for i in items})
