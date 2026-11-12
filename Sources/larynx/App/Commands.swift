@@ -468,7 +468,10 @@ func runFeed(_ path: String) async {
                 item.types.compactMap { type in item.data(forType: type).map { (type, $0) } }
             }
             let started = Date()
-            delivery = await Inserter.deliver(result.text, to: target).label
+            // The same fit-to-field as live dictation (Listen passes the vocabulary terms the same way).
+            await Loader.shared.vocabulary.value
+            let terms = Set(vocabularyCache.terms)
+            delivery = await Inserter.deliver(result.text, to: target, keepsCapital: { terms.contains($0) }).label
             deliveredMs = ms(since: started)
             // A paste restores the clipboard itself after 0.5 s; the copy fallback leaves the words there. Either way,
             // if the test's words are still on the clipboard after that, put back what was there before.

@@ -14,6 +14,17 @@ final class CaptureWindow: NSObject, NSTextViewDelegate {
     func run(seconds: Double, prefill: String = "") {
         let app = NSApplication.shared
         app.setActivationPolicy(.regular)
+        // An Edit menu, as every real app has: on macOS ⌘V reaches a text view through the menu's key equivalents.
+        let main = NSMenu()
+        let appItem = NSMenuItem(); appItem.submenu = NSMenu(); main.addItem(appItem)
+        appItem.submenu?.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let editItem = NSMenuItem(); let editMenu = NSMenu(title: "Edit"); editItem.submenu = editMenu; main.addItem(editItem)
+        editMenu.addItem(NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z"))
+        editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        app.mainMenu = main
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 160), styleMask: [.titled, .closable],
                               backing: .buffered, defer: false)
         window.title = "Larynx test capture (safe to close)"

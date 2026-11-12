@@ -60,7 +60,8 @@ def run_case(name, extra_env, want_delivery, prefill="", expect=lambda text: tex
         # A bundle macOS has never seen can fail its first launch (-10810) until LaunchServices registers it.
         subprocess.run([LSREGISTER, "-f", str(app)], capture_output=True)
         for attempt in range(4):
-            if subprocess.run(["open", "-n", str(app), "--stdout", str(out), "--args", "capture-window", "--seconds", "40",
+            if subprocess.run(["open", "-n", str(app), "--stdout", str(out), "--stderr", str(Path(work) / "capture.err"),
+                               "--args", "capture-window", "--seconds", "60",
                                "--prefill", prefill],
                               capture_output=True).returncode == 0: break
             time.sleep(1)
@@ -87,7 +88,8 @@ def run_case(name, extra_env, want_delivery, prefill="", expect=lambda text: tex
                     Path(mark).unlink(missing_ok=True)
         result = next((json.loads(l) for l in feed.stdout.splitlines() if '"event":"result"' in l.replace(" ", "")), None)
         if not result:
-            return False, f"{name}: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]}"
+            err = (Path(work) / "capture.err").read_text()[-300:] if (Path(work) / "capture.err").exists() else ""
+            return False, f"{name}: no result from listen --feed: {feed.stdout[-300:]} {feed.stderr[-300:]} capture window: {err!r}"
         expected, seen, deadline = expect(result["text"]), "", time.time() + 3
         while time.time() < deadline and expected not in seen:
             texts = [m["text"] for m in map(json.loads, filter(str.strip, out.read_text().splitlines())) if m.get("event") == "text"]
