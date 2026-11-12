@@ -420,7 +420,7 @@ case "capture-window":
 case "golden":
     // Your own recordings with what you really said: the benchmark that matters most (bench/run.py --sets golden).
     //   larynx golden add <id> [--text "what was said"] [--source user|agent|edit|repeat]   (no --text: the typed text was right)
-    //   larynx golden remove <id> | list | candidates [--apply]
+    //   larynx golden remove <id> | list | candidates [--apply] | sample [--n 60] [--seed N] | label
     let sub = args.dropFirst().first ?? "list"
     let rows = History.shared.recent(limit: 5000)
     let clips = Golden.load()
@@ -462,8 +462,63 @@ case "golden":
         } else {
             print("\(found.count) candidates\(found.isEmpty ? "" : "; --apply adds them")")
         }
+    case "sample":
+        // R4: dictations picked at random, a third per length band, waiting in golden/pending.jsonl for labels.
+        //   larynx golden sample [--n 60] [--seed N]   then python3 bench/prelabel.py, then larynx golden label
+        let waiting = Golden.loadPending()
+        let n = Int(option("--n") ?? "") ?? 60
+        let seed = UInt64(option("--seed") ?? "") ?? UInt64(Date().timeIntervalSince1970)
+        let picked = Golden.sample(rows, n: n, skip: Set(clips.map(\.id) + waiting.map(\.id)), privateApps: Privacy.excludedApps(), seed: seed)
+        let added = picked.map { Golden.Pending(id: $0.id, audio: $0.audioPath ?? "", audioSeconds: $0.audioSeconds, band: Golden.band($0.audioSeconds)) }
+        do { try Golden.savePending(waiting + added) } catch { print("\(error)"); exit(1) }
+        let bands = Swift.Dictionary(grouping: added, by: \.band).map { "\($0.key) \($0.value.count)" }.sorted().joined(separator: ", ")
+        print("picked \(added.count) at random (seed \(seed)\(bands.isEmpty ? "" : "; " + bands)); \(waiting.count + added.count) waiting for labels")
+        print("next: python3 bench/prelabel.py (all engines, a few minutes), then larynx golden label")
+    case "label":
+        // Plays each waiting clip and shows what was heard. Return keeps the proposal, typing replaces it,
+        // r plays it again, s skips, x drops the clip, q stops. Accepted clips join the set as source "random".
+        var waiting = Golden.loadPending()
+        if waiting.isEmpty { print("nothing waiting; larynx golden sample first"); exit(0) }
+        waiting.sort { ($0.agreed != nil ? 0 : 1, $0.id) < ($1.agreed != nil ? 0 : 1, $1.id) }
+        var done = 0
+        func play(_ path: String) -> Process? {
+            if args.contains("--no-play") { return nil }  // tests
+            let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/afplay"); p.arguments = [path]
+            p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+            return (try? p.run()) != nil ? p : nil
+        }
+        labelling: for item in waiting {
+            guard let row = rows.first(where: { $0.id == item.id }) else { continue }
+            let proposal = item.agreed ?? row.text
+            print("\n[\(done + 1)/\(waiting.count)] \(String(format: "%.1f", item.audioSeconds)) s, \(item.agreed != nil ? "all engines agree" : item.heard.isEmpty ? "not pre-labelled" : "engines differ")")
+            if item.agreed == nil { for (engine, text) in item.heard.sorted(by: { $0.key < $1.key }) { print("   \(engine): \(text)") } }
+            print("   typed: \(row.text)\n > \(proposal)")
+            var player = play(item.audio)
+            while true {
+                print("Return keeps it, or type what was said (r again, s skip, x drop, q quit): ", terminator: "")
+                guard let line = readLine() else { player?.terminate(); break labelling }
+                player?.terminate()
+                let answer = line.trimmingCharacters(in: .whitespaces)
+                switch answer {
+                case "r": player = play(item.audio); continue
+                case "s": continue labelling
+                case "q": break labelling
+                case "x": waiting.removeAll { $0.id == item.id }; try? Golden.savePending(waiting); continue labelling
+                default:
+                    do {
+                        _ = try Golden.add(row, text: answer.isEmpty ? proposal : answer, source: "random")
+                        waiting.removeAll { $0.id == item.id }
+                        try Golden.savePending(waiting)
+                        done += 1
+                    } catch { print("   \(error)") }
+                    continue labelling
+                }
+            }
+        }
+        let random = Golden.load().filter { $0.source == "random" }.count
+        print("\nlabelled \(done); golden set: \(Golden.load().count) clips (\(random) random); \(waiting.count) still waiting")
     default:
-        print("larynx golden add <id> [--text ...] | remove <id> | list [--text] | candidates [--apply]"); exit(2)
+        print("larynx golden add <id> [--text ...] | remove <id> | list [--text] | candidates [--apply] | sample [--n 60] | label"); exit(2)
     }
     exit(0)
 case "tidy":

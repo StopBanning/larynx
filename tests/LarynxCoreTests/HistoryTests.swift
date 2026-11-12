@@ -217,3 +217,47 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(rows.first { $0.id == "old-1" }?.timing == nil)
     #expect(timing.summary == "mic 0 tail 120 wait 130 asr 80 clean 9 paste 225 deliver 640 gap 31 s load 2.1 (ax was off) reason no-focused-element")
 }
+
+@Test func theRandomGoldenSampleSpreadsOverLengthsAndSkipsWhatItShould() {
+    func row(_ id: String, _ seconds: Double, app: String? = "com.example.notes", audio: String? = "/clips/x.flac") -> History.Row {
+        History.Row(id: id, time: Date(), app: app, mode: "standard", engine: "ultra", raw: "", text: "",
+                    steps: [], audioSeconds: seconds, totalMs: 0, delivery: "inserted", audioPath: audio, flags: [])
+    }
+    var rows = (0..<10).map { row("s\($0)", 2) } + (0..<10).map { row("m\($0)", 9) } + (0..<2).map { row("l\($0)", 30) }
+    rows += [row("private", 9, app: "com.1password.1password"), row("noaudio", 9, audio: nil), row("tiny", 0.3),
+             row("have", 9), row("gone", 9, audio: "/clips/deleted.flac")]
+    let pick = { Golden.sample(rows, n: 9, skip: ["have"], privateApps: Privacy.builtInApps, seed: 7,
+                               hasAudio: { $0 != "/clips/deleted.flac" }) }
+    let ids = pick().map(\.id)
+    #expect(ids.count == 9)
+    #expect(Set(ids).count == 9)
+    #expect(ids == pick().map(\.id))  // the same seed, the same pick
+    #expect(!ids.contains { ["private", "noaudio", "tiny", "have", "gone"].contains($0) })
+    // Both long clips taken; the short and medium bands share the rest.
+    #expect(ids.filter { $0.hasPrefix("l") }.count == 2)
+    #expect(abs(ids.filter { $0.hasPrefix("s") }.count - ids.filter { $0.hasPrefix("m") }.count) <= 1)
+    #expect(Golden.band(4.9) == "short" && Golden.band(15) == "medium" && Golden.band(15.1) == "long")
+}
+
+@Test func engineAgreementProposesALabelOnlyWhenTheWordsMatch() {
+    let typed = "Move the stand-up to Thursday, please."
+    let same = ["ultra": "move the stand up to thursday please", "clean": "Move the stand-up to Thursday, please."]
+    #expect(Golden.agreed(heard: same, typed: typed) == typed)
+    // Typed text was cleaned into other words: the engines' own words are proposed instead.
+    #expect(Golden.agreed(heard: same, typed: "Move the standup to Thursday.") == "Move the stand-up to Thursday, please.")
+    #expect(Golden.agreed(heard: ["ultra": "move the stand up to thursday", "clean": "move the stand up to tuesday"], typed: typed) == nil)
+    #expect(Golden.agreed(heard: ["ultra": typed], typed: typed) == nil)  // one engine is not agreement
+    #expect(Golden.agreed(heard: ["ultra": "", "clean": ""], typed: "") == nil)
+}
+
+@Test func pendingClipsRoundTripPrivately() throws {
+    let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("larynx-pending-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: folder) }
+    var item = Golden.Pending(id: "a", audio: "/clips/a.flac", audioSeconds: 3.2, band: "short")
+    item.heard = ["ultra": "water the plants", "clean": "water the plants"]
+    item.agreed = "Water the plants."
+    try Golden.savePending([item], root: folder)
+    #expect(Golden.loadPending(root: folder) == [item])
+    let mode = try FileManager.default.attributesOfItem(atPath: Golden.pendingFile(root: folder).path)[.posixPermissions] as? Int
+    #expect(mode == 0o600)
+}
