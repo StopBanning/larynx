@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SQLite3
 import Testing
 @testable import LarynxCore
 
@@ -188,4 +189,31 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     f.history.addFlag("undone", to: row.id)
     f.history.addFlag("undone", to: row.id)
     #expect(f.history.recent(limit: 1).first?.flags == ["undone"])
+}
+
+@Test func timingIsKeptWithTheDictationAndOldDatabasesGainTheColumn() throws {
+    // A database from before the timing column (user_version 1) opens, gains the column and keeps its rows.
+    let f = try HistoryFixture()
+    var db: OpaquePointer?
+    #expect(sqlite3_open(f.history.databaseURL.path, &db) == SQLITE_OK)
+    let old = """
+        CREATE TABLE dictations (id TEXT PRIMARY KEY, time REAL NOT NULL, app TEXT, mode TEXT, engine TEXT, raw TEXT,
+            text TEXT, steps TEXT, audioSeconds REAL, totalMs INTEGER, delivery TEXT, audioPath TEXT, flags TEXT);
+        INSERT INTO dictations VALUES ('old-1', \(Date().timeIntervalSince1970 - 10), 'com.example.app', 'ai', 'clean',
+            'move the call to noon', 'Move the call to noon.', '[]', 1.2, 60, 'inserted', NULL, '');
+        PRAGMA user_version = 1;
+        """
+    #expect(sqlite3_exec(db, old, nil, nil, nil) == SQLITE_OK)
+    sqlite3_close(db)
+
+    let pending = f.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
+    let timing = History.Timing(micMs: 0, tailMs: 120, waitMs: 130, asrMs: 80, cleanMs: 9, keyUpToPasteMs: 225,
+                                deliverMs: 640, gapSeconds: 31, load: 2.1, accessibilityWasOff: true,
+                                reason: "no-focused-element", previewRunning: false)
+    f.history.complete(pending, transcript: f.transcript("Book the table for four."), delivery: "pasted+copied", timing: timing)
+    let rows = f.history.recent()
+    #expect(rows.count == 2)
+    #expect(rows.first { $0.id == pending.id }?.timing == timing)
+    #expect(rows.first { $0.id == "old-1" }?.timing == nil)
+    #expect(timing.summary == "mic 0 tail 120 wait 130 asr 80 clean 9 paste 225 deliver 640 gap 31 s load 2.1 (ax was off) reason no-focused-element")
 }

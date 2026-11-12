@@ -72,6 +72,9 @@ extension Hotkey.Key {
         let micStart = Date()
         do { try recorder.start() } catch { session.reset(); log("\(error)"); return }
         let micMs = ms(since: micStart)
+        session.timing.micMs = micMs
+        if let pid = session.target?.processIdentifier { session.timing.accessibilityWasOff = !AccessibilityModes.isHeld(pid: pid) }
+        if let last = ListenSession.lastDelivered { session.timing.gapSeconds = Int(Date().timeIntervalSince(last)) }
         ListenSession.current = session
         session.privateField = Privacy.isPrivate(app: session.target)
         NSSound(named: "Tink")?.play()
@@ -100,8 +103,12 @@ extension Hotkey.Key {
     }, onUp: {
         guard let session = ListenSession.current, session.state.finish() else { return }
         session.stopPreview()
+        let keyUp = Date()
+        session.timing.load = loadAverage()
+        session.timing.previewRunning = ListenSession.previewBusy
         Task { @MainActor in
         let (samples, tailMs) = await recorder.stopAfterTail()
+        session.timing.tailMs = tailMs
         if tailMs > 0 { log("kept listening \(tailMs) ms after the key: a word was still being said") }
         let app = session.target
         guard Double(samples.count) / Recorder.sampleRate >= 0.3 else {  // a tap, not dictation
@@ -113,10 +120,13 @@ extension Hotkey.Key {
         let mode = CleanupMode.forApp(bundleID: app?.bundleIdentifier)
         // On disk before transcription starts, so a crash from here on can't lose the words.
         let pending = History.shared.begin(samples: samples, app: app?.bundleIdentifier, mode: mode, privateField: session.privateField)
+        session.timing.waitMs = ms(since: keyUp)
         Task {
             defer { session.reset() }
             do {
                 let result = try await finish(samples, clean: wantsClean, mode: mode, screen: session.contextTerms)
+                session.timing.asrMs = result.asrMs
+                session.timing.cleanMs = result.totalMs - result.asrMs
                 let text = result.text
                 guard !text.isEmpty else {
                     History.shared.discard(pending)
@@ -133,8 +143,14 @@ extension Hotkey.Key {
                     return
                 }
                 let terms = Set(vocabularyCache.terms)
+                let deliverStart = Date()
+                Inserter.lastPasteSent = nil
                 let delivery = await Inserter.deliver(text, to: app, keepsCapital: { terms.contains($0) })
-                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label)
+                session.timing.deliverMs = ms(since: deliverStart)
+                if let sent = Inserter.lastPasteSent { session.timing.keyUpToPasteMs = Int(sent.timeIntervalSince(keyUp) * 1000) }
+                session.timing.reason = delivery.reason
+                ListenSession.lastDelivered = Date()
+                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label, timing: session.timing)
                 if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }
                 if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }
                 MenuController.shared.remember(text)
@@ -170,7 +186,7 @@ extension Hotkey.Key {
                                             symbol: "questionmark.circle", tint: .systemYellow, seconds: 2)
                     }
                 }
-                logTranscript("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(logNote(result.rewrite)) (\(result.rewriteMs) ms), \(text.split(separator: " ").count) words, \(pending.persists ? pending.id : "not saved")", text: text)
+                logTranscript("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(logNote(result.rewrite)) (\(result.rewriteMs) ms), \(text.split(separator: " ").count) words, \(pending.persists ? pending.id : "not saved"); \(session.timing.summary)", text: text)
             } catch {
                 // The spool keeps the audio; the next launch transcribes it again.
                 if session.shouldPresent { Pill.shared.hide(); setStatus("Error: \(error)") }
@@ -325,4 +341,12 @@ enum Undo {
             log("context: \(terms.count) terms from \(ctx.elements) elements in \(took) ms")
         }
     }
+}
+
+
+/// The machine's 1-minute load average, recorded with each dictation (is the Mac busy when one is slow?).
+func loadAverage() -> Double? {
+    var loads = [Double](repeating: 0, count: 3)
+    guard getloadavg(&loads, 3) > 0 else { return nil }
+    return (loads[0] * 10).rounded() / 10
 }

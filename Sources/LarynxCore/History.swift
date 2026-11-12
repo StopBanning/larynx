@@ -22,6 +22,59 @@ public final class History: @unchecked Sendable {
         public var delivery: String
         public var audioPath: String?
         public var flags: [String]
+        /// Where the time went and why a paste wasn't confirmed (numbers and codes, never text). Nil on old rows.
+        public var timing: Timing? = nil
+    }
+
+    /// One dictation's time split, from key-down to delivered, and the delivery's reason code. Recorded so a slow or
+    /// unconfirmed dictation can be explained afterwards (`larynx review`); holds no text.
+    public struct Timing: Codable, Equatable, Sendable {
+        /// Microphone start at key-down (0 when it was already warm).
+        public var micMs: Int?
+        /// Listening kept on after key-up because a word was still being said.
+        public var tailMs: Int?
+        /// Key-up to the start of transcription (the tail, plus writing the spool).
+        public var waitMs: Int?
+        public var asrMs: Int?
+        /// Cleanup after the speech model (dictionary, tidy, numbers, rewrite, doubt).
+        public var cleanMs: Int?
+        /// Key-up until ⌘V was sent (or the words were inserted another way): what you wait for.
+        public var keyUpToPasteMs: Int?
+        /// Inside delivery: bringing the app back, reading the field, pasting, checking.
+        public var deliverMs: Int?
+        /// Seconds since the previous dictation ended (nil for the first one after launch).
+        public var gapSeconds: Int?
+        /// The machine's 1-minute load average at key-up.
+        public var load: Double?
+        /// The app's accessibility tree was off at key-down (Larynx had switched it off, or never on).
+        public var accessibilityWasOff: Bool?
+        /// Why the paste wasn't confirmed, as a short code (nil when it was).
+        public var reason: String?
+        /// A live-preview transcription was still running at key-up (the final one waits for it).
+        public var previewRunning: Bool?
+
+        public init(micMs: Int? = nil, tailMs: Int? = nil, waitMs: Int? = nil, asrMs: Int? = nil, cleanMs: Int? = nil,
+                    keyUpToPasteMs: Int? = nil, deliverMs: Int? = nil, gapSeconds: Int? = nil, load: Double? = nil,
+                    accessibilityWasOff: Bool? = nil, reason: String? = nil, previewRunning: Bool? = nil) {
+            self.micMs = micMs; self.tailMs = tailMs; self.waitMs = waitMs; self.asrMs = asrMs; self.cleanMs = cleanMs
+            self.keyUpToPasteMs = keyUpToPasteMs; self.deliverMs = deliverMs; self.gapSeconds = gapSeconds
+            self.load = load; self.accessibilityWasOff = accessibilityWasOff; self.reason = reason
+            self.previewRunning = previewRunning
+        }
+
+        /// One line for the log: "wait 12 asr 80 clean 9 paste 104 deliver 640 gap 31 s load 2.1 (ax was off) reason x".
+        public var summary: String {
+            var parts: [String] = []
+            func add(_ name: String, _ v: Int?) { if let v { parts.append("\(name) \(v)") } }
+            add("mic", micMs); add("tail", tailMs); add("wait", waitMs); add("asr", asrMs); add("clean", cleanMs)
+            add("paste", keyUpToPasteMs); add("deliver", deliverMs)
+            if let gapSeconds { parts.append("gap \(gapSeconds) s") }
+            if let load { parts.append(String(format: "load %.1f", load)) }
+            if accessibilityWasOff == true { parts.append("(ax was off)") }
+            if previewRunning == true { parts.append("(preview running)") }
+            if let reason { parts.append("reason " + reason) }
+            return parts.joined(separator: " ")
+        }
     }
 
     /// A recording that has been spooled (or deliberately not) and is waiting for its transcript.
@@ -82,7 +135,8 @@ public final class History: @unchecked Sendable {
 
     /// Saves the transcript and clears the spool (or keeps the audio when `keepAudio` is set).
     @discardableResult
-    public func complete(_ pending: Pending, transcript: Transcript, delivery: String, flags: [String] = []) -> Row? {
+    public func complete(_ pending: Pending, transcript: Transcript, delivery: String, flags: [String] = [],
+                         timing: Timing? = nil) -> Row? {
         guard let spool = pending.spool else { return nil }
         defer { Self.removeSpool(spool) }
         guard !transcript.text.isEmpty else { return nil }
@@ -102,7 +156,8 @@ public final class History: @unchecked Sendable {
         let row = Row(id: pending.id, time: pending.time, app: pending.app, mode: transcript.mode.rawValue,
                       engine: transcript.engine, raw: transcript.raw, text: transcript.text, steps: transcript.steps,
                       audioSeconds: transcript.audioSeconds, totalMs: transcript.totalMs, delivery: delivery,
-                      audioPath: audioPath, flags: flags + (transcript.doubtful == nil || flags.contains("doubtful") ? [] : ["doubtful"]))
+                      audioPath: audioPath, flags: flags + (transcript.doubtful == nil || flags.contains("doubtful") ? [] : ["doubtful"]),
+                      timing: timing)
         do { try insert(row) } catch { return nil }
         prune()
         return row
@@ -210,12 +265,13 @@ public final class History: @unchecked Sendable {
 
     func insert(_ row: Row) throws {
         let steps = String(decoding: try JSONEncoder().encode(row.steps), as: UTF8.self)
+        let timing = try row.timing.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
         try withDB { db in
             try exec(db, """
-                INSERT OR REPLACE INTO dictations (id, time, app, mode, engine, raw, text, steps, audioSeconds, totalMs, delivery, audioPath, flags)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO dictations (id, time, app, mode, engine, raw, text, steps, audioSeconds, totalMs, delivery, audioPath, flags, timing)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, [row.id, row.time.timeIntervalSince1970, row.app, row.mode, row.engine, row.raw, row.text, steps,
-                      row.audioSeconds, row.totalMs, row.delivery, row.audioPath, row.flags.joined(separator: ",")])
+                      row.audioSeconds, row.totalMs, row.delivery, row.audioPath, row.flags.joined(separator: ","), timing])
             try exec(db, "DELETE FROM dictations_fts WHERE id = ?", [row.id])
             try exec(db, "INSERT INTO dictations_fts (id, text) VALUES (?, ?)", [row.id, row.text])
         }
@@ -224,7 +280,7 @@ public final class History: @unchecked Sendable {
     private func query(_ search: String?, limit: Int) throws -> [Row] {
         var rows: [Row] = []
         try withDB { db in
-            let columns = "d.id, d.time, d.app, d.mode, d.engine, d.raw, d.text, d.steps, d.audioSeconds, d.totalMs, d.delivery, d.audioPath, d.flags"
+            let columns = "d.id, d.time, d.app, d.mode, d.engine, d.raw, d.text, d.steps, d.audioSeconds, d.totalMs, d.delivery, d.audioPath, d.flags, d.timing"
             let match = search.map(Self.ftsQuery) ?? ""
             let sql = match.isEmpty
                 ? "SELECT \(columns) FROM dictations d ORDER BY d.time DESC LIMIT ?"
@@ -238,7 +294,8 @@ public final class History: @unchecked Sendable {
                                 app: string(2), mode: string(3) ?? "", engine: string(4) ?? "", raw: string(5) ?? "",
                                 text: string(6) ?? "", steps: steps, audioSeconds: sqlite3_column_double(statement, 8),
                                 totalMs: Int(sqlite3_column_int64(statement, 9)), delivery: string(10) ?? "",
-                                audioPath: string(11), flags: (string(12) ?? "").split(separator: ",").map(String.init)))
+                                audioPath: string(11), flags: (string(12) ?? "").split(separator: ",").map(String.init),
+                                timing: string(13).flatMap { try? JSONDecoder().decode(Timing.self, from: Data($0.utf8)) }))
             }
         }
         return rows
@@ -275,17 +332,31 @@ public final class History: @unchecked Sendable {
             try exec(handle, """
                 CREATE TABLE IF NOT EXISTS dictations (
                     id TEXT PRIMARY KEY, time REAL NOT NULL, app TEXT, mode TEXT, engine TEXT, raw TEXT, text TEXT,
-                    steps TEXT, audioSeconds REAL, totalMs INTEGER, delivery TEXT, audioPath TEXT, flags TEXT)
+                    steps TEXT, audioSeconds REAL, totalMs INTEGER, delivery TEXT, audioPath TEXT, flags TEXT, timing TEXT)
                 """)
             try exec(handle, "CREATE INDEX IF NOT EXISTS dictations_time ON dictations(time)")
             try exec(handle, "CREATE VIRTUAL TABLE IF NOT EXISTS dictations_fts USING fts5(id UNINDEXED, text)")
             // What a dictation should have said, when the user fixed it: an edit in the field or a repeat with a word
             // changed. The golden set (`larynx golden`) takes its reference texts from here.
             try exec(handle, "CREATE TABLE IF NOT EXISTS corrections (id TEXT PRIMARY KEY, text TEXT NOT NULL, source TEXT, time REAL)")
-            try exec(handle, "PRAGMA user_version = 1")
+            // Version 2 (Nov 12, 2026): the time split and delivery reason of each dictation (R1).
+            if !Self.hasColumn(handle, table: "dictations", column: "timing") {
+                try exec(handle, "ALTER TABLE dictations ADD COLUMN timing TEXT")
+            }
+            try exec(handle, "PRAGMA user_version = 2")
             db = handle
         }
         try body(db!)
+    }
+
+    private static func hasColumn(_ db: OpaquePointer, table: String, column: String) -> Bool {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(\(table))", -1, &statement, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(statement) }
+        while sqlite3_step(statement) == SQLITE_ROW {
+            if let name = sqlite3_column_text(statement, 1), String(cString: name) == column { return true }
+        }
+        return false
     }
 
     private func prepare(_ db: OpaquePointer, _ sql: String, _ values: [Any?]) throws -> OpaquePointer? {

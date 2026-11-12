@@ -315,6 +315,28 @@ case "review":
     }
     let deliveries = Swift.Dictionary(grouping: rows, by: { $0.delivery }).map { "\($0.key) \($0.value.count)" }.sorted()
     print("  delivered: " + deliveries.joined(separator: ", "))
+    // R1: where the time goes and why pastes weren't confirmed (rows recorded from Nov 12 on).
+    let timed = rows.compactMap { r in r.timing.map { (r, $0) } }
+    if !timed.isEmpty {
+        func split(_ label: String, _ items: [(History.Row, History.Timing)]) {
+            func p(_ get: (History.Timing) -> Int?) -> String {
+                let xs = items.compactMap { get($0.1) }
+                return xs.isEmpty ? "-" : "\(pct(xs, 0.5))/\(pct(xs, 0.9))"
+            }
+            print("    \(label) (\(items.count)): paste \(p(\.keyUpToPasteMs)), wait \(p(\.waitMs)), asr \(p(\.asrMs)), clean \(p(\.cleanMs)), deliver \(p(\.deliverMs)), mic \(p(\.micMs))")
+        }
+        print("  time split, ms p50/p90 (key-up to paste = wait + asr + clean + the start of delivery):")
+        split("all", timed)
+        split("first after a 5-min gap", timed.filter { ($0.1.gapSeconds ?? 0) >= 300 })
+        split("accessibility was off", timed.filter { $0.1.accessibilityWasOff == true })
+        split("preview running at key-up", timed.filter { $0.1.previewRunning == true })
+        split("load 4 or more", timed.filter { ($0.1.load ?? 0) >= 4 })
+        var reasons: [String: Int] = [:]
+        for (r, t) in timed { if let why = t.reason { reasons["\(r.app ?? "?") \(why)", default: 0] += 1 } }
+        print("  not confirmed, by app and reason: " + (reasons.isEmpty ? "none" : reasons.sorted { $0.value > $1.value }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")))
+        let off = timed.filter { $0.1.accessibilityWasOff == true }, on = timed.filter { $0.1.accessibilityWasOff == false }
+        print("  not confirmed when accessibility was off at the press: \(off.filter { $0.1.reason != nil }.count) of \(off.count); when on: \(on.filter { $0.1.reason != nil }.count) of \(on.count)")
+    }
     var stageChanges: [String: Int] = [:]
     for r in rows { for st in r.steps where st.applied && st.before != st.after { stageChanges[st.stage, default: 0] += 1 } }
     print("  stages that changed text: " + stageChanges.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", "))

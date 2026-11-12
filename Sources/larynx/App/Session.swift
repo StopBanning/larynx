@@ -15,6 +15,10 @@ import LarynxCore
     var contextTerms: [String]?
     /// Hands-free: recording with no key held.
     var locked = false
+    /// Where this dictation's time goes, filled in as it happens (R1); saved with it in history.
+    var timing = History.Timing()
+    /// When the previous dictation finished delivering, for the idle gap before the next one.
+    static var lastDelivered: Date?
 
     init(target: NSRunningApplication?) {
         self.target = target
