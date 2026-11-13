@@ -42,6 +42,19 @@ extension Hotkey.Key {
     }
 }
 
+/// Professional when the professional key started this dictation, or when the menu's Professional Style is on
+/// (PLAN-v1 P1). Fixed at key-down, like the target app.
+func dictationStyle(key: Hotkey.Key?, settings: Settings = .shared) -> Style {
+    if let key, settings.string(.professionalKey) == key.rawValue { return .professional }
+    return Style(rawValue: settings.string(.style)) ?? .casual
+}
+
+/// The talk keys plus the professional key, which has to be one of them to be heard.
+func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> [Hotkey.Key] {
+    guard let key = Hotkey.Key(rawValue: settings.string(.professionalKey)), !keys.contains(key) else { return keys }
+    return keys + [key]
+}
+
 @MainActor func runListen(keys: [Hotkey.Key]) async {
     setStatus("Asking for permissions...")
     guard await requestMicrophone() else { setStatus("Microphone access refused"); log("microphone access was refused"); return }
@@ -67,8 +80,10 @@ extension Hotkey.Key {
     // instantly (a cold start loses the first 150-300 ms). Command-line tools and serve close it at once.
     if inApp { recorder.warmSeconds = { Double(Settings.shared.string(.micWarm)) ?? 30 } }
     recorder.deviceUID = { Settings.shared.string(.micDevice) }
+    let keys = withProfessionalKey(keys)
     let hotkey = Hotkey(keys: keys, onDown: {
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
+        session.style = dictationStyle(key: activeHotkey?.pressedKey)
         let micStart = Date()
         do { try recorder.start() } catch { session.reset(); log("\(error)"); return }
         let micMs = ms(since: micStart)
@@ -97,7 +112,7 @@ extension Hotkey.Key {
         // Names on screen for this dictation, gathered and turned into a vocabulary while you speak (never waited for).
         if inApp, !session.privateField { startContext(for: session) }
         guard inApp, Pill.enabled else { return }
-        Pill.shared.listen(app: session.target, privateField: session.privateField,
+        Pill.shared.listen(app: session.target, privateField: session.privateField, professional: session.style == .professional,
                            field: Inserter.focusedFieldFrame(in: session.target), level: { recorder.level })
         session.previewTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak session] _ in
             Task { @MainActor in
@@ -138,7 +153,7 @@ extension Hotkey.Key {
         Task {
             defer { session.reset() }
             do {
-                let result = try await finish(samples, clean: wantsClean, mode: mode, screen: session.contextTerms)
+                let result = try await finish(samples, clean: wantsClean, mode: mode, style: session.style, screen: session.contextTerms)
                 session.timing.asrMs = result.asrMs
                 session.timing.cleanMs = result.totalMs - result.asrMs
                 let text = result.text
@@ -164,7 +179,8 @@ extension Hotkey.Key {
                 if let sent = Inserter.lastPasteSent { session.timing.keyUpToPasteMs = Int(sent.timeIntervalSince(keyUp) * 1000) }
                 session.timing.reason = delivery.reason
                 ListenSession.lastDelivered = Date()
-                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label, timing: session.timing)
+                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label,
+                                                    flags: session.style == .professional ? ["professional"] : [], timing: session.timing)
                 if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }
                 if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }
                 MenuController.shared.remember(text)

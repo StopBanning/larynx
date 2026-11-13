@@ -115,6 +115,11 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/uni
   90 seconds with one word changed and Larynx learns the fix. *Fix it in place*: for 20 seconds after a paste,
   Larynx watches the text field; change a word to one that sounds like what it heard and it learns that too. The
   menu has Undo Learned.
+- **Two styles**: casual for friends and AI chats, professional for work. Professional drops "you know", "dude",
+  swearing for emphasis and "gonna", and turns spoken lists into lists. Turn it on in the menu, or hold the
+  Professional Key (set it in the menu) for one dictation.
+
+  > Yeah, so we're gonna need the slides by Friday, you know?  →  We're going to need the slides by Friday.
 - **Fix it once**: when a dictation came out wrong, open History (or Fix Last Dictation… in the menu), press Fix…
   and type what you said. An invented word ("Zorvex" for "Zorbax") is corrected from then on; two real words that
   sound alike are only noted, never swapped by themselves.

@@ -73,7 +73,7 @@ func requestMicrophone() async -> Bool {
 }
 
 /// Transcribes, optionally cleans, and reports timing for one utterance.
-func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy: Bool = !verbatim,
+func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, style: Style = .casual, tidy: Bool = !verbatim,
             screen: [String]? = nil) async throws -> Transcript {
     let started = Date()
     try await Loader.shared.task.value
@@ -88,7 +88,7 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, tidy
     let rewrite = (option("--rewrite") ?? settings.string(.rewrite)) == "auto"
     let context = Pipeline.Context(tidy: tidy, rewrite: rewrite, forceRewrite: clean,
                                    snippets: tidy ? Snippets.load() : [:], dictionary: tidy ? Dictionary.load() : [:],
-                                   caseTerms: vocabularyCache.terms, settings: settings)
+                                   caseTerms: vocabularyCache.terms, settings: settings, style: style)
     var result = await Pipeline().run(input, context: context)
     // Homophones settled by the names on screen ("doc" -> "Dock"), in shadow: recorded, not applied yet.
     if let terms = screen, let proposal = ContextWords.proposal(result.text, screenTerms: terms) {

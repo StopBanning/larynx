@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Professional style**: the same voice, a cleaner register for work. Drops "you know", "I mean", "dude" and
+  other forms of address, openers like "Yeah," and "Alright,", swearing used for emphasis, and spoken forms like
+  "gonna", and turns a list you say ("three things: ...", "first..., second...") into a numbered list. Turn it on
+  for everything (menu: Professional Style) or hold the Professional Key for one dictation; the pill shows a
+  briefcase. Casual output is unchanged. `--style professional` on the command line, `"style"` in serve and MCP.
+
 - **History window** (menu: History…, ⌘Y): the last 30 days by day, with search, copy, play (when the recording is
   kept), what went where, and running totals. **Fix…** on a row (or Fix Last Dictation… in the menu) takes what you
   actually said: the fix is saved, an invented word is learned for next time under the same rules as learning from

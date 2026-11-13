@@ -38,6 +38,8 @@ let usage = """
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
     --engine clean|parakeet|bark3|ultra|unified   speech model (clean = English, drops ums; see docs/BENCHMARKS.md)
     --mode ai|correspondence|standard   how much to polish (listen picks it from the front app)
+    --style casual|professional   professional also drops "you know", "dude", swearing for emphasis and "gonna",
+                          and makes spoken lists into lists (listen: the professional key or the menu picks it)
     --verbatim            skip the tidy-up rules
     --rewrite auto|off    AI rewrite for corrections, numbers and verbal tics, only when needed (Apple's on-device model)
     --clean               always run the AI rewrite with Apple's on-device model when available
@@ -93,7 +95,8 @@ func runTranscribe() async {
             }
             exit(0)
         }
-        let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard)
+        let result = try await finish(samples, clean: wantsClean, mode: option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard,
+                                      style: option("--style").flatMap(Style.init(rawValue:)) ?? .casual)
         log("\(result.audioSeconds) s of audio, speech \(result.asrMs) ms, total \(result.totalMs) ms")
         print(result.text)
         exit(0)
@@ -546,7 +549,8 @@ case "golden":
     exit(0)
 case "tidy":
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
-    let tidied = Tidy.apply(args.last ?? "", mode: mode)
+    let style = option("--style").flatMap(Style.init(rawValue:)) ?? .casual
+    let tidied = Tidy.apply(args.last ?? "", mode: mode, style: style)
     print(tidied)
     // --shadow: also what each shadow rule would make of it.
     if args.contains("--shadow") {

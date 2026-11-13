@@ -42,6 +42,7 @@ func runServe() async {
             do {
                 var result = try await finish(samples, clean: request["clean"] as? Bool ?? false,
                                               mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
+                                              style: (request["style"] as? String).flatMap(Style.init(rawValue:)) ?? .casual,
                                               tidy: !(request["verbatim"] as? Bool ?? false))
                 if request["paste"] as? Bool == true, !result.text.isEmpty {
                     let text = result.text
@@ -62,6 +63,7 @@ func runServe() async {
             do {
                 let result = try await finish(try loadAudioFile(URL(fileURLWithPath: path)), clean: request["clean"] as? Bool ?? false,
                                               mode: (request["mode"] as? String).flatMap(CleanupMode.init(rawValue:)) ?? .standard,
+                                              style: (request["style"] as? String).flatMap(Style.init(rawValue:)) ?? .casual,
                                               tidy: !(request["verbatim"] as? Bool ?? false))
                 var body = try result.jsonObject()
                 body["event"] = "result"

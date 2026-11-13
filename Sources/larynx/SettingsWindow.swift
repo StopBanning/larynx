@@ -196,6 +196,20 @@ private struct CleanupPane: View {
     @ObservedObject private var model = SettingsModel.shared
     var body: some View {
         Form {
+            Section("Style") {
+                Picker("Every dictation", selection: setting(.style)) {
+                    Text("Casual").tag("casual"); Text("Professional").tag("professional")
+                }
+                Picker("Professional key", selection: setting(.professionalKey, apply: { _ in
+                    if let hotkey = activeHotkey { hotkey.keys = withProfessionalKey(hotkey.keys) }
+                })) {
+                    Text("None").tag("none")
+                    ForEach(Hotkey.Key.allCases, id: \.rawValue) { Text($0.label).tag($0.rawValue) }
+                }
+                Toggle("Remove swearing in the professional style", isOn: onOff(.professionalSwearing, on: "remove", off: "keep"))
+                Text("Professional drops \u{201C}you know\u{201D}, \u{201C}dude\u{201D}, swearing used for emphasis and \u{201C}gonna\u{201D}, and turns spoken lists into lists. Hold the professional key to use it for one dictation.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Cleanup") {
                 Toggle("AI rewrite for corrections in Mail and Messages (Apple's on-device model)", isOn: onOff(.rewrite, on: "auto"))
                 Toggle("Fit dictations to the text already in the field", isOn: onOff(.fitToField))

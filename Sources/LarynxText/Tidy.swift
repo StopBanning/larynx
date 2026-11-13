@@ -1,6 +1,14 @@
 import Foundation
 
 /// How much to polish, chosen from the app you are dictating into.
+/// How the text should read (PLAN-v1 section P). `CleanupMode` is where it is going (an AI chat, a message, an
+/// email); the style is the register. Casual is everything Larynx did before; professional also removes what you'd
+/// leave out when writing to a client: discourse fillers, "dude", swearing used for emphasis, spoken forms like
+/// "gonna", and turns spoken lists into real ones.
+public enum Style: String, Codable, Sendable, CaseIterable {
+    case casual, professional
+}
+
 public enum CleanupMode: String, Codable, Sendable {
     /// AI chats, terminals, code editors: the model reading it doesn't care about polish. Light tidy, no added period.
     case ai
@@ -179,7 +187,7 @@ public enum Tidy {
     /// Joins the copies of a chant ("No way, no way, no way.") so the repeat rules leave it; removed before the end.
     static let chantMark = "\u{2060}"
 
-    public static func apply(_ text: String, mode: CleanupMode) -> String {
+    public static func apply(_ text: String, mode: CleanupMode, style: Style = .casual, keepSwearing: Bool = false) -> String {
         var s = text
         // 0a. "New paragraph." / "new line," said as its own phrase between sentence boundaries ("A new line of
         // shoes" stays). Marked now, turned into line breaks after the spacing rules.
@@ -248,6 +256,8 @@ public enum Tidy {
         s = CodeWords.apply(s)
         // 2f. "like" as a filler, only where it cannot be the verb or a comparison.
         s = fillerLike(s)
+        // 2g. The professional style's extra cleanup (PLAN-v1 P2). Casual text never reaches it.
+        if style == .professional { s = professional(s, keepSwearing: keepSwearing) }
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
@@ -285,7 +295,65 @@ public enum Tidy {
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
+        // 7. Professional: a list you said ("first..., second...", "three things: a, b and c") becomes a real one.
+        if style == .professional { s = spokenList(countedList(s)) }
         return s
+    }
+
+    /// The professional style's rules (PLAN-v1 P2). Each was read against every match in 677 real dictations before
+    /// it was turned on; the misses that reading found are the exclusions written into the patterns.
+    static func professional(_ text: String, keepSwearing: Bool) -> String {
+        var s = text
+        func re(_ pattern: String, _ template: String) {
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+        }
+        let start = "(^|[.!?]\\s+)"
+        // Spoken forms written out. "it's gotta" is "it has to", not "it's have to".
+        re("\\b(there|it|that|he|she)'s\\s+gotta\\b", "$1 has to")
+        for (spoken, written) in [("wanna", "want to"), ("gonna", "going to"), ("gotta", "have to"), ("kinda", "kind of"),
+                                  ("sorta", "sort of"), ("lemme", "let me"), ("gimme", "give me"), ("dunno", "don't know"),
+                                  ("'cause", "because"), ("cuz", "because"), ("cos", "because")] {
+            re("(?<![\\w'])" + NSRegularExpression.escapedPattern(for: spoken) + "(?![\\w'])", written)
+        }
+        // "cause" only where it is "because": opening a clause ("the cause of" stays).
+        re("(^|[.!?,]\\s+)cause\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|this|that)\\b)", "$1because ")
+        re("\\b(for|to|with|at|see|thank|tell|love|miss|help|let|got)\\s+ya\\b", "$1 you")
+        // Tag fillers: "..., you know?", "or whatever", "and stuff", "I mean, ...".
+        re(",?\\s*you know\\?(?=\\s|$)", ".")
+        re(",\\s*you know,\\s*", ", ")
+        re(",\\s*you know(?=[.!?]|$)", "")
+        re(start + "you know,\\s+", "$1")
+        re(",?\\s+or whatever(?=[.!?,]|$)", "")
+        re(",?\\s+and (?:stuff|shit)(?: like that)?(?=[.!?,]|$)", "")
+        re(start + "I mean,\\s+", "$1")
+        re(start + "I mean\\s+(?=(?:if|it's|that's|we|you|they|the|honestly|obviously|i|there's|this|yeah)\\b)", "$1")
+        // Exclamations that are only emphasis.
+        if !keepSwearing { re(start + "(?:god ?damn|damn) it[,.!]*\\s*", "$1") }
+        re(start + "oh my god[,.!]*\\s*", "$1")
+        // Openers and forms of address, as many as are stacked ("Oh yeah, ...", "Alright, yeah, ..."). "So" only
+        // when it opens a clause: "So far", "So weird" and "So much" stay.
+        var previous = ""
+        while previous != s {
+            previous = s
+            re(start + "(?:yeah|yep|yup|okay so|ok so|alright|all right|dude|bro|man|big dog|ah|oh)(?:,\\s*|\\s+)(?=\\w)", "$1")
+            re(start + "so(?:,\\s*|\\s+(?=(?:we|i|you|they|he|she|it|let's|that's|it's|there's|this|if|yeah)\\b))", "$1")
+        }
+        re(",\\s*(?:dude|bro|man|big dog|brother|my brother|buddy|bud|my guy|homie)(?=[.!?,]|$)", "")
+        // Swearing used for emphasis. Not where it is the verb ("they kept f***ing the order up").
+        if !keepSwearing {
+            re("\\b(?:fucking|fuckin'?|freaking|frickin'?|goddamn|god damn|damn)\\s+(?!(?:it|up|around|with|over|off|me|him|her|them|us|you)\\b)(?!(?:\\w+\\s+){1,2}(?:up|over|around|off)\\b)(?=\\w)", "")
+            re("\\bshit like that\\b", "things like that")
+            re("\\b(the|this|that|my|your|our|his|her|their)\\s+shit\\b", "$1 stuff")
+        }
+        // "like" the shared rules leave because it can be a comparison in casual speech.
+        re("\\b(it's|it is|it was|that's|that is|is|was)\\s+like,?\\s+(?=(?:can|could|will|would|should|almost|really|so|very|super|totally|pretty|literally|just|not|kind of|sort of)\\b)", "$1 ")
+        re("\\balmost like\\s+(?=\\w+ed\\b)", "almost ")
+        re("\\b(can|could|will|would|should|must|might)\\s+be\\s+like\\s+(?=\\w)", "$1 be ")
+        // What the removals leave behind: a comma before a full stop, a doubled mark.
+        re(",\\s*([.!?])", "$1")
+        re("([!?])\\s*\\.", "$1")
+        // Never hand back nothing: a dictation that was only an opener ("Yeah.") stays as it was.
+        return s.rangeOfCharacter(from: .letters) == nil ? text : s
     }
 
     /// Drops "like" where it is only a filler: "to like talk", "for like the whole day", "or like vendors",

@@ -50,7 +50,8 @@ final class Pill {
     // MARK: States
 
     /// Recording started: shows the target app's icon and a live waveform.
-    func listen(app: NSRunningApplication?, privateField: Bool, field: NSRect? = nil, level: @escaping () -> Float) {
+    /// `professional`: a small briefcase beside the waveform, so you can see which style this dictation will get.
+    func listen(app: NSRunningApplication?, privateField: Bool, professional: Bool = false, field: NSRect? = nil, level: @escaping () -> Float) {
         guard Pill.enabled else { return }
         let content = build()
         cancelHide()
@@ -64,7 +65,7 @@ final class Pill {
         anchor = Settings.shared.string(.pillPosition) == "auto" ? field : nil
         content.applyGlass(Pill.glassLevel)
         content.setApp(AppIcon.forPill(app), name: app?.localizedName, privateField: privateField)
-        content.setSymbol(nil)
+        content.setSymbol(professional ? "briefcase.fill" : nil, tint: .secondaryLabelColor)
         content.wave.mode = .live
         content.wave.reset()
         layout(text: "", dim: false)

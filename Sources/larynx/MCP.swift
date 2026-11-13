@@ -16,6 +16,7 @@ func runMCP() async {
          "inputSchema": ["type": "object", "required": ["text"], "properties": [
             "text": ["type": "string"],
             "mode": ["type": "string", "enum": ["ai", "correspondence", "standard"], "description": "Default correspondence"],
+            "style": ["type": "string", "enum": ["casual", "professional"], "description": "Default casual. Professional also removes discourse fillers, swearing used for emphasis and spoken forms like gonna, and makes spoken lists into lists."],
          ]]],
         ["name": "add_dictionary_word",
          "description": "Teach Larynx a word it keeps mishearing, e.g. heard 'lynx' -> written 'Larynx'.",
@@ -67,7 +68,8 @@ func runMCP() async {
                 let raw = a["text"] as? String ?? ""
                 let input = Transcript(text: raw, raw: raw, engine: "text", mode: mode, audioSeconds: 0,
                                        asrMs: 0, rewriteMs: 0, totalMs: 0, rewrite: "off", rewritten: false)
-                let context = Pipeline.Context(dictionary: Dictionary.load(), settings: Settings.shared.snapshot())
+                let style = (a["style"] as? String).flatMap(Style.init(rawValue:)) ?? .casual
+                let context = Pipeline.Context(dictionary: Dictionary.load(), settings: Settings.shared.snapshot(), style: style)
                 text(id, await Pipeline().run(input, context: context).text)
             case "add_dictionary_word":
                 guard let heard = a["heard"] as? String, let written = a["written"] as? String, !heard.isEmpty

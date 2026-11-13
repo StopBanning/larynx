@@ -14,6 +14,7 @@ public final class Settings: @unchecked Sendable {
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
         case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded, micDevice
+        case style, professionalKey, professionalSwearing
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -35,6 +36,9 @@ public final class Settings: @unchecked Sendable {
             case .micWarm: return "30"
             case .context: return "app-only"  // the window walk is opt-in: suspected in two Claude freezes (Nov 11)
             case .onboarded: return "false"
+            case .style: return "casual"
+            case .professionalKey: return "none"
+            case .professionalSwearing: return "remove"
             default: return "on"
             }
         }
@@ -51,6 +55,9 @@ public final class Settings: @unchecked Sendable {
             case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
             case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet, .onboarded: return ["true", "false"].contains(value)
+            case .style: return ["casual", "professional"].contains(value)
+            case .professionalKey: return value == "none" || Hotkey.Key(rawValue: value) != nil
+            case .professionalSwearing: return ["remove", "keep"].contains(value)
             case .keys, .vocabularyRoots, .toggleKeys, .micDevice: return true
             default: return StageMode(rawValue: value) != nil
             }

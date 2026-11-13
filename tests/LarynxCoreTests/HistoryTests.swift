@@ -342,3 +342,15 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     try FileManager.default.removeItem(at: folder)
     for e in Engine.allCases { #expect(ModelSetup.expectedBytes(e) > 400 * mb) }
 }
+
+@Test func theProfessionalStyleIsAValidSettingWithSafeDefaults() throws {
+    let f = try HistoryFixture()
+    #expect(f.settings.string(.style) == "casual")
+    #expect(f.settings.string(.professionalKey) == "none")
+    #expect(f.settings.string(.professionalSwearing) == "remove")
+    try f.settings.set("professional", for: .style)
+    try f.settings.set("rightCommand", for: .professionalKey)
+    #expect(f.settings.string(.style) == "professional" && f.settings.string(.professionalKey) == "rightCommand")
+    #expect(throws: (any Error).self) { try f.settings.set("formal", for: .style) }
+    #expect(throws: (any Error).self) { try f.settings.set("capsLock", for: .professionalKey) }
+}

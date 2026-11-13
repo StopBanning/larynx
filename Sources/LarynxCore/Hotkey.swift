@@ -33,6 +33,8 @@ public final class Hotkey: @unchecked Sendable {
     public var doubleTapLocks = true
     /// Keys that toggle hands-free with a single press (a second macro-pad button, say): press to start, press to finish.
     public var toggleKeys: [Key] = []
+    /// The key that started the current dictation (the professional key changes how it is cleaned up).
+    public private(set) var pressedKey: Key?
     private let onDown: () -> Void
     private let onUp: () -> Void
     private let onCancel: () -> Void
@@ -130,11 +132,12 @@ public final class Hotkey: @unchecked Sendable {
         if pressed {
             guard !isDown, !swallowUp else { return }
             if isLocked { isLocked = false; swallowUp = true; onUp(); return }  // any talk key finishes hands-free
-            if isToggle { swallowUp = true; onDown(); isLocked = true; onLock(); return }
+            if isToggle { pressedKey = key; swallowUp = true; onDown(); isLocked = true; onLock(); return }
             guard !cancelled else { return }
             isDown = true
             downAt = now
             secondTap = doubleTapLocks && now.timeIntervalSince(lastTapUp) < Hotkey.doubleTapGap
+            pressedKey = key
             onDown()
         } else {
             if swallowUp { swallowUp = false; return }

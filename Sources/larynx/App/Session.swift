@@ -17,6 +17,8 @@ import LarynxCore
     var locked = false
     /// Where this dictation's time goes, filled in as it happens (R1); saved with it in history.
     var timing = History.Timing()
+    /// Casual or professional, fixed when the key goes down.
+    var style: Style = .casual
     /// When the previous dictation finished delivering, for the idle gap before the next one.
     static var lastDelivered: Date?
 

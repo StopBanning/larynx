@@ -100,6 +100,26 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(toggle("Live Preview", on: Pill.enabled, #selector(togglePreview)))
         menu.addItem(glassSliderItem())
         menu.addItem(toggle("AI Cleanup", on: autoRewrite, #selector(toggleRewrite)))
+        // Professional (PLAN-v1 P): every dictation, or only while the professional key is held.
+        let professional = toggle("Professional Style", on: settings.string(.style) == "professional", #selector(toggleProfessional))
+        professional.toolTip = "Cleaner text for work: no \u{201C}you know\u{201D}, \u{201C}dude\u{201D}, swearing or \u{201C}gonna\u{201D}, and spoken lists become lists"
+        menu.addItem(professional)
+        let proKeyItem = NSMenuItem(title: "Professional Key", action: nil, keyEquivalent: "")
+        let proKeyMenu = NSMenu()
+        let proKey = settings.string(.professionalKey)
+        for (raw, title) in [("none", "None")] + Hotkey.Key.allCases.map({ ($0.rawValue, $0.label) }) {
+            let item = NSMenuItem(title: title, action: #selector(chooseProfessionalKey(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = raw
+            item.state = proKey == raw ? .on : .off
+            proKeyMenu.addItem(item)
+        }
+        let note = NSMenuItem(title: "Hold it to dictate in the professional style", action: nil, keyEquivalent: "")
+        note.isEnabled = false
+        proKeyMenu.addItem(.separator())
+        proKeyMenu.addItem(note)
+        proKeyItem.submenu = proKeyMenu
+        menu.addItem(proKeyItem)
         let keyItem = NSMenuItem(title: "Talk Key", action: nil, keyEquivalent: "")
         let keyMenu = NSMenu()
         for key in Hotkey.Key.allCases {
@@ -257,13 +277,25 @@ final class MenuController: NSObject, NSMenuDelegate {
         save(autoRewrite ? "off" : "auto", for: .rewrite)
     }
 
+    @objc func toggleProfessional() {
+        save(settings.string(.style) == "professional" ? "casual" : "professional", for: .style)
+    }
+
+    /// The professional key has to be heard, so it joins the talk keys while it is set (a key already used for
+    /// hands-free can't also be it).
+    @objc func chooseProfessionalKey(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, save(raw, for: .professionalKey) else { return }
+        if let hotkey = activeHotkey { hotkey.keys = withProfessionalKey(hotkey.keys) }
+        log("professional key: " + (Hotkey.Key(rawValue: raw)?.label ?? "none"))
+    }
+
     @objc func toggleKey(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, let key = Hotkey.Key(rawValue: raw) else { return }
         var keys = activeHotkey?.keys ?? listenKeys
         if keys.contains(key) { keys.removeAll { $0 == key } } else { keys.append(key) }
         guard !keys.isEmpty else { return }  // always keep one talk key
         guard save(keys.map(\.rawValue).joined(separator: ","), for: .keys) else { return }
-        activeHotkey?.keys = keys
+        activeHotkey?.keys = withProfessionalKey(keys)
         log("talk keys: " + keys.map(\.label).joined(separator: ", "))
     }
 

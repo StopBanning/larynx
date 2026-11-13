@@ -11,10 +11,12 @@ public struct Pipeline {
         public var dictionary: [String: String]
         public var caseTerms: [String]
         public var settings: Settings.Snapshot
+        /// Casual or professional (PLAN-v1 P): chosen per dictation by the key held or the menu's Professional Style.
+        public var style: Style
 
         public init(tidy: Bool = true, rewrite: Bool = true, forceRewrite: Bool = false,
                     snippets: [String: String] = [:], dictionary: [String: String] = [:],
-                    caseTerms: [String] = [], settings: Settings.Snapshot = .init()) {
+                    caseTerms: [String] = [], settings: Settings.Snapshot = .init(), style: Style = .casual) {
             self.tidy = tidy
             self.rewrite = rewrite
             self.forceRewrite = forceRewrite
@@ -22,6 +24,7 @@ public struct Pipeline {
             self.dictionary = dictionary
             self.caseTerms = caseTerms
             self.settings = settings
+            self.style = style
         }
     }
 
@@ -93,7 +96,10 @@ public struct Pipeline {
         },
         Stage(name: "tidy", setting: .tidyStage, enabled: { $0.tidy }) { input, context in
             var result = input
-            if context.tidy { result.text = Tidy.apply(input.text, mode: input.mode) }
+            if context.tidy {
+                result.text = Tidy.apply(input.text, mode: input.mode, style: context.style,
+                                         keepSwearing: context.settings.string(.professionalSwearing) == "keep")
+            }
             return result
         },
         // Spoken numbers to digits in every mode, AI apps included ("Opus five point five" -> "Opus 5.5").
