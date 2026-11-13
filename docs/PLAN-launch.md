@@ -241,7 +241,8 @@ GitHub organization; posting (or approving) each launch item; the Apple enrolmen
 | --- | --- | --- |
 | L0.8 | built Nov 13 | PLAN-v1 R5 row. Picture in the README. |
 | L0.1 | built Nov 13 (Colin left the pick to the planner: "Night") | `scripts/make-icon.swift` draws it (voice bars ending in a text cursor, dark glass tile, blue cursor; three fatter bars up to 64 px) and writes `packaging/Larynx.icns`, `docs/images/icon.png` and `docs/images/social-preview.png`. `make-app.sh` puts it in the bundle; `tests/install.py` checks it. Left: Colin uploads the social preview in the repo settings (no API for it); favicon comes with L0.10. |
-| L0.2 to L0.7, L0.9 to L0.13 | not started (planned Nov 13) | |
+| L0.9 | built Nov 13 (not clicked through live) | Menu: Send Feedback…, Check for Updates…, About Larynx. `Links.swift` holds the repo address in one place for LQ2. The About credits point to the README for each model's licence until L0.13 checks them. |
+| L0.2 to L0.7, L0.10 to L0.13 | not started (planned Nov 13) | |
 | L1 | not started | |
 | L2 | waits on LQ1 | |
 | L3 | reels 8 to 10 after L0.11; 1 to 7 after L2 | |

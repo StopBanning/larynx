@@ -164,7 +164,25 @@ final class MenuController: NSObject, NSMenuDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
+        menu.addItem(.separator())
+        for (title, action) in [("Send Feedback…", #selector(sendFeedback)), ("Check for Updates…", #selector(checkForUpdates)),
+                                ("About Larynx", #selector(showAbout))] {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+        }
         menu.addItem(NSMenuItem(title: "Quit Larynx", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    /// Opens a new GitHub issue with the version, macOS and speech model filled in. Nothing dictated is attached.
+    @objc func sendFeedback() { NSWorkspace.shared.open(Links.feedback(engine: Settings.shared.string(.engine))) }
+
+    /// Opens the releases page. A signed download with automatic updates is PLAN-launch L2.2.
+    @objc func checkForUpdates() { NSWorkspace.shared.open(Links.releases) }
+
+    @objc func showAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: Links.credits, .applicationName: "Larynx"])
     }
 
     /// "Pill Glass": Clear on the left, Solid on the right; the pill appears while you drag.

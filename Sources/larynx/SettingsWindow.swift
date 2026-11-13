@@ -232,7 +232,7 @@ private struct PrivacyPane: View {
             Section {
                 Text("Nothing you say leaves this Mac. Password fields and the apps in privacy.json are never recorded or kept.")
                     .font(.callout)
-                Button("Open privacy details") { NSWorkspace.shared.open(URL(string: "https://github.com/StopBanning/larynx/blob/main/docs/PRIVACY.md")!) }
+                Button("Open privacy details") { NSWorkspace.shared.open(URL(string: Links.repo + "/blob/main/docs/PRIVACY.md")!) }
             }
         }
         .formStyle(.grouped)

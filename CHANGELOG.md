@@ -6,6 +6,8 @@
   kept), what went where, and running totals. **Fix…** on a row (or Fix Last Dictation… in the menu) takes what you
   actually said: the fix is saved, an invented word is learned for next time under the same rules as learning from
   a repeat, and the clip joins your test set when its recording is kept.
+- **An app icon**, and in the menu: Send Feedback… (a new issue with your version, macOS and speech model filled in;
+  nothing you dictated is attached), Check for Updates… and About Larynx.
 - **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
 - **Privacy, tested**: `tests/privacy.py` runs speech to text with every network connection denied.
