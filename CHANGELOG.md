@@ -8,6 +8,7 @@
   a repeat, and the clip joins your test set when its recording is kept.
 - **An app icon**, and in the menu: Send Feedback… (a new issue with your version, macOS and speech model filled in;
   nothing you dictated is attached), Check for Updates… and About Larynx.
+- **Uninstall** in one line (`scripts/uninstall.sh`): lists what it will remove, asks, and can keep your data.
 - **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
 - **Privacy, tested**: `tests/privacy.py` runs speech to text with every network connection denied.

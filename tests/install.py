@@ -5,7 +5,8 @@
 
 Runs the installer with HOME set to a new, empty folder, ad-hoc signing (no identity from this Mac), no model
 warm-up and nothing opened, then checks the bundle: it exists, is ad-hoc signed, has the bundle id, the icon and the
-microphone text, its binary runs, and the new home holds no Larynx data, so the first launch starts at setup.
+microphone text, its binary runs, the new home holds no Larynx data (so the first launch starts at setup), and the uninstall script
+then leaves that home clean.
 Permissions (microphone, accessibility, input monitoring) cannot be tested this way.
 
 The new home is under ~/work/scratch (the startup disk) and is deleted afterwards. This never restarts, opens or
@@ -46,6 +47,13 @@ def main():
             check(info.get("CFBundleIconFile") == "Larynx" and (app / "Contents/Resources/Larynx.icns").exists(), "app icon")
             run = subprocess.run([str(binary), "tidy", "um so this is a test"], env=dict(env, LARYNX_DATA_DIR=str(home / "data")), capture_output=True, text=True, timeout=60)
             check(run.returncode == 0 and run.stdout.strip() == "So this is a test", "the app's binary runs")
+            # Uninstall, files only (never quits an app or touches settings or permissions): the new home is left clean.
+            (home / "Library/Application Support/Larynx").mkdir(parents=True, exist_ok=True)
+            (home / "Documents").mkdir(exist_ok=True)
+            (home / "Documents/keep.txt").write_text("not Larynx's")
+            un = subprocess.run(["zsh", str(ROOT / "scripts/uninstall.sh"), "--files-only", "--yes"], env=env, capture_output=True, text=True, timeout=60)
+            check(un.returncode == 0 and not app.exists() and not (home / "Library/Application Support/Larynx").exists()
+                  and (home / "Documents/keep.txt").exists(), "uninstall removes the app and its data, and nothing else")
         if failures:
             print("\n--- install.sh output\n" + (r.stdout + r.stderr)[-2000:])
     finally:

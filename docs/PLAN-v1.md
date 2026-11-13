@@ -2,10 +2,10 @@
 
 Written Nov 11, 2026 by Fable for an executing agent (Opus). Colin's goal: "put Wispr Flow to shame and be free."
 This file is the **order of work from v0.5 to v1.0 and beyond**. It replaces section 3 (order) and section 11
-(status) of `docs/MASTER-PLAN.md`. The master plan stays the reference for task detail: when a task here says
+(status) of `docs/dev/MASTER-PLAN.md`. The master plan stays the reference for task detail: when a task here says
 "master 2.1", read that task there and apply the changes listed here. Where the two disagree, this file wins.
 
-**Read first, every session:** `docs/HANDOFF.md` section "How to work with Colin", then master plan 1.2 (the six
+**Read first, every session:** `docs/dev/HANDOFF.md` section "How to work with Colin", then master plan 1.2 (the six
 invariants) and 1.3-1.4 (how to execute, shadow mode). Then the status table at the bottom of this file.
 
 ---

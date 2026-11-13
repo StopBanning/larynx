@@ -2,7 +2,7 @@
 
 **For the next session (Fable plans, Opus executes).** Colin's goal, his words: "put Wispr Flow to shame and be
 free." Larynx is already his only dictation tool (about 600 dictations in two days, 90% into Claude desktop). Read
-this file, then `docs/MASTER-PLAN.md` (roadmap, invariants, scoreboard, status table) and `docs/BENCHMARKS.md`.
+this file, then `docs/dev/MASTER-PLAN.md` (roadmap, invariants, scoreboard, status table) and `docs/BENCHMARKS.md`.
 
 **The ask:** review where Larynx stands, then write the next version of the plan: what would make it clearly better
 than Wispr Flow on every row, more fleshed out, and more delightful, with tasks Opus can execute and test. Keep the
@@ -40,7 +40,7 @@ master plan's invariants (never lose words, never slower, never change a right w
 | User data | `~/Library/Application Support/Larynx/`: `settings.json`, `history.sqlite`, `dictionary.json`, `vocabulary.txt`, `snippets.json`, `suggestions.json`, `privacy.json`, `models/` |
 | Models on disk | bark-3.0-clean (default), parakeet-tdt-0.6b-v3, parakeet-ultra, parakeet-unified-en-0.6b, bark-3.0, parakeet-ctc-110m (vocabulary) |
 | Benchmark audio | `~/work/scratch/larynx-bench` (jargon, noise10, noise5, whisper, ls-clean, ls-other, long; 930 clips) |
-| Docs | README, CHANGELOG, docs/MASTER-PLAN.md, BENCHMARKS.md, SETTINGS.md, PRIVACY.md, INTEGRATION.md, WINDOWS.md, PLAN-next.md |
+| Docs | README, CHANGELOG, docs/dev/MASTER-PLAN.md, BENCHMARKS.md, SETTINGS.md, PRIVACY.md, INTEGRATION.md, WINDOWS.md, PLAN-next.md |
 
 ## What Larynx does today (all local, free)
 

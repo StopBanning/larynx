@@ -6,7 +6,10 @@
 ![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black)
 ![Swift 6.1](https://img.shields.io/badge/Swift-6.1-orange)
 
-**Free, open-source, fully offline dictation for the Mac.** Hold a key, speak, let go: clean, punctuated text lands
+**Think out loud. Larynx writes it down.**
+
+Free, open-source, fully offline dictation for the Mac. Talk the way you think, with the ums, restarts and changes
+of mind, and get back what you meant. Hold a key, speak, let go: clean, punctuated text lands
 wherever your cursor is, in about 0.15 s. It works in every app, with no account, no subscription and no word
 limits. Speech runs on your Mac's Neural Engine with NVIDIA's Parakeet models through
 [FluidAudio](https://github.com/FluidInference/FluidAudio). Nothing you say ever leaves your Mac.
@@ -48,6 +51,14 @@ and in Settings… (⌘,).
 There is no downloadable app yet: a signed, notarized build needs a paid Apple developer account. Building from
 source is the supported install for now.
 
+**Uninstall.** One line removes the app and everything it stored (history, recordings, your words, the speech
+models, settings, its Privacy & Security entries). It lists what it will remove and asks first; add
+`--keep-data` after `zsh -s --` to keep your history and words.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/uninstall.sh | zsh -s --
+```
+
 ## What it does
 
 **Talking**
@@ -59,7 +70,8 @@ source is the supported install for now.
 - **Live preview**: a small Liquid Glass pill sits just above the text box you are dictating into. It shows the
   target app's icon, a waveform and your words as you say them, never takes focus, warns you if the microphone
   hears nothing, and shows a lock in a password field. A slider sets how see-through it is.
-- **25 languages** with the default model (Parakeet Ultra), with no switch to flip.
+- **English is the measured language.** The default model (Parakeet Ultra) also transcribes 24 other European
+  languages with no switch to flip; those work but are not measured yet, and the cleanup rules are English.
 - **Pick your microphone** in Settings; an unplugged one falls back to the system default.
 
 **Never loses your words**
@@ -128,10 +140,22 @@ source is the supported install for now.
 
 Every setting is listed in [docs/SETTINGS.md](docs/SETTINGS.md).
 
-## Compared with cloud dictation
+## Why Larynx
 
-Cloud dictation apps are excellent, and they send your voice to a server. Larynx sets out to match them feature for
-feature while staying local and free.
+There are other good free, offline dictation apps for the Mac, and excellent paid cloud ones. What Larynx sets out
+to do differently:
+
+- **Text you don't have to fix.** Fillers, stutters, false starts and changes of mind are cleaned by rules,
+  instantly, with no language model in the way: 0.87% of words wrong on real, randomly picked dictation
+  ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
+- **It shows its work.** Privacy, speed, accuracy and the installer each have a test you can run
+  ([Testing](#testing)), and the benchmarks include what was tried and lost.
+- **It never loses what you said.** Every paste is checked, with three fallbacks and crash recovery.
+- **Nothing held back.** MIT, no account, no paid tier, no limits.
+- **Built for talking to AI all day.** Command line, JSON lines and an MCP server.
+
+A measured comparison with the Mac's built-in dictation and other free apps is planned
+([docs/PLAN-launch.md](docs/PLAN-launch.md), L0.5). Against cloud dictation in general:
 
 | | Larynx | Typical cloud dictation app |
 | --- | --- | --- |
@@ -147,8 +171,8 @@ feature while staying local and free.
 | Never loses a dictation | Checked paste with three fallbacks, crash recovery, target-app lock | Varies |
 | Scriptable | CLI, JSON-lines API, MCP server | Limited |
 
-Not there yet: a downloadable signed app, rewriting selected text by voice, languages
-beyond the 25 European ones, and Windows (the text engine and the speech model already run on Windows in CI:
+Not there yet: a downloadable signed app, rewriting selected text by voice, measured support for languages other
+than English, and Windows (the text engine and the speech model already run on Windows in CI:
 [docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ## Build from a checkout
@@ -208,6 +232,8 @@ a sentence for Mail, Slack, Messages and Notes.
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
 | `python3 bench/latency.py` | The speed gate, run before each release: 50 clips through the full pipeline; fails over 150 ms median or 350 ms at the 90th percentile | 80 ms median, 144 ms p90 (Nov 12) |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
+| `scripts/when-idle.sh python3 tests/privacy.py --prove` | Speech to text three ways inside a sandbox that denies every network connection; then a deliberate web request under the same sandbox, which must fail | 4/4 (Nov 12) |
+| `python3 tests/install.py` | The installer into an empty home folder, signed ad hoc as on someone else's Mac: the bundle, its signature, icon and resources, the binary runs, no data left behind; then the uninstall leaves that home clean. Also runs in CI on a clean Mac | 11/11 (Nov 13) |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
 
 Spoken-suite detail (Parakeet Ultra, AI rewrite on where it would run, Nov 11):
@@ -250,7 +276,8 @@ Three Swift targets: `LarynxText` (the text rules, Foundation only, builds on Wi
 | `Context.swift`, `ContextWords.swift` | Names in the text field you are dictating into, to settle sound-alike words (shadow) |
 | `History.swift`, `Privacy.swift` | Local history (SQLite, full-text search), the crash spool, and what is never stored |
 | `Golden.swift` | Your own recordings with what you meant, as a private benchmark |
-| `Pill.swift`, `Menu.swift`, `SettingsWindow.swift`, `FirstRun.swift` | The pill, the menu bar menu, Settings and the setup window |
+| `HistoryFix.swift` | A fix made in the History window: saved, and turned into a lesson when it is safe to learn |
+| `Pill.swift`, `Menu.swift`, `SettingsWindow.swift`, `HistoryWindow.swift`, `FirstRun.swift` | The pill, the menu bar menu, Settings, History and the setup window |
 | `App/` | The listen session, the engine, `serve`, and the CLI commands |
 | `MCP.swift` | The `mcp` command |
 
@@ -268,7 +295,8 @@ everything through Larynx, including the directions that built it.
 
 ## Roadmap
 
-[docs/PLAN-v1.md](docs/PLAN-v1.md) is the road to 1.0, in order.
+[ROADMAP.md](ROADMAP.md) is the short version; [docs/PLAN-v1.md](docs/PLAN-v1.md) is the road to 1.0, in order, and
+[docs/PLAN-launch.md](docs/PLAN-launch.md) is how it gets to more people. To help, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - **Done**: the Parakeet Ultra model and its cleanup rules (0.5), then "Trust" (0.6): shadow mode, the live test
   rig, word confidence, no clipped first or last word, checked paste, the speed gate, fitting the field, the
@@ -281,31 +309,5 @@ everything through Larynx, including the directions that built it.
 
 ## License
 
-MIT. Parakeet TDT v3 weights are CC-BY-4.0 (NVIDIA); FluidAudio is Apache-2.0.
-
-### Portable text core
-
-`LarynxText` contains cleanup modes and rules, spoken code, snippets, dictionary
-replacement, and the deterministic rewrite guard. It imports Foundation only and
-can be built independently with `swift build --target LarynxText`. `LarynxCore`
-keeps audio, the speech and Apple language models, Accessibility, app focus, and
-macOS spelling. Existing `import LarynxCore` clients still see the text APIs.
-
-Spelling is supplied through the `WordList` protocol. On macOS, `MacWordList`
-continues to use NSSpellChecker, preserving the app's existing behavior. Other
-hosts can use `BundledWordList.shared`: 56,372 case-insensitive entries from
-[SCOWL 2020.12.07](https://wordlist.aspell.net/), American/common word and
-contraction lists through level 40. This is a finite fallback, not a complete
-English dictionary, and it does not stem words or use the macOS learned dictionary.
-The upstream MIT-like/BSD-compatible notices are preserved verbatim in
-[SCOWL-Copyright.txt](Sources/LarynxText/Resources/SCOWL-Copyright.txt).
-Our modifications are selection, lowercasing, deduplication, sorting, and UTF-8
-encoding; `scripts/generate-wordlist.py` reproduces them from the upstream release.
-The app build script bundles both the list and its notices. When moving the CLI
-executable manually, keep `Larynx_LarynxText.bundle` beside it.
-
-The dictation pipeline in `LarynxCore` now records each cleanup decision as a typed
-Step, preserving the existing stage order. Stage policies and the existing menu
-preferences share [Settings](docs/SETTINGS.md), with optional JSON overrides and
-legacy `defaults` fallbacks. The app's capture/session, engine, serve, and command
-wiring live under `Sources/larynx/App/`; `main.swift` only launches the app or CLI.
+MIT. Parakeet TDT v3 weights are CC-BY-4.0 (NVIDIA); FluidAudio is Apache-2.0. The portable text core and its word
+list (SCOWL) are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

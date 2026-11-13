@@ -1,11 +1,11 @@
 # Larynx: handoff and plan (updated Nov 10, 2026)
 
-**Start with `docs/HANDOFF.md` (Nov 11: status and the rules for working with Colin), then `docs/PLAN-v1.md`
+**Start with `docs/dev/HANDOFF.md` (Nov 11: status and the rules for working with Colin), then `docs/PLAN-v1.md`
 (the order of work from v0.5 to v1.0).**
 
 
 Start here. Colin uses Larynx for all his dictation now (Right Command, mostly into Claude desktop, Messages).
-The roadmap is `docs/MASTER-PLAN.md` (Nov 10): the task-by-task plan to make Larynx better than Wispr Flow on every
+The roadmap is `docs/dev/MASTER-PLAN.md` (Nov 10): the task-by-task plan to make Larynx better than Wispr Flow on every
 row of its scoreboard. Execute from that file, top to bottom. This file is the short handoff: where things live, how
 to work with Colin, lessons learned. Read README.md for the feature list and how it works.
 

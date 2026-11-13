@@ -4,7 +4,7 @@
 reference for task detail (PLAN-v1 cites tasks here as "master 2.1"), the invariants and the scoreboard.
 
 Written Nov 10, 2026 for an executing agent (Opus). Read this whole file once, then work top to bottom.
-`docs/PLAN-next.md` stays as the short handoff (where things live, how to work with Colin). This file is the roadmap.
+`docs/dev/PLAN-next.md` stays as the short handoff (where things live, how to work with Colin). This file is the roadmap.
 
 **Goal (Colin's words):** "a free, open source, better version of this. Indisputable across the board. Sacrifice
 nothing." So the bar is not "good for a local app". It is: on every row of the scoreboard in section 2, Larynx is
@@ -686,7 +686,7 @@ None of these block phases 0-2. Defaults apply until he says otherwise.
 - Docs worth reading before the matching task: `Documentation/Models.md`, `ASR/CustomVocabulary.md`,
   `ASR/LongTranscription.md`, `ASR/Bark3.md`, `Enhancement/LocalVQE.md`, `Sources/.../Unified/benchmark.md`.
 
-**Repo facts:** see `docs/PLAN-next.md` (paths, signing, test commands, the synthetic key press snippet, lessons).
+**Repo facts:** see `docs/dev/PLAN-next.md` (paths, signing, test commands, the synthetic key press snippet, lessons).
 
 **Things already tried and rejected (do not redo without new evidence):** NeMo inverse text normalization for
 numbers (too aggressive); FluidAudio's own rescored text for vocabulary (rewrites real words; only its one-word
