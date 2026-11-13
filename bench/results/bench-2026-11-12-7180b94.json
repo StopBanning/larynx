@@ -1,0 +1,117 @@
+{
+  "date": "2026-11-12",
+  "commit": "7180b94",
+  "machine": "Apple M6, 16 GB, macOS 27.2.1",
+  "results": {
+    "ultra": {
+      "random": {
+        "clips": 57,
+        "wer": 0.87,
+        "punctF1": 97.6,
+        "names": 71.2,
+        "p50ms": 48,
+        "p90ms": 128,
+        "rtfx": 160.3,
+        "examples": []
+      },
+      "golden": {
+        "clips": 48,
+        "wer": 0.58,
+        "punctF1": 99.3,
+        "names": 76.2,
+        "p50ms": 36,
+        "p90ms": 61,
+        "rtfx": 127.1,
+        "examples": []
+      }
+    },
+    "clean": {
+      "random": {
+        "clips": 57,
+        "wer": 4.78,
+        "punctF1": 79.4,
+        "names": 59.6,
+        "p50ms": 52,
+        "p90ms": 214,
+        "rtfx": 133.0,
+        "examples": []
+      },
+      "golden": {
+        "clips": 48,
+        "wer": 3.48,
+        "punctF1": 81.3,
+        "names": 52.4,
+        "p50ms": 38,
+        "p90ms": 70,
+        "rtfx": 127.6,
+        "examples": []
+      }
+    },
+    "parakeet": {
+      "random": {
+        "clips": 57,
+        "wer": 1.49,
+        "punctF1": 86.5,
+        "names": 69.2,
+        "p50ms": 46,
+        "p90ms": 125,
+        "rtfx": 166.4,
+        "examples": []
+      },
+      "golden": {
+        "clips": 48,
+        "wer": 2.67,
+        "punctF1": 88.6,
+        "names": 61.9,
+        "p50ms": 36,
+        "p90ms": 57,
+        "rtfx": 131.7,
+        "examples": []
+      }
+    },
+    "unified": {
+      "random": {
+        "clips": 57,
+        "wer": 1.85,
+        "punctF1": 73.2,
+        "names": 65.4,
+        "p50ms": 54,
+        "p90ms": 136,
+        "rtfx": 155.5,
+        "examples": []
+      },
+      "golden": {
+        "clips": 48,
+        "wer": 2.67,
+        "punctF1": 84.6,
+        "names": 71.4,
+        "p50ms": 33,
+        "p90ms": 55,
+        "rtfx": 160.6,
+        "examples": []
+      }
+    },
+    "bark3": {
+      "random": {
+        "clips": 57,
+        "wer": 3.24,
+        "punctF1": 76.3,
+        "names": 44.2,
+        "p50ms": 47,
+        "p90ms": 127,
+        "rtfx": 167.3,
+        "examples": []
+      },
+      "golden": {
+        "clips": 48,
+        "wer": 2.9,
+        "punctF1": 77.6,
+        "names": 52.4,
+        "p50ms": 34,
+        "p90ms": 56,
+        "rtfx": 145.5,
+        "examples": []
+      }
+    }
+  }
+}

@@ -61,6 +61,41 @@ may raise its golden WER), not yet a fair comparison between engines. References
 pasted dictation and repeats with a word changed are now recorded automatically) will replace that bias as they
 accumulate; the target is 100 clips.
 
+## Real voice, picked at random (PLAN-v1 R4, Nov 12, commit 7180b94)
+
+The golden set above leans toward dictations that went wrong (they were picked because something needed fixing).
+This set is 57 dictations drawn at random from two days of daily use, a third each short (under 5 s), medium and
+long (over 15 s): 678 s of audio, about 1,900 words, mostly messages to an AI assistant. Same full pipeline, same
+privacy: numbers only. `python3 bench/run.py --sets random`. Spoken spellings count as the same word here (wanna /
+want to, 'cause / because, alright / all right).
+
+| Engine | WER | Punctuation F1 | Names | p50 | p90 |
+| --- | --- | --- | --- | --- | --- |
+| ultra | 0.87% | 97.6 | 71.2% | 48 ms | 128 ms |
+| parakeet | 1.49% | 86.5 | 69.2% | 46 ms | 125 ms |
+| unified | 1.85% | 73.2 | 65.4% | 54 ms | 136 ms |
+| bark3 | 3.24% | 76.3 | 44.2% | 47 ms | 127 ms |
+| clean | 4.78% | 79.4 | 59.6% | 52 ms | 214 ms |
+
+**How the references were made, and what that means.** Every downloaded engine transcribed each clip verbatim
+(`bench/prelabel.py`); all five agreed word for word on 10 of 60, three or more on 33. An assistant then wrote what
+was meant from the five versions, the typed text and the conversation around it: fillers, stutters and cut-off word
+fragments out, everything else as said; where engines disagreed, the majority unless the sentence showed otherwise
+(3 such spots went against Ultra). 3 clips nobody could settle (foreign words read aloud, a name every engine spelled
+differently) were left out. Nobody listened: a word all five engines got wrong the same way is invisible here, and
+the house style follows Larynx's cleanup, which helps the default engine on punctuation. So the ranking is solid,
+the absolute numbers are a floor. The author's own labels (`larynx golden label`) would replace these.
+
+**What Ultra still gets wrong** (12 spots in 57 dictations; examples are made up, of the same kind):
+
+| Kind | Spots | Fix |
+| --- | --- | --- |
+| Cut-off word left in ("it was defin- really good") | 4 | Cleanup: not yet safe to remove; R6 |
+| A homophone where the right word was on screen ("real" for "reel") | 2 | Screen context (C3, in shadow) |
+| Stutter kept ("that that") | 2 | "that that" can be meant; left alone |
+| Misheard word | 2 | Speech model |
+| Cleanup removed a word (a "like"; a phrase said three times cut to two) | 2 | The second fixed in 7180b94 |
+
 ## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
 
 The speech model's per-word confidence (lowest token confidence in the word) against what was really said, on the

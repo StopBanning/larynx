@@ -130,6 +130,7 @@ feature while staying local and free.
 | Works offline | Yes | No |
 | Price, limits | Free, unlimited, MIT | Free tier with weekly limits, paid plans |
 | Key-up to text | 0.14 s median over 285 real dictations (0.47 s at the 90th percentile; long dictations take longer) | Network round trip |
+| Words wrong on real dictation | 0.87% over 57 of the author's dictations picked at random (references written from five engines, not yet by ear: [details](docs/BENCHMARKS.md)) | Not published |
 | Cleanup | Fillers, stutters, false starts, self-corrections, numbers as digits, code by voice | Similar |
 | Hands-free | Yes, up to 30 min | Yes |
 | History | 30 days on your Mac, full-text search; password fields never kept | Yes |
