@@ -74,6 +74,15 @@ final class MenuController: NSObject, NSMenuDelegate {
         }
         recentItem.submenu = recentMenu
         menu.addItem(recentItem)
+        let historyItem = NSMenuItem(title: "History…", action: #selector(openHistory), keyEquivalent: "y")
+        historyItem.target = self
+        menu.addItem(historyItem)
+        if !recent.isEmpty {
+            let fix = NSMenuItem(title: "Fix Last Dictation…", action: #selector(fixLast), keyEquivalent: "")
+            fix.target = self
+            fix.toolTip = "It came out wrong: type what you said, and Larynx learns the word"
+            menu.addItem(fix)
+        }
 
         if let last = Undo.last, Date().timeIntervalSince(last.time) <= Undo.window {
             let item = NSMenuItem(title: "Undo Last Dictation", action: #selector(undoDictation), keyEquivalent: "")
@@ -291,6 +300,10 @@ final class MenuController: NSObject, NSMenuDelegate {
     @objc func openSetup() { Task { @MainActor in FirstRun.shared.show() } }
 
     @objc func openSettings() { Task { @MainActor in SettingsWindow.shared.show() } }
+
+    @objc func openHistory() { Task { @MainActor in HistoryWindow.shared.show() } }
+
+    @objc func fixLast() { Task { @MainActor in HistoryWindow.shared.show(fixLast: true) } }
 
     @objc func toggleLogin() {
         do {

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **History window** (menu: History…, ⌘Y): the last 30 days by day, with search, copy, play (when the recording is
+  kept), what went where, and running totals. **Fix…** on a row (or Fix Last Dictation… in the menu) takes what you
+  actually said: the fix is saved, an invented word is learned for next time under the same rules as learning from
+  a repeat, and the clip joins your test set when its recording is kept.
+- **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
+  ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
+- **Privacy, tested**: `tests/privacy.py` runs speech to text with every network connection denied.
+- Cleanup: stutters on more words ("some some", "I'm I'm"); a phrase said three times is one stumble or a meant
+  chant, never two copies; "hindsight is 20/20" is not the year.
+
 ## 0.6.0 (Nov 12, 2026): "Trust"
 
 Never lose a word, never be confidently wrong, and installed with one line.

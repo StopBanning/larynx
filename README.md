@@ -41,6 +41,10 @@ and in Settings… (⌘,).
   <img src="docs/images/settings-general.png" alt="The Settings window, General pane: talk keys, hands-free, pill and login options" width="330">
 </p>
 
+<p align="center">
+  <img src="docs/images/history.png" alt="The History window: dictations grouped by day with the app each went to, a search box, a dictation marked Fixed with the word Larynx learned from it, and totals at the bottom" width="480">
+</p>
+
 There is no downloadable app yet: a signed, notarized build needs a paid Apple developer account. Building from
 source is the supported install for now.
 
@@ -99,6 +103,9 @@ source is the supported install for now.
   90 seconds with one word changed and Larynx learns the fix. *Fix it in place*: for 20 seconds after a paste,
   Larynx watches the text field; change a word to one that sounds like what it heard and it learns that too. The
   menu has Undo Learned.
+- **Fix it once**: when a dictation came out wrong, open History (or Fix Last Dictation… in the menu), press Fix…
+  and type what you said. An invented word ("Zorvex" for "Zorbax") is corrected from then on; two real words that
+  sound alike are only noted, never swapped by themselves.
 - **"Not sure about …"**: when the speech model was very unsure of a word, the pill names it for 2 seconds after
   the paste, so a glance catches it before you send. Your text is not changed.
 - **"Scratch that"** said on its own within 30 seconds undoes the last dictation.
@@ -107,7 +114,9 @@ source is the supported install for now.
 
 - Audio and text never leave your Mac. There is no server, no account and no telemetry. A test runs speech to text
   with every network connection blocked and passes ([docs/PRIVACY.md](docs/PRIVACY.md)).
-- **History stays local**: 30 days in a database on your Mac, searchable with `larynx history --search <words>`.
+- **History stays local**: 30 days in a database on your Mac. The History window (menu: History…, ⌘Y) searches it,
+  copies a dictation again and plays the recording when one is kept; `larynx history --search <words>` does the same
+  from a terminal.
   Audio is not kept unless you turn on `keepAudio`. Nothing said into a password field or a password manager is
   ever stored. `history: off` keeps everything in memory only.
 
@@ -134,11 +143,11 @@ feature while staying local and free.
 | Cleanup | Fillers, stutters, false starts, self-corrections, numbers as digits, code by voice | Similar |
 | Hands-free | Yes, up to 30 min | Yes |
 | History | 30 days on your Mac, full-text search; password fields never kept | Yes |
-| Learns your words | From repeats and from your edits, with Undo | From your edits |
+| Learns your words | From repeats, from your edits and from fixes in the History window, with Undo | From your edits |
 | Never loses a dictation | Checked paste with three fallbacks, crash recovery, target-app lock | Varies |
 | Scriptable | CLI, JSON-lines API, MCP server | Limited |
 
-Not there yet: a downloadable signed app, rewriting selected text by voice, a history window, languages
+Not there yet: a downloadable signed app, rewriting selected text by voice, languages
 beyond the 25 European ones, and Windows (the text engine and the speech model already run on Windows in CI:
 [docs/WINDOWS.md](docs/WINDOWS.md)).
 
@@ -193,7 +202,7 @@ a sentence for Mail, Slack, Messages and Notes.
 
 | Suite | What it checks | Latest |
 | --- | --- | --- |
-| `swift test` | 56 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
+| `swift test` | 62 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
 | `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | Nov 11: rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
@@ -264,7 +273,7 @@ everything through Larynx, including the directions that built it.
 - **Done**: the Parakeet Ultra model and its cleanup rules (0.5), then "Trust" (0.6): shadow mode, the live test
   rig, word confidence, no clipped first or last word, checked paste, the speed gate, fitting the field, the
   Settings and setup windows, the one-line install.
-- **Next**: screen context out of shadow, per-app profiles, a history window, editors for your dictionary and
+- **Next**: screen context out of shadow, per-app profiles, editors for your dictionary and
   snippets, a signed download.
 - **Later**: streaming while you speak, spoken punctuation and lists out of shadow, writing styles, editing
   selected text by voice, more languages, an open benchmark anyone can reproduce, then Windows

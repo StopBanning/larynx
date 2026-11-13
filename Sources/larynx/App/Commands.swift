@@ -352,7 +352,7 @@ case "review":
     for (a, b) in zip(rows, rows.dropFirst()) where a.app == b.app && b.time.timeIntervalSince(a.time) <= 90 && Golden.isWordFix(a.text, b.text) { repeats.append((a, b)) }
     var shadow: [String: Int] = [:]
     for r in rows { for st in r.steps where !st.applied && st.before != st.after { shadow[st.stage, default: 0] += 1 } }
-    print("  not sure (doubtful): \(doubtful.count), undone (scratch that): \(undone.count), fixed by you: \(fixed.count), said again with a word changed: \(repeats.count)")
+    print("  not sure (doubtful): \(doubtful.count), undone (scratch that): \(undone.count), fixed by you: \(fixed.count) (\(fixed.filter { corrections[$0.id]?.source == "fix" }.count) in the History window), said again with a word changed: \(repeats.count)")
     print("  shadow proposals: " + (shadow.isEmpty ? "none" : shadow.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")))
     // From the log (no text there): microphone start, tails, edit watching, lessons. Since the log began.
     let logText = (try? String(contentsOfFile: NSHomeDirectory() + "/Library/Logs/Larynx.log", encoding: .utf8)) ?? ""
@@ -386,6 +386,11 @@ case "settings-snapshot":
     // Renders the settings panes to PNGs (layout check, no window shown): larynx settings-snapshot <dir>
     NSApplication.shared.setActivationPolicy(.prohibited)
     MainActor.assumeIsolated { snapshotSettings(to: args.count > 1 ? args[1] : ".") }
+    exit(0)
+case "history-snapshot":
+    // Renders the History window with made-up dictations to PNGs (never your own history): larynx history-snapshot <dir>
+    NSApplication.shared.setActivationPolicy(.prohibited)
+    MainActor.assumeIsolated { snapshotHistory(to: args.count > 1 ? args[1] : ".") }
     exit(0)
 case "idle":
     // Seconds since the last keyboard/mouse input: "<hardware> <any>" (hardware = the HID system state, which

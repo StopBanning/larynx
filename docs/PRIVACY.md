@@ -21,9 +21,9 @@ user account only.
 | Dictation text, with the app it went to, timings and the cleanup steps | `history.sqlite` | 30 days (`historyDays`) | `history: off` |
 | Audio of a dictation while it is being transcribed (crash spool) | `history/spool/<id>.wav` | Until the transcript is saved, normally well under a second | `history: off` |
 | Audio after transcription | `history/audio/<id>.flac` | Not kept unless you set `keepAudio` to a number of days | `keepAudio: off` (default) |
-| Your fix to a dictation (a word you edited after the paste, or said again) | `history.sqlite`, table `corrections` | As long as the dictation | `learn: off` |
+| Your fix to a dictation (a word you edited after the paste, said again, or fixed in the History window) | `history.sqlite`, table `corrections` | As long as the dictation | `learn: off` |
 | Text on screen at each press (around the cursor, the visible window text) to spell names | Memory only, for that one dictation | Never kept or logged | `context: off` |
-| Golden set: recordings you chose with what you meant (`larynx golden add`) | `golden/` | Until you remove them (`larynx golden remove <id>`); not affected by `keepAudio` | Don't add any |
+| Golden set: recordings with what you meant. A clip joins when you add it (`larynx golden add`) or when you fix a dictation in the History window while its recording is still kept (the window says so) | `golden/` | Until you remove them (`larynx golden remove <id>`); not affected by `keepAudio` | Keep `keepAudio: off` (the default), or remove clips |
 | Your words | `dictionary.json`, `vocabulary.txt`, `snippets.json` | Until you edit them | - |
 | Settings | `settings.json` (and the `com.automatedworkflow.larynx` defaults) | - | - |
 | Log | `~/Library/Logs/Larynx.log` | Grows until you delete it | Transcript text is not logged unless `debugText: on` |

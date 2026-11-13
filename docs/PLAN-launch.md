@@ -239,7 +239,8 @@ GitHub organization; posting (or approving) each launch item; the Apple enrolmen
 
 | Task | State | Notes / evidence |
 | --- | --- | --- |
-| L0.1 to L0.13 | not started (planned Nov 13) | |
+| L0.8 | built Nov 13 | PLAN-v1 R5 row. Picture in the README. |
+| L0.1 to L0.7, L0.9 to L0.13 | not started (planned Nov 13) | |
 | L1 | not started | |
 | L2 | waits on LQ1 | |
 | L3 | reels 8 to 10 after L0.11; 1 to 7 after L2 | |

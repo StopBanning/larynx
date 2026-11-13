@@ -416,3 +416,12 @@ public final class History: @unchecked Sendable {
         return d
     }
 }
+
+extension History.Row {
+    /// A row made by hand (the History window's layout snapshot uses made-up ones). Real rows come from `complete`.
+    public init(id: String, time: Date, app: String?, text: String, audioSeconds: Double, delivery: String = "inserted",
+                flags: [String] = [], audioPath: String? = nil) {
+        self.init(id: id, time: time, app: app, mode: "standard", engine: "ultra", raw: text, text: text, steps: [],
+                  audioSeconds: audioSeconds, totalMs: 0, delivery: delivery, audioPath: audioPath, flags: flags)
+    }
+}

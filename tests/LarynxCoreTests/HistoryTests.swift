@@ -275,3 +275,44 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     #expect(Golden.differences(typed, "send the draft to priya tonight").isEmpty)
     #expect(Golden.differences("a b", "a b c").map(\.other) == ["c"])
 }
+
+@Test func aFixInTheHistoryWindowIsSavedJoinsTheGoldenSetAndTeachesTheWord() throws {
+    let f = try HistoryFixture(#"{"keepAudio": "30"}"#)
+    let words = BundledWordList.shared
+    let pending = f.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
+    let row = try #require(f.history.complete(pending, transcript: f.transcript("Ask Zorvex to start the build."), delivery: "inserted"))
+
+    // An invented word fixed to a name: saved, in the golden set with the fixed text, and a dictionary lesson.
+    let out = HistoryFix.apply(row, fixed: "Ask Zorbax to start the build. ", history: f.history, words: words)
+    #expect(out.saved && out.addedToGolden)
+    #expect(out.lessons == [.dictionary(heard: "Zorvex", meant: "Zorbax"), .vocabulary("Zorbax")])
+    #expect(f.history.corrections()[row.id]?.text == "Ask Zorbax to start the build.")
+    #expect(f.history.corrections()[row.id]?.source == "fix")
+    let clip = try #require(Golden.load(root: f.folder).first)
+    #expect(clip.text == "Ask Zorbax to start the build." && clip.source == "user")
+
+    // Unchanged or empty: nothing is written.
+    #expect(!HistoryFix.apply(row, fixed: " Ask Zorvex to start the build. ", history: f.history, words: words).saved)
+    #expect(!HistoryFix.apply(row, fixed: "  ", history: f.history, words: words).saved)
+
+    // Two real words that sound alike are only a suggestion; a rewrite teaches nothing but is still saved.
+    #expect(HistoryFix.changes(typed: "We sent the report on Friday.", fixed: "We send the report on Friday.")
+            == [Corrections.Change(heard: "sent", meant: "send")])
+    #expect(Corrections.lessons(HistoryFix.changes(typed: "We sent the report on Friday.", fixed: "We send the report on Friday."), words: words)
+            == [.suggestion(heard: "sent", meant: "send")])
+    let rewrite = HistoryFix.apply(row, fixed: "Tell the other team to begin whenever they like.", history: f.history, words: words)
+    #expect(rewrite.saved && rewrite.lessons.isEmpty)
+
+    // A fix is deliberate, so a one- or two-word dictation counts (a repeat that short does not).
+    #expect(Corrections.changes(previous: "Thanks Zorvex.", current: "Thanks Zorbax.").isEmpty)
+    #expect(HistoryFix.changes(typed: "Thanks Zorvex.", fixed: "Thanks Zorbax.") == [Corrections.Change(heard: "Zorvex", meant: "Zorbax")])
+    #expect(HistoryFix.changes(typed: "Thanks Zorvex.", fixed: "Cheers Zorbax.").isEmpty)
+    #expect(HistoryFix.changes(typed: "Thanks.", fixed: "Thanks a lot.").isEmpty)
+
+    // No recording kept: the fix is still saved, just not added to the golden set.
+    let g = try HistoryFixture()
+    let p2 = g.history.begin(samples: tone, app: "com.example.app", mode: .ai, privateField: false)
+    let row2 = try #require(g.history.complete(p2, transcript: g.transcript("Ask Zorvex to start the build."), delivery: "inserted"))
+    let out2 = HistoryFix.apply(row2, fixed: "Ask Zorbax to start the build.", history: g.history, words: words)
+    #expect(out2.saved && !out2.addedToGolden && Golden.load(root: g.folder).isEmpty)
+}
