@@ -1,10 +1,18 @@
 name: macOS
 # Builds Larynx and runs the Swift test suite on macOS 26 (the Liquid Glass pill needs the macOS 26 SDK).
+# GitHub's macOS arm64 machines are often scarce: a run that waits too long for one is marked failed without running
+# anything (and emails Colin). So pushes that only change docs don't start a run, and a newer push cancels an older
+# run still waiting (a cancelled run sends no email).
 on:
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**/*.md', '!docs/SETTINGS.md', '.github/ISSUE_TEMPLATE/**']
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md', '!docs/SETTINGS.md', '.github/ISSUE_TEMPLATE/**']
   workflow_dispatch:
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
