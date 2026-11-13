@@ -84,6 +84,8 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
     let hotkey = Hotkey(keys: keys, onDown: {
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
         session.style = dictationStyle(key: activeHotkey?.pressedKey)
+        // Which key started it (no text): a macro pad or a keyboard without some keys makes this the only way to know.
+        log("dictation key: \(activeHotkey?.pressedKey?.label ?? "?")\(session.style == .professional ? ", professional" : "")")
         let micStart = Date()
         do { try recorder.start() } catch { session.reset(); log("\(error)"); return }
         let micMs = ms(since: micStart)
