@@ -4,6 +4,13 @@ Larynx runs entirely on your Mac. After the speech models download (once, from H
 network connections: audio, transcripts, your dictionary and history never leave the machine. There are no accounts,
 no analytics and no telemetry.
 
+**Tested, not just promised**: `python3 tests/privacy.py --prove` runs speech to text three ways (`transcribe`, a
+`serve` request and `listen --feed`) under a macOS sandbox that denies every network connection
+(`sandbox-exec` with `(deny network*)`), with a throwaway data folder. All three must produce text. `--prove` then
+runs a deliberate web request under the same sandbox, which must fail, so a pass means the block was really there.
+Last run Nov 12 with the installed app's binary: all four checks pass. The test covers the speech and cleanup path;
+the microphone and paste need macOS permissions a script cannot grant, and the optional on-device AI rewrite is off.
+
 ## What is stored, and where
 
 Everything lives under `~/Library/Application Support/Larynx/` unless noted. Folders are created readable by your

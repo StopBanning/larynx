@@ -105,8 +105,8 @@ source is the supported install for now.
 
 **Private by design**
 
-- Audio and text never leave your Mac. There is no server, no account and no telemetry
-  ([docs/PRIVACY.md](docs/PRIVACY.md)).
+- Audio and text never leave your Mac. There is no server, no account and no telemetry. A test runs speech to text
+  with every network connection blocked and passes ([docs/PRIVACY.md](docs/PRIVACY.md)).
 - **History stays local**: 30 days in a database on your Mac, searchable with `larynx history --search <words>`.
   Audio is not kept unless you turn on `keepAudio`. Nothing said into a password field or a password manager is
   ever stored. `history: off` keeps everything in memory only.
@@ -264,7 +264,7 @@ everything through Larynx, including the directions that built it.
   rig, word confidence, no clipped first or last word, checked paste, the speed gate, fitting the field, the
   Settings and setup windows, the one-line install.
 - **Next**: screen context out of shadow, per-app profiles, a history window, editors for your dictionary and
-  snippets, a test that fails if the app ever opens a network connection, a signed download.
+  snippets, a signed download.
 - **Later**: streaming while you speak, spoken punctuation and lists out of shadow, writing styles, editing
   selected text by voice, more languages, an open benchmark anyone can reproduce, then Windows
   ([docs/WINDOWS.md](docs/WINDOWS.md)).
