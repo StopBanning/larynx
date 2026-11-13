@@ -86,6 +86,8 @@ private struct Cases: Decodable {
         ("I mean, it's basically ready, just send it over or whatever.", "It's basically ready, just send it over."),
         ("Oh my god, the client loved it.", "The client loved it."),
         ("Oh yeah, we can ship on Monday.", "We can ship on Monday."),
+        ("Number one, book the flights. Number two, book the hotel. And three ask about a rental car.",
+         "1. Book the flights\n2. Book the hotel\n3. Ask about a rental car"),
         ("We need two steps before launch: book the venue and print the badges.",
          "We need two steps before launch:\n1. Book the venue\n2. Print the badges"),
     ]

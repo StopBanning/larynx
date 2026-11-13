@@ -138,7 +138,12 @@ public enum Tidy {
         var rest = Substring(text)
         var lead = ""
         for (n, words) in ordinals.enumerated() {
-            guard let r = rest.range(of: "(?i)(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:number\\s+)?(?:\(words))[,.:]\\s+", options: .regularExpression) else { break }
+            // After the first item, "and three ask about..." counts too: an ordinal right after a sentence or comma,
+            // with or without its own comma, takes the "and" before it along.
+            let pattern = n == 0
+                ? "(?i)(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:number\\s+)?(?:\(words))[,.:]\\s+"
+                : "(?i)(?:(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:and\\s+)?(?:number\\s+)?(?:\(words))[,.:]\\s+|(?<=[.,;:!?])\\s+(?:and\\s+)?(?:number\\s+)?(?:\(words))\\s+(?=[a-z]))"
+            guard let r = rest.range(of: pattern, options: .regularExpression) else { break }
             if n == 0 { lead = String(rest[..<r.lowerBound]) } else { items.append(String(rest[..<r.lowerBound])) }
             rest = rest[r.upperBound...]
         }
@@ -291,6 +296,9 @@ public enum Tidy {
         }
         s = s.replacingOccurrences(of: chantMark, with: "")
         guard !s.isEmpty else { return s }
+        // 4d. "i'll" and a lone "i" are "I'll" and "I". Not in code: "for i in items", "i++", "a[i]".
+        s = s.replacingOccurrences(of: "(?<![\\w'])i(?='(?:m|ll|ve|d)\\b)", with: "I", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<![\\w'.\\-/$\\[(])(?<!for )i(?=\\s+(?!in\\b)[a-z]{2,})", with: "I", options: .regularExpression)
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.

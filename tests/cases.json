@@ -728,6 +728,18 @@
       "expect": "They kind of ignore the first step."
     },
     {
+      "id": "t-lowercase-i",
+      "mode": "standard",
+      "in": "yep and i'll call you after work i think",
+      "expect": "Yep and I'll call you after work I think"
+    },
+    {
+      "id": "t-lowercase-i-code",
+      "mode": "ai",
+      "in": "for i in items, print each one",
+      "expect": "For i in items, print each one"
+    },
+    {
       "id": "t-aye-stutter",
       "mode": "standard",
       "in": "Aye, I, I really appreciate it.",
