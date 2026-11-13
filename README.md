@@ -217,7 +217,7 @@ Four layers, cheapest first:
 1. **Speech model.** The default, Parakeet Ultra (25 European languages), was picked by benchmark: about 37% fewer
    word errors than the previous default on jargon, noise and hard speech, and names spelled right twice as often
    ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)). It types what you said, so the tidy rules remove the ums, repeats and
-   false starts. `--engine clean` switches to Underdog Bark 3.0 Clean (English), which drops them as it listens.
+   false starts. `--engine clean` switches to Underdog Bark 3.0 Clean (English, non-commercial licence), which drops them as it listens.
 2. **Tidy rules.** Leftover fillers, stutters ("the the", "I, I"), stranded commas and capitals. Instant, never
    rewrites a word, and leaves real doubles alone ("very very", "had had").
 3. **Numbers.** Spoken numbers, times and percentages become digits by rule, in every app.
@@ -317,5 +317,14 @@ everything through Larynx, including the directions that built it.
 
 ## License
 
-MIT. Parakeet TDT v3 weights are CC-BY-4.0 (NVIDIA); FluidAudio is Apache-2.0. The portable text core and its word
-list (SCOWL) are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Larynx is MIT. The speech models are downloaded on first use and keep their own licences:
+
+| Model | By | Licence |
+| --- | --- | --- |
+| Parakeet Ultra (default) | moondream, from NVIDIA's Parakeet v3 | CC BY 4.0 |
+| Parakeet v3, Parakeet CTC 110M | NVIDIA | CC BY 4.0 |
+| Parakeet Unified | NVIDIA | NVIDIA Open Model License |
+| Bark Clean, Bark 3.0 (optional) | Conway Research | CC BY-NC 4.0, **non-commercial** |
+
+FluidAudio, which runs them, is Apache 2.0; the word list is SCOWL. Every source, link and licence text is in
+[packaging/CREDITS.md](packaging/CREDITS.md), which also travels inside the app with the licence texts.

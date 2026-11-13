@@ -12,6 +12,12 @@ mkdir -p "$APP/Contents/Resources"
 cp -R .build/release/Larynx_LarynxText.bundle "$APP/Contents/Resources/"
 # The icon is drawn by scripts/make-icon.swift and kept in the repo, so a build never has to draw it.
 cp packaging/Larynx.icns "$APP/Contents/Resources/Larynx.icns"
+# Licences: Larynx's own, the credits (every model and its licence), and the texts of the code compiled in.
+LIC="$APP/Contents/Resources/Licenses"
+mkdir -p "$LIC/FluidAudio"
+cp LICENSE packaging/CREDITS.md "$LIC/"
+cp .build/checkouts/FluidAudio/LICENSE "$LIC/FluidAudio/"
+cp -R .build/checkouts/FluidAudio/ThirdPartyLicenses "$LIC/FluidAudio/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

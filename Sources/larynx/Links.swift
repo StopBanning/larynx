@@ -30,8 +30,9 @@ enum Links {
         let text = """
             Free and open source (MIT). Everything runs on this Mac.
 
-            Speech models: NVIDIA Parakeet, run through FluidAudio (Apache-2.0). Each model's licence is in the README.
-            Word list: SCOWL.
+            Speech: Parakeet Ultra by moondream and Parakeet by NVIDIA (CC BY 4.0), Parakeet Unified (NVIDIA Open
+            Model License), Bark by Conway Research (CC BY-NC 4.0, non-commercial), run with FluidAudio (Apache 2.0).
+            Word list: SCOWL. Licence texts are inside the app, in Contents/Resources/Licenses.
 
             \(repo)
             """

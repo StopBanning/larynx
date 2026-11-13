@@ -161,7 +161,7 @@ private struct SpeechPane: View {
                     MenuController.shared.chooseEngine(item)  // prepares the new model in the background, then restarts
                 })) {
                     Text("Parakeet Ultra: most accurate, 25 languages").tag("ultra")
-                    Text("Bark Clean: English, drops ums as it listens").tag("clean")
+                    Text("Bark Clean: English, drops ums as it listens (non-commercial licence)").tag("clean")
                     Text("Parakeet v3: 25 languages").tag("parakeet")
                     Text("Parakeet Unified: English").tag("unified")
                 }

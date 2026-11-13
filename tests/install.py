@@ -4,8 +4,8 @@
     python3 tests/install.py
 
 Runs the installer with HOME set to a new, empty folder, ad-hoc signing (no identity from this Mac), no model
-warm-up and nothing opened, then checks the bundle: it exists, is ad-hoc signed, has the bundle id, the icon and the
-microphone text, its binary runs, the new home holds no Larynx data (so the first launch starts at setup), and the uninstall script
+warm-up and nothing opened, then checks the bundle: it exists, is ad-hoc signed, has the bundle id, the icon, the licence
+texts and the microphone text, its binary runs, the new home holds no Larynx data (so the first launch starts at setup), and the uninstall script
 then leaves that home clean.
 Permissions (microphone, accessibility, input monitoring) cannot be tested this way.
 
@@ -45,6 +45,9 @@ def main():
             check(bool(info.get("NSMicrophoneUsageDescription")), "microphone usage text")
             check((app / "Contents/Resources/Larynx_LarynxText.bundle").exists(), "text resources travel with the app")
             check(info.get("CFBundleIconFile") == "Larynx" and (app / "Contents/Resources/Larynx.icns").exists(), "app icon")
+            lic = app / "Contents/Resources/Licenses"
+            check(all((lic / f).exists() for f in ["LICENSE", "CREDITS.md", "FluidAudio/LICENSE", "FluidAudio/ThirdPartyLicenses"]),
+                  "licence texts and credits travel with the app")
             run = subprocess.run([str(binary), "tidy", "um so this is a test"], env=dict(env, LARYNX_DATA_DIR=str(home / "data")), capture_output=True, text=True, timeout=60)
             check(run.returncode == 0 and run.stdout.strip() == "So this is a test", "the app's binary runs")
             # Uninstall, files only (never quits an app or touches settings or permissions): the new home is left clean.

@@ -8,6 +8,9 @@
   for everything (menu: Professional Style) or hold the Professional Key for one dictation; the pill shows a
   briefcase. Casual output is unchanged. `--style professional` on the command line, `"style"` in serve and MCP.
 
+- **Credits and licences** ([packaging/CREDITS.md](packaging/CREDITS.md)): every speech model with its maker,
+  licence and source, in the README and the About panel. The Bark models are non-commercial (CC BY-NC 4.0) and
+  are labelled so in Settings and the menu. The app now carries the licence texts of the code compiled into it.
 - **Works with your AI tools** ([docs/AGENTS.md](docs/AGENTS.md)): dictating into coding agents and terminals,
   the MCP server in one line for Claude Code (and the JSON for other clients), and the command line from the app
   itself. `tests/agents.py` runs the page's examples.
