@@ -1,4 +1,4 @@
-# Larynx
+<h1><img src="docs/images/icon.png" alt="" width="56" align="top"> Larynx</h1>
 
 [![portable](https://github.com/StopBanning/larynx/actions/workflows/portable.yml/badge.svg)](https://github.com/StopBanning/larynx/actions/workflows/portable.yml)
 [![macOS](https://github.com/StopBanning/larynx/actions/workflows/macos.yml/badge.svg)](https://github.com/StopBanning/larynx/actions/workflows/macos.yml)

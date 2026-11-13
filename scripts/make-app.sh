@@ -10,6 +10,8 @@ cp .build/release/larynx "$APP/Contents/MacOS/larynx"
 # SwiftPM resources must travel with the executable, including the portable spelling fallback and its licence.
 mkdir -p "$APP/Contents/Resources"
 cp -R .build/release/Larynx_LarynxText.bundle "$APP/Contents/Resources/"
+# The icon is drawn by scripts/make-icon.swift and kept in the repo, so a build never has to draw it.
+cp packaging/Larynx.icns "$APP/Contents/Resources/Larynx.icns"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -18,6 +20,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Larynx</string>
   <key>CFBundleDisplayName</key><string>Larynx</string>
   <key>CFBundleExecutable</key><string>larynx</string>
+  <key>CFBundleIconFile</key><string>Larynx</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.6.0</string>
   <key>CFBundleVersion</key><string>1</string>
