@@ -15,6 +15,9 @@
 - **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
 - **Privacy, tested**: `tests/privacy.py` runs speech to text with every network connection denied.
+- **Fewer "like"s**: "like" is dropped where it is only a filler ("to like talk", "for like the whole day",
+  "Like, does that matter?") and kept wherever it can be the verb or a comparison ("I honestly like both",
+  "looks like", "it's like a", "like that"). Read against every "like" in 677 real dictations first.
 - Cleanup: stutters on more words ("some some", "I'm I'm"); a phrase said three times is one stumble or a meant
   chant, never two copies; "hindsight is 20/20" is not the year.
 

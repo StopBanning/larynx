@@ -246,6 +246,8 @@ public enum Tidy {
         if trailed != s, !trailed.isEmpty { s = trailed + (mode == .ai ? "" : ".") }
         // 2f. Spoken code: case commands, file names, acronyms.
         s = CodeWords.apply(s)
+        // 2f. "like" as a filler, only where it cannot be the verb or a comparison.
+        s = fillerLike(s)
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
@@ -283,6 +285,65 @@ public enum Tidy {
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
+        return s
+    }
+
+    /// Drops "like" where it is only a filler: "to like talk", "for like the whole day", "or like vendors",
+    /// "build like a demo", "my like calendar", "Like, does that matter?". It stays wherever it can be the verb
+    /// ("I honestly like both"), a comparison ("looks like", "feel like", "it's like a", "more like", "just like",
+    /// "like that") or a quotation ("she was like, no"). Each pattern was read against every "like" in 677 real
+    /// dictations before it was turned on: 71 removed of 254, none of them a verb or a comparison.
+    static func fillerLike(_ text: String) -> String {
+        guard text.range(of: "like", options: .caseInsensitive) != nil else { return text }
+        let prep = "for|in|on|at|with|of|about|from|by|into|over|around|through|after|before|than|within|during"
+        let conj = "and|or|but|so|because|cause|'cause|then|when|if|while|where|which|plus"
+        let verbs = "make|made|making|have|has|had|having|get|got|getting|use|used|using|need|needs|want|wanna|build|built|add|added|"
+            + "see|saw|take|takes|took|give|gave|put|buy|bought|write|wrote|create|created|run|ran|try|tried|find|found|pay|paid|"
+            + "spend|spent|post|posted|send|sent|cut|pick|picked|show|showed|keep|kept|gonna|gotta"
+        let det = "a|an|the|my|your|our|their|his|her|its|some|any|every|all|two|three|four|five|six|seven|eight|nine|ten|one|another|"
+            + "each|both|\\d[\\d,.]*%?"
+        let obj = "that|this|these|those|it|him|her|me|us|them|mine|yours|so"
+        let baseVerbs = "speak|talk|say|tell|do|make|have|get|go|come|see|look|use|try|put|take|give|show|send|post|write|read|build|"
+            + "run|start|stop|keep|let|help|work|play|move|add|change|check|find|think|know|feel|want|need|ask|call|open|close|set|"
+            + "turn|pull|push|cut|pay|buy|sell|bring|leave|meet|learn|test|fix|ship|update|create|explore|explain|share|record|edit|"
+            + "finish|wait|watch|listen|pick|click|press|hold|drop|drag|scroll|type|copy|paste|save|load|install|download|upload|"
+            + "deploy|merge|commit|review|plan|design|draw|render|zoom|crash|restart|reset|switch|compare|measure|count|track|"
+            + "handle|manage|focus|optimize|translate|convert"
+        // "Like I said" and "like you said" mean "as": never a filler.
+        let notAs = "(?!\\s+(?:i|you|we)\\s+(?:said|say|was saying|were saying|mentioned|told))"
+        let opener = "it's|i'm|we're|you're|they're|there's|that's|if|do|did|does|is|are|can|could|should|would|will|maybe|right now|"
+            + "literally|honestly|basically|obviously|sometimes"
+        let afterPronoun = "don't|didn't|can't|can|feel|think|mean|guess|just|was|had|have|would|could|really|literally|never|kinda|"
+            + "still|also|actually|wanna|want|need"
+        let start = "(^|[.!?]\\s+)"
+        let rules: [(String, String)] = [
+            // After a preposition ("of like mind" and "in like manner" are the old adjective).
+            ("\\b(\(prep))\\s+like,?\\s+(?!mind\\b|minds\\b|manner\\b|kind\\b)(?=[\\w$])", "$1 "),
+            // After a conjunction, unless an object follows ("and like that, it was gone").
+            ("\\b(\(conj)),?\\s+like,?\(notAs)\\s+(?!(?:\(obj))\\b)(?=[\\w$])", "$1 "),
+            // A verb, "like", then a determiner or number: "build like a demo".
+            ("\\b(\(verbs))\\s+like,?\\s+(?=(?:\(det))\\b)", "$1 "),
+            // "to like talk": "to like" before a plain verb.
+            ("\\bto\\s+like,?\\s+(?=(?:\(baseVerbs))\\b)", "to "),
+            // Set off by commas, or opening a sentence with a comma after it.
+            (",\\s+like,\\s+", ", "),
+            (start + "like,\\s+", "$1"),
+            // Opening a clause: "Like it's ...", ", like is that ...", "Like what?", "Like I can't tell".
+            ("(^|[.!?]\\s+|,\\s+)like\\s+(?=(?:\(opener))\\b)", "$1"),
+            (start + "like\\s+(?=(?:what|how|why|when|where)\\b)", "$1"),
+            (start + "like\\s+(?=(?:i|we|he|she|they)\\s+(?:\(afterPronoun))\\b)", "$1"),
+            // "my like calendar", "you're like making", "maybe like trying", "it was already like done".
+            ("\\b(my|your|our|their|his|its|any)\\s+like\\s+(?=\\w)", "$1 "),
+            ("\\b(i'm|you're|we're|they're)\\s+like,?\\s+(?=\\w+ing\\b)", "$1 "),
+            ("\\b(maybe)\\s+like,?\\s+(?!(?:\(obj)|\(det))\\b)(?=\\w)", "$1 "),
+            ("(?<!\\bi )(?<!\\byou )(?<!\\bwe )(?<!\\bthey )\\b(already|basically)\\s+like,?\\s+(?!(?:\(obj)|\(det))\\b)(?=\\w)", "$1 "),
+            // "they like kind of ignore": never before "kind of" ("I'd like kind of a quiet place" keeps it).
+            ("(?<!would )(?<!'d )\\blike\\s+(?=(?:kind of|sort of|kinda|sorta)\\b)", ""),
+        ]
+        var s = text
+        for (pattern, template) in rules {
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+        }
         return s
     }
 

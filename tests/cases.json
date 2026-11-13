@@ -674,6 +674,60 @@
       "expect": "And then I. Never mind."
     },
     {
+      "id": "t-like-verb-det",
+      "mode": "standard",
+      "in": "We should build like a small demo first.",
+      "expect": "We should build a small demo first."
+    },
+    {
+      "id": "t-like-sentence-start",
+      "mode": "standard",
+      "in": "Like right now the bus is late again.",
+      "expect": "Right now the bus is late again."
+    },
+    {
+      "id": "t-like-to-verb",
+      "mode": "standard",
+      "in": "She tried to like talk to customers or like vendors.",
+      "expect": "She tried to talk to customers or vendors."
+    },
+    {
+      "id": "t-like-preposition",
+      "mode": "standard",
+      "in": "We waited for like the whole afternoon.",
+      "expect": "We waited for the whole afternoon."
+    },
+    {
+      "id": "t-like-comma-start",
+      "mode": "standard",
+      "in": "Like, does that even matter?",
+      "expect": "Does that even matter?"
+    },
+    {
+      "id": "t-like-possessive",
+      "mode": "standard",
+      "in": "Add it to my like calendar, and skip any like background music.",
+      "expect": "Add it to my calendar, and skip any background music."
+    },
+    {
+      "id": "t-like-ing",
+      "mode": "standard",
+      "in": "You're like making this harder, and maybe like trying too much.",
+      "expect": "You're making this harder, and maybe trying too much."
+    },
+    {
+      "id": "t-like-pronoun-start",
+      "mode": "standard",
+      "in": "Like I can't tell which one is newer. But like nobody labels them.",
+      "expect": "I can't tell which one is newer. But nobody labels them."
+    },
+    {
+      "id": "t-like-kind-of",
+      "mode": "standard",
+      "in": "They like kind of ignore the first step.",
+      "expect": "They kind of ignore the first step."
+    },
+    {
       "id": "t-aye-stutter",
       "mode": "standard",
       "in": "Aye, I, I really appreciate it.",
@@ -1011,6 +1065,141 @@
     }
   ],
   "mustNotChange": [
+    {
+      "id": "keep-like-00",
+      "in": "But like it or not, we ship on Friday.",
+      "expect": "But like it or not, we ship on Friday."
+    },
+    {
+      "id": "keep-like-01",
+      "in": "I honestly like both of the options.",
+      "expect": "I honestly like both of the options."
+    },
+    {
+      "id": "keep-like-02",
+      "in": "We actually like the first design.",
+      "expect": "We actually like the first design."
+    },
+    {
+      "id": "keep-like-03",
+      "in": "We basically like the same things.",
+      "expect": "We basically like the same things."
+    },
+    {
+      "id": "keep-like-04",
+      "in": "It looks like rain, and it feels like winter.",
+      "expect": "It looks like rain, and it feels like winter."
+    },
+    {
+      "id": "keep-like-05",
+      "in": "Would you like some tea?",
+      "expect": "Would you like some tea?"
+    },
+    {
+      "id": "keep-like-06",
+      "in": "Kids that like puzzles will love it.",
+      "expect": "Kids that like puzzles will love it."
+    },
+    {
+      "id": "keep-like-07",
+      "in": "Click the like button and the like count goes up.",
+      "expect": "Click the like button and the like count goes up."
+    },
+    {
+      "id": "keep-like-08",
+      "in": "Like I said, it's ready.",
+      "expect": "Like I said, it's ready."
+    },
+    {
+      "id": "keep-like-09",
+      "in": "Do it like that.",
+      "expect": "Do it like that."
+    },
+    {
+      "id": "keep-like-10",
+      "in": "Some like it hot.",
+      "expect": "Some like it hot."
+    },
+    {
+      "id": "keep-like-11",
+      "in": "Like they do in Japan, we bow.",
+      "expect": "Like they do in Japan, we bow."
+    },
+    {
+      "id": "keep-like-12",
+      "in": "It's like a second home.",
+      "expect": "It's like a second home."
+    },
+    {
+      "id": "keep-like-13",
+      "in": "She was like, I can't believe it.",
+      "expect": "She was like, I can't believe it."
+    },
+    {
+      "id": "keep-like-14",
+      "in": "Cars, like the Honda, hold their value.",
+      "expect": "Cars, like the Honda, hold their value."
+    },
+    {
+      "id": "keep-like-15",
+      "in": "People, like you, deserve better.",
+      "expect": "People, like you, deserve better."
+    },
+    {
+      "id": "keep-like-16",
+      "in": "They are of like mind.",
+      "expect": "They are of like mind."
+    },
+    {
+      "id": "keep-like-17",
+      "in": "It works just like before.",
+      "expect": "It works just like before."
+    },
+    {
+      "id": "keep-like-18",
+      "in": "Something like that would help.",
+      "expect": "Something like that would help."
+    },
+    {
+      "id": "keep-like-19",
+      "in": "It's more like a hobby.",
+      "expect": "It's more like a hobby."
+    },
+    {
+      "id": "keep-like-20",
+      "in": "I'd like kind of a quiet place.",
+      "expect": "I'd like kind of a quiet place."
+    },
+    {
+      "id": "keep-like-21",
+      "in": "And like that, it was gone.",
+      "expect": "And like that, it was gone."
+    },
+    {
+      "id": "keep-like-22",
+      "in": "She wants them to like it.",
+      "expect": "She wants them to like it."
+    },
+    {
+      "id": "keep-like-23",
+      "in": "We need people who like to work hard.",
+      "expect": "We need people who like to work hard."
+    },
+    {
+      "id": "keep-like-24",
+      "in": "If you like, we can stop here.",
+      "expect": "If you like, we can stop here."
+    },
+    {
+      "id": "keep-like-25",
+      "in": "I like that a lot.",
+      "expect": "I like that a lot."
+    },
+    {
+      "id": "keep-like-26",
+      "in": "It sounds like a plan.",
+      "expect": "It sounds like a plan."
+    },
     {
       "id": "keep-ordinary-001",
       "in": "Please send the report tomorrow.",
