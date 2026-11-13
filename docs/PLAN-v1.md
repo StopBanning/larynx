@@ -337,7 +337,7 @@ the stage on.
 style). README section with one sentence shown in both styles. Reel: "One voice, two keys" (PLAN-launch L3).
 
 Gate: every P2 rule has passed its shadow read; the professional cases pass; casual output is byte-for-byte what
-it was (the existing cases and the 185 must-not-change sentences); latency gate green in both styles.
+it was (the existing cases and the 186 must-not-change sentences); latency gate green in both styles.
 
 Order: P1, P2 (shadow from the first commit), P3, P5, then P4.
 
