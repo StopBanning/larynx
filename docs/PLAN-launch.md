@@ -225,6 +225,8 @@ shares say more than likes.
 For the executor, one at a time, reporting and continuing as usual:
 
 1. L0.8 history window (PLAN-v1 R5), then L0.1 icon, L0.9 small things.
+   (Added Nov 13, at Colin's ask: PLAN-v1 section P, the professional style, comes before L0.10. It is also
+   the best demo: one sentence, two registers.)
 2. L0.2 demo (needs LQ6: write the sentence and the recording steps for Colin first), L0.3 README, L0.4 repo.
 3. L0.7 first five minutes, L0.10 landing page, L0.11 agents page, L0.12 counting, L0.13 licences.
 4. L0.5 comparison (may change the README table and reel 5).

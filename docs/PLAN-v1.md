@@ -291,6 +291,58 @@ budget; BENCHMARKS has the random-clip table; the privacy test runs with each re
 
 ---
 
+## P. Professional style (E4 pulled forward, Nov 13)
+
+Colin, Nov 13: Larynx reads as if it were made for talking to friends and AI agents; he wants a mode for writing
+that has to look professional, with bullet points, and far fewer "like"s. The first part shipped the same day for
+every mode (`Tidy.fillerLike`: 70 of 254 "like"s in his history, none a verb or a comparison). This section is
+the rest.
+
+**The idea.** *Mode* is where the text is going (an AI chat, a message, an email) and already exists. *Style* is
+how it should read, and is new: `casual` (today's behaviour, the default) and `professional`. Same voice, same
+speed, two registers. It is also the clearest demo Larynx has: one sentence said twice, once to a friend and once
+to a client.
+
+**P1. Style as a setting, and how to switch.** `style: casual | professional` in settings.json, in Settings and in
+the menu. Per-app defaults in `styles` (`{"com.apple.mail": "professional"}`); mail apps start professional,
+everything else casual. A **Professional Key**: one of the talk keys can be set to dictate in the professional
+style whatever the app's default, so switching is which key you hold, with nothing to click. The pill shows a
+small mark while that style is in use. History records the style used.
+
+**P2. Professional cleanup, by rules** (instant, no model; `Tidy.professional`, after the shared rules):
+1. The fillers the shared rules leave because they are ambiguous in casual speech: "it's like" before a verb or
+   clause, "be like" before a noun, "almost like", "you know", "I mean", "or whatever", "and stuff", a leading
+   "Yeah," "So," "Okay so," "Alright," "Dude,", and "bro" / "dude" / "man" as address.
+2. Spoken forms written out: wanna, gonna, gotta, kinda, sorta, 'cause, ya, lemme, gimme, dunno.
+3. Swearing used as emphasis is dropped ("so fucking fast" becomes "so fast"); "shit like that" becomes "things
+   like that". Setting `professionalSwearing: remove | keep` (decision Q8).
+4. Hedge stacks trimmed to one ("I think maybe it kind of" becomes "I think it").
+Every rule: its cases first, then sentences that must not change in this style, then a replay over his history in
+shadow (`shadow:professional` step on every dictation, never applied) with 100 proposals read before the style
+can be chosen in the menu.
+
+**P3. Structure.** In this style the list rules that are in shadow today are on: "first… second… third…" and
+"one… two… three…" become a numbered list, "bullet" or "next point" starts a bullet, "new paragraph" already
+works. A list said in one breath with "and" between three or more short items stays a sentence: lists are only
+made when asked for.
+
+**P4. The on-device rewrite, when it is available** (macOS 26, Apple's model, already wired as AI Cleanup). Rules
+give clean spoken English; turning a ramble into tight written prose needs a language model. In the professional
+style the rewrite runs with the existing guard (it may drop and reorder words, never add facts) and a 600 ms
+deadline: if it is late or the guard rejects it, the rule-cleaned text is delivered. Off with `rewrite: off`.
+Measure before trusting: 40 professional cases in `tests/cases.json` (`rewrite` set), and the latency gate with
+the stage on.
+
+**P5. Proof and the demo.** A `professional` set in the suite (the same 40 sentences, expected output in each
+style). README section with one sentence shown in both styles. Reel: "One voice, two keys" (PLAN-launch L3).
+
+Gate: every P2 rule has passed its shadow read; the professional cases pass; casual output is byte-for-byte what
+it was (the existing cases and the 185 must-not-change sentences); latency gate green in both styles.
+
+Order: P1, P2 (shadow from the first commit), P3, P5, then P4.
+
+---
+
 ## C. v0.7 "Context": it knows what you're looking at
 
 Headline: names and look-alike words come out right because Larynx reads them off the screen, locally.
@@ -432,6 +484,8 @@ W7 (real-hardware numbers) needs decision Q3. Everything before it runs in CI.
 | Q4 | Sign in to Wispr Flow for a measured head-to-head (master C3) | Decide at F2 | Not needed before then. |
 | Q5 | Which "beyond" features first | G1, G2, G3 | G1 fits how he works; G3 is nearly free. |
 | Q6 | About 10 minutes labelling random clips of his own dictation (R4) | Yes, once R4's label window exists | Without it the only real-voice number comes from 48 hand-picked clips. |
+| Q7 | How to switch to the professional style (P1) | A Professional Key (one talk key dictates professionally) plus per-app defaults, mail apps professional | Nothing to click; which key you hold is the switch. He picks the key. |
+| Q8 | Swearing in the professional style (P2) | Remove it there; casual is untouched | That is what the style is for. One setting flips it. |
 
 None of these block A or B except Q2 for B3 (which has a weaker fallback).
 
@@ -481,6 +535,7 @@ section C continue once the launch drafts (L1) are with Colin.
 | R3 | watching, not started (Colin Nov 12: he never said Larynx was slow; work it only if the timing data blames Larynx) | First 40 timed dictations: speech time per audio second does not rise with system load (p50 23 ms below load 6, 15 ms at load 12+), so the Neural Engine is not the bottleneck. The CPU parts do: cleanup p90 35 ms below load 6, 122-131 ms above, and key-up to paste p50 154 ms vs 310 ms. The busy load came from the restart at 9:10 and Blender running again from 14:46 (plus a 1-minute Neural Engine compile at 14:50 by an unknown client, not Larynx). Re-read after 200 timed dictations; if cleanup or the field read in a busy Claude window is the cost, try a higher task priority first. Fallback model: the 161 s stall on Nov 11 22:06 was its first compile, fixed by the install warm-up at 22:44; after a restart its first use still loads from disk in about 3 s (6 fallbacks in all, so left alone). |
 | R4 | done Nov 12 (labels by the agent at Colin's ask; his own labels would replace them) | 57 of 60 labelled from the five engine versions plus context, 3 left in pending (unsettled). `bench/run.py --sets random` (kept apart from the 48 picked; spoken spellings equal): Ultra 0.87%, Parakeet 1.49%, Unified 1.85%, Bark 3 3.24%, Clean 4.78%; table and Ultra's 12 error spots by kind in docs/BENCHMARKS.md, README row. Found and fixed on the way: a phrase said three times came out twice (7180b94). | `larynx golden sample --n 60` (a third per length band, seeded, skips private apps and clips already in), `bench/prelabel.py` (every downloaded engine, verbatim; proposes a label only when two or more agree word for word), `larynx golden label` (plays the clip; Return keeps, typing corrects, r/s/x/q; adds as source "random"). Pre-labelled Nov 12 (all 5 engines, 60 clips, 745 s of audio): all five agree on 10 (short clips), 4 on 10, 3 on 13, no majority on 27 (mostly the long ones). So `label` now starts from the majority (3+ of 5) or the typed text, lists only the spots where an engine heard something else (fillers hidden), and goes easiest first. Q6's 10 minutes is more like 20-25 (12 minutes of listening alone); s/q make it resumable in sittings. Next: Colin labels, then the BENCHMARKS table. |
 | R5 | built Nov 13; needs Colin's use on 5 real slips | `HistoryWindow.swift` (menu: History…, ⌘Y; Fix Last Dictation…): days, search, copy, play, tags (fixed, not sure, undone, recovered, clipboard), totals. `HistoryFix` (LarynxCore): saves the correction (source `fix`), adds the clip to the golden set as `user` when its recording is kept, returns lessons from `Corrections.lessons`; one- and two-word dictations count for a fix. Test `aFixInTheHistoryWindowIsSavedJoinsTheGoldenSetAndTeachesTheWord`. `larynx history-snapshot <dir>` renders it with made-up rows (docs/images/history.png). `larynx review` counts window fixes. Left out: paste again (Copy instead), clicking the pill after a "Not sure" hint (the pill ignores the mouse by design), marking which word was doubtful (history keeps only the flag). |
+| P | planned Nov 13; "like" as a filler shipped for every mode the same day (`Tidy.fillerLike`, commit 3d00043) | Section P. Next: P1 (style setting, Professional Key), then P2 rules in shadow. |
 | R6 | not started (planned Nov 12) | Evidence table at the top of section R. |
 | R7 | done Nov 12: all four checks pass (installed app binary) | `tests/privacy.py`: transcribe, one serve request and `listen --feed` under `sandbox-exec` with `(deny network*)`, throwaway data folder, copy-only. Proof the profile bites (`--prove`): the same Python `urlopen` reaches example.com outside the sandbox and fails inside it with "nodename nor servname provided". Run Nov 12 under when-idle.sh with `LARYNX_BIN=~/Applications/Larynx.app/Contents/MacOS/larynx`: transcribe, serve and listen --feed all produced text with no network, and the probe was blocked. Documented in docs/PRIVACY.md and the README privacy line. |
 | R8 | install test passes here and on a clean GitHub Mac (macos-26, Nov 12, 4 min); needs one person's install with permissions | `make-app.sh` takes `LARYNX_SIGN=adhoc`; `install.sh` takes `LARYNX_NO_OPEN=1` (builds without restarting or opening, so a test never touches the running Larynx). `tests/install.py`: empty HOME under ~/work/scratch, 9 checks (bundle, ad hoc signature verifies, bundle id, microphone text, resources, binary runs, no data in the new home): all pass here in 63 s, the installed app untouched. CI job `install` in macos.yml runs it on a clean runner. "Install report" issue template added. Left: one install by someone who is not Colin; README wording after R5. |
