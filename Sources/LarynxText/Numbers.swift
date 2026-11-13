@@ -22,8 +22,18 @@ public enum Numbers {
     struct Token { var lead: String; var core: String; var trail: String }
     struct Rendered { var text: String; var consumesNext = false; var absorbsArticle = false }
 
+    /// "Hindsight is twenty twenty", "twenty twenty vision": the eyesight score, not the year. Speech models write
+    /// "2020" here, so both spellings are handled.
+    static func idioms(_ text: String) -> String {
+        let score = "(?:2020|twenty[- ]twenty)"
+        var s = text.replacingOccurrences(of: "(?i)\\b(hindsight(?:'s|\\s+is|\\s+was|\\s+being)\\s+)\(score)\\b", with: "$120/20",
+                                          options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b\(score)(\\s+(?:vision|eyesight|hindsight))\\b", with: "20/20$1", options: .regularExpression)
+        return s
+    }
+
     public static func apply(_ text: String) -> String {
-        let t = tokenize(text)
+        let t = tokenize(idioms(text))
         var out: [Token] = []
         var i = 0
         while i < t.count {

@@ -1811,6 +1811,18 @@
     "_about": "Spoken numbers to digits (LarynxText/Numbers.swift). `change`: in -> expect. `keep`: must come out exactly as given. Reviewed against 574 real dictations before turning on (every would-be change read; the only error found, Y2K, is a case here).",
     "change": [
       {
+        "in": "Easy to say now, hindsight's 2020.",
+        "expect": "Easy to say now, hindsight's 20/20."
+      },
+      {
+        "in": "Hindsight is twenty twenty, as they say.",
+        "expect": "Hindsight is 20/20, as they say."
+      },
+      {
+        "in": "The pilot needs twenty twenty vision.",
+        "expect": "The pilot needs 20/20 vision."
+      },
+      {
         "in": "How funny would it be if Opus five point five did it.",
         "expect": "How funny would it be if Opus 5.5 did it."
       },
@@ -2016,6 +2028,8 @@
       }
     ],
     "keep": [
+      "We shipped the first version in 2020.",
+      "In hindsight, 2020 was a strange year.",
       "Can you send me one of those?",
       "This one is better.",
       "No one knows.",
