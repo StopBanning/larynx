@@ -97,7 +97,16 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, styl
     result.confidence = (Double(heard.confidence) * 1000).rounded() / 1000
     let doubtful = Doubt.words(heard.words.map { ($0.word, $0.confidence) }, finalText: result.text,
                                isKnown: { word in Vocabulary.isEnglish(word) || vocabularyCache.terms.contains { $0.lowercased() == word } })
-    result.doubtful = doubtful.isEmpty ? nil : doubtful
+    // A cut-off word the model doubted ("I was tra trying to") is dropped; the rest stay doubtful for the hint.
+    let isKnownWord: (String) -> Bool = { word in Vocabulary.isEnglish(word) || vocabularyCache.terms.contains { $0.lowercased() == word } }
+    let cut = tidy ? Doubt.cutOffs(doubtful, in: result.text, isKnown: isKnownWord, startsAWord: { BundledWordList.shared.startsAWord($0) }) : []
+    if !cut.isEmpty {
+        let before = result.text
+        result.text = Doubt.removing(cut, from: result.text)
+        result.steps.append(Step(stage: "cutOff", before: before, after: result.text, applied: true))
+    }
+    let stillDoubtful = doubtful.filter { !cut.contains($0) }
+    result.doubtful = stillDoubtful.isEmpty ? nil : stillDoubtful
     result.totalMs = ms(since: started)
     return result
 }

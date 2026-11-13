@@ -21,6 +21,8 @@
 - **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).
 - **Privacy, tested**: `tests/privacy.py` runs speech to text with every network connection denied.
+- **Cut-off words dropped**: a word the speech model doubted, that no dictionary knows and that is only the
+  start of a real word (you started one word and switched to another) is left out. History records it.
 - **Fewer "like"s**: "like" is dropped where it is only a filler ("to like talk", "for like the whole day",
   "Like, does that matter?") and kept wherever it can be the verb or a comparison ("I honestly like both",
   "looks like", "it's like a", "like that"). Read against every "like" in 677 real dictations first.

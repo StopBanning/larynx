@@ -21,4 +21,11 @@ public struct BundledWordList: WordList {
 
     public func contains(_ word: String) -> Bool { words.contains(word.lowercased()) }
     public var count: Int { words.count }
+
+    /// True when some word at least two letters longer starts with `prefix` ("pla" starts "place"). For telling a
+    /// cut-off word from a made-up one; rare enough that a scan is fine.
+    public func startsAWord(_ prefix: String) -> Bool {
+        let p = prefix.lowercased()
+        return words.contains { $0.count >= p.count + 2 && $0.hasPrefix(p) }
+    }
 }

@@ -30,3 +30,21 @@ private func known(_ w: String) -> Bool { english.contains(w) }
     for t in ["Scratch that.", "scratch that", "Undo that!", "Delete that."] { #expect(VoiceCommand.isUndo(t), "\(t)") }
     for t in ["Scratch that idea and start over.", "I said scratch that", "Scratch the last part."] { #expect(!VoiceCommand.isUndo(t), "\(t)") }
 }
+
+
+@Test func aDoubtedCutOffWordIsDroppedAndNothingElse() {
+    let words = BundledWordList.shared
+    let known: (String) -> Bool = { words.contains($0) }
+    let starts: (String) -> Bool = { words.startsAWord($0) }
+    // Cut off as the speaker changed course: doubted, unknown, and the start of a real word.
+    #expect(Doubt.cutOffs(["tra"], in: "I was tra trying to finish it", isKnown: known, startsAWord: starts) == ["tra"])
+    #expect(Doubt.removing(["tra"], from: "I was tra trying to finish it") == "I was trying to finish it")
+    #expect(Doubt.removing(["bu"], from: "It's fine, bu, honestly.") == "It's fine, honestly.")
+    // Kept: a real word, a name (capital), a made-up word that starts nothing, a sound said again, a long word.
+    #expect(Doubt.cutOffs(["read"], in: "I read it", isKnown: known, startsAWord: starts).isEmpty)
+    #expect(Doubt.cutOffs(["Zorvex"], in: "Ask Zorvex", isKnown: known, startsAWord: starts).isEmpty)
+    #expect(Doubt.cutOffs(["zzq"], in: "the zzq part", isKnown: known, startsAWord: starts).isEmpty)
+    #expect(Doubt.cutOffs(["dum"], in: "dum dum dum", isKnown: known, startsAWord: starts).isEmpty)
+    #expect(Doubt.cutOffs(["frobnicat"], in: "we frobnicat it", isKnown: known, startsAWord: starts).isEmpty)
+    #expect(words.startsAWord("tra") && !words.startsAWord("zzq"))
+}
