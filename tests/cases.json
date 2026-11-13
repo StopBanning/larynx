@@ -626,6 +626,30 @@
       "expect": "I need the keys."
     },
     {
+      "id": "t-stutter-some",
+      "mode": "standard",
+      "in": "We should give it some some time before deciding.",
+      "expect": "We should give it some time before deciding."
+    },
+    {
+      "id": "t-stutter-contraction",
+      "mode": "standard",
+      "in": "I'm I'm happy to wait. Don't don't don't rush it.",
+      "expect": "I'm happy to wait. Don't rush it."
+    },
+    {
+      "id": "t-stutter-until",
+      "mode": "standard",
+      "in": "Hold the release until until the tests pass.",
+      "expect": "Hold the release until the tests pass."
+    },
+    {
+      "id": "t-stutter-just-keep",
+      "mode": "standard",
+      "in": "It's it's just just a draft, so keep keep going.",
+      "expect": "It's just a draft, so keep going."
+    },
+    {
       "id": "t-aye-stutter",
       "mode": "standard",
       "in": "Aye, I, I really appreciate it.",

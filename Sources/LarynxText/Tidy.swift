@@ -42,7 +42,8 @@ public enum CleanupMode: String, Codable, Sendable {
 public enum Tidy {
     static let fillers = "(?:u+m+|u+h+m*|e+r+m+|h+m+)"
     /// Words people stutter on. Doubles of other words ("very very", "had had", "that that", "no no") are left alone.
-    static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be"
+    static let stutterWords = "the|a|an|to|i|we|you|it|is|and|of|in|on|for|my|our|can|so|but|or|if|he|she|they|this|at|with|be|"
+        + "some|which|until|would|are|as|just|keep|i'm|i'll|i've|it's|don't|let's|we're|you're|that's"
     // MARK: Email layout
 
     static let greetings = "Hi|Hey|Hello|Dear|Good morning|Good afternoon|Good evening|Morning|Afternoon"
