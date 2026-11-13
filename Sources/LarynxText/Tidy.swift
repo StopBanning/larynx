@@ -176,6 +176,8 @@ public enum Tidy {
 
     /// Placeholders for spoken "new line" / "new paragraph" while the rules run (not letters, not whitespace).
     static let lineMark = "\u{E000}", paragraphMark = "\u{E001}"
+    /// Joins the copies of a chant ("No way, no way, no way.") so the repeat rules leave it; removed before the end.
+    static let chantMark = "\u{2060}"
 
     public static func apply(_ text: String, mode: CleanupMode) -> String {
         var s = text
@@ -216,8 +218,15 @@ public enum Tidy {
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
-        // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place".
-        s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
+        // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place". Until nothing changes,
+        // so a stumble said three times ("we could, we could, we could try") ends as one copy, not two. A phrase said three
+        // or more times that ends its sentence ("No way, no way, no way.") is meant, and is marked so this leaves it.
+        s = markChants(s)
+        var before = ""
+        while before != s {
+            before = s
+            s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
+        }
         s = repeatedPhrases(s)
         var previous = ""
         while previous != s {  // "I, I, I think" needs two passes
@@ -268,11 +277,29 @@ public enum Tidy {
             let cut = String(s.dropLast()).trimmingCharacters(in: .whitespaces)
             if !cut.isEmpty { s = cut + (mode == .ai ? "" : ".") }
         }
+        s = s.replacingOccurrences(of: chantMark, with: "")
         guard !s.isEmpty else { return s }
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)
         // 6. Text for people ends like a sentence.
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
+        return s
+    }
+
+    /// "No way, no way, no way." / "Go team go team go team!": one to three words said three or more times, ending the
+    /// sentence. Meant, so the copies are joined with `chantMark` and the repeat rules below don't see a repeat. A
+    /// single stutter word ("and then I, I, I.") is not a chant.
+    static func markChants(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){0,2})((?:,?\\s+\\1\\b){2,})(?=\\s*(?:[.!?]|$))")
+        else { return text }
+        let stutters = Set(stutterWords.split(separator: "|").map(String.init))
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let phrase = Range(m.range(at: 1), in: s), let copies = Range(m.range(at: 2), in: s) else { continue }
+            if stutters.contains(s[phrase].lowercased()) { continue }
+            let joined = s[copies].replacingOccurrences(of: "(,?)(\\s+)", with: "$1\(chantMark)$2", options: .regularExpression)
+            s.replaceSubrange(copies, with: joined)
+        }
         return s
     }
 

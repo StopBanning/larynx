@@ -650,6 +650,30 @@
       "expect": "It's just a draft, so keep going."
     },
     {
+      "id": "t-chant-kept",
+      "mode": "standard",
+      "in": "Great game. Go team, go team, go team!",
+      "expect": "Great game. Go team, go team, go team!"
+    },
+    {
+      "id": "t-chant-kept-2",
+      "mode": "standard",
+      "in": "No way, no way, no way. That can't be right.",
+      "expect": "No way, no way, no way. That can't be right."
+    },
+    {
+      "id": "t-stumble-three",
+      "mode": "standard",
+      "in": "We should, we should, we should ask first.",
+      "expect": "We should ask first."
+    },
+    {
+      "id": "t-stutter-word-not-chant",
+      "mode": "standard",
+      "in": "And then I, I, I. Never mind.",
+      "expect": "And then I. Never mind."
+    },
+    {
       "id": "t-aye-stutter",
       "mode": "standard",
       "in": "Aye, I, I really appreciate it.",
