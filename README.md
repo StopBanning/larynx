@@ -241,6 +241,7 @@ a sentence for Mail, Slack, Messages and Notes.
 | `python3 bench/latency.py` | The speed gate, run before each release: 50 clips through the full pipeline; fails over 150 ms median or 350 ms at the 90th percentile | 80 ms median, 144 ms p90 (Nov 12) |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
 | `scripts/when-idle.sh python3 tests/privacy.py --prove` | Speech to text three ways inside a sandbox that denies every network connection; then a deliberate web request under the same sandbox, which must fail | 4/4 (Nov 12) |
+| `python3 tests/metrics.py` | The launch metrics script (`scripts/metrics.py`, GitHub's own counts, no telemetry): counts add up and a day is never counted twice. Offline | 7/7 (Nov 13) |
 | `python3 tests/install.py` | The installer into an empty home folder, signed ad hoc as on someone else's Mac: the bundle, its signature, icon and resources, the binary runs, no data left behind; then the uninstall leaves that home clean. Also runs in CI on a clean Mac | 11/11 (Nov 13) |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
 
