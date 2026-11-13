@@ -86,8 +86,8 @@ Replace `YOU` with your user name (`echo $HOME` prints the whole path). Then ask
 - "Clean up this voice note in the professional style and draft it as an email."
 - "Larynx keeps writing 'post gress' for Postgres. Fix that."
 
-The first `transcribe_file` loads the speech model, which takes a few seconds; after that each file takes a fraction
-of its length.
+The first `transcribe_file` after the server starts loads the speech model, which can take up to a minute; after
+that a short memo comes back in a tenth of a second or so.
 
 ## 3. Scripts and apps
 
