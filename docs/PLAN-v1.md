@@ -439,6 +439,9 @@ None of these block A or B except Q2 for B3 (which has a weaker fallback).
 
 ## Status (the executor keeps this current)
 
+**Order of work from Nov 13:** [PLAN-launch.md](PLAN-launch.md) section 6. R5 is its first task (L0.8); R6 and
+section C continue once the launch drafts (L1) are with Colin.
+
 | Task | State | Notes / evidence |
 |---|---|---|
 | A (switch to Ultra) | done Nov 11 (v0.5.0 released; A1 watch continues to 200 dictations) | Ultra 272/300 vs Bark Clean 264/300 after the new tidy rules; default changed, installed, cache warmed. `bench/results/suite2-*.log`, docs/BENCHMARKS.md. |
