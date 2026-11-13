@@ -331,8 +331,9 @@ public enum Tidy {
         re(",\\s*you know,\\s*", ", ")
         re(",\\s*you know(?=[.!?]|$)", "")
         re(start + "you know,\\s+", "$1")
-        re(",?\\s+or whatever(?=[.!?,]|$)", "")
-        re(",?\\s+and (?:stuff|shit)(?: like that)?(?=[.!?,]|$)", "")
+        // A trailing tag can stack: "and stuff, you know" (the "you know" goes only with the tag before it).
+        re(",?\\s+or whatever(?:,?\\s+you know)?(?=[.!?,]|$)", "")
+        re(",?\\s+and (?:stuff|shit)(?: like that)?(?:,?\\s+you know)?(?=[.!?,]|$)", "")
         re(start + "I mean,\\s+", "$1")
         re(start + "I mean\\s+(?=(?:if|it's|that's|we|you|they|the|honestly|obviously|i|there's|this|yeah)\\b)", "$1")
         // Exclamations that are only emphasis.

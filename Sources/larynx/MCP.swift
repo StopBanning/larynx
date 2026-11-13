@@ -9,13 +9,13 @@ func runMCP() async {
          "description": "Transcribe an audio file (wav, m4a, mp3, aiff...) on-device and clean it up. Returns the text.",
          "inputSchema": ["type": "object", "required": ["path"], "properties": [
             "path": ["type": "string", "description": "Absolute path to the audio file"],
-            "mode": ["type": "string", "enum": ["ai", "correspondence", "standard"], "description": "How much to polish (default standard)"],
+            "mode": ["type": "string", "enum": ["ai", "correspondence", "standard", "email"], "description": "How much to polish (default standard)"],
          ]]],
         ["name": "clean_text",
          "description": "Clean up dictated text: dictionary fixes, filler and stutter removal, and (when needed) an on-device AI pass for self-corrections, numbers and verbal tics.",
          "inputSchema": ["type": "object", "required": ["text"], "properties": [
             "text": ["type": "string"],
-            "mode": ["type": "string", "enum": ["ai", "correspondence", "standard"], "description": "Default correspondence"],
+            "mode": ["type": "string", "enum": ["ai", "correspondence", "standard", "email"], "description": "Default correspondence"],
             "style": ["type": "string", "enum": ["casual", "professional"], "description": "Default casual. Professional also removes discourse fillers, swearing used for emphasis and spoken forms like gonna, and makes spoken lists into lists."],
          ]]],
         ["name": "add_dictionary_word",
@@ -45,7 +45,7 @@ func runMCP() async {
         case "initialize":
             result(id, ["protocolVersion": (params["protocolVersion"] as? String) ?? "2025-06-18",
                         "capabilities": ["tools": [:] as [String: Any]],
-                        "serverInfo": ["name": "larynx", "version": "0.3.0"]])
+                        "serverInfo": ["name": "larynx", "version": Links.version]])
         case "ping":
             result(id, [:])
         case "tools/list":

@@ -8,6 +8,12 @@
   for everything (menu: Professional Style) or hold the Professional Key for one dictation; the pill shows a
   briefcase. Casual output is unchanged. `--style professional` on the command line, `"style"` in serve and MCP.
 
+- **Works with your AI tools** ([docs/AGENTS.md](docs/AGENTS.md)): dictating into coding agents and terminals,
+  the MCP server in one line for Claude Code (and the JSON for other clients), and the command line from the app
+  itself. `tests/agents.py` runs the page's examples.
+- Fixed: `LARYNX_DATA_DIR` now moves the dictionary too, so tests and scripts using a throwaway folder no longer
+  write to your real dictionary. The MCP server reports the app's version and accepts the `email` mode.
+
 - **History window** (menu: History…, ⌘Y): the last 30 days by day, with search, copy, play (when the recording is
   kept), what went where, and running totals. **Fix…** on a row (or Fix Last Dictation… in the menu) takes what you
   actually said: the fix is saved, an invented word is learned for next time under the same rules as learning from

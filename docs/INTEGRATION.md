@@ -101,11 +101,14 @@ Larynx directly. Tools:
 `transcribe_file` keeps its text content response and adds a `structuredContent` object containing the same
 Transcript fields as serve (without the serve envelope). The other MCP tool responses are unchanged.
 
-Claude Code:
+Claude Code, with the app installed (its binary uses the app's speech model, so nothing is downloaded twice):
 
 ```bash
-claude mcp add larynx -- ~/work/larynx/.build/release/larynx mcp --models-dir "$HOME/Library/Application Support/Larynx/models"
+claude mcp add larynx -- ~/Applications/Larynx.app/Contents/MacOS/larynx mcp
 ```
+
+From a source build, add `--models-dir "$HOME/Library/Application Support/Larynx/models"`. Setup for other clients
+and examples: [AGENTS.md](AGENTS.md).
 
 ## Not yet
 

@@ -84,6 +84,7 @@ private struct Cases: Decodable {
         ("Alright, I wanna push the launch, 'cause the venue isn't ready, man.", "I want to push the launch, because the venue isn't ready."),
         ("It's gotta work on the first try.", "It has to work on the first try."),
         ("I mean, it's basically ready, just send it over or whatever.", "It's basically ready, just send it over."),
+        ("We still have to sign the lease and stuff you know.", "We still have to sign the lease."),
         ("Oh my god, the client loved it.", "The client loved it."),
         ("Oh yeah, we can ship on Monday.", "We can ship on Monday."),
         ("Number one, book the flights. Number two, book the hotel. And three ask about a rental car.",
@@ -98,7 +99,8 @@ private struct Cases: Decodable {
     }
     // What must not change, found by reading the rules against real dictation.
     for kept in ["So far the numbers look fine.", "So much for the plan.", "They kept fucking the order up.", "Stop fucking around with it.",
-                 "The cause of the delay is known.", "Yeah.", "I mean it when I say thanks."] {
+                 "The cause of the delay is known.", "Yeah.", "I mean it when I say thanks.",
+                 "It means more than you know."] {
         #expect(Tidy.apply(kept, mode: .correspondence, style: .professional) == kept, "\(kept)")
     }
     // Swearing can be kept.

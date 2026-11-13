@@ -139,6 +139,8 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/uni
 
 **For scripts and agents**
 
+- Dictating into Claude Code, Cursor, ChatGPT or a terminal, and giving an agent Larynx as a tool with one line:
+  [docs/AGENTS.md](docs/AGENTS.md).
 - A CLI (`larynx transcribe note.m4a`), a JSON-lines API for host apps (`larynx serve`) and an MCP server
   (`larynx mcp`). See [docs/INTEGRATION.md](docs/INTEGRATION.md). Apps such as [Locust](https://locust.lol) embed
   it this way.
@@ -231,9 +233,10 @@ a sentence for Mail, Slack, Messages and Notes.
 
 | Suite | What it checks | Latest |
 | --- | --- | --- |
-| `swift test` | 63 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
+| `swift test` | 66 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
 | `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | Nov 11: rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
+| `python3 tests/agents.py` | The examples in [docs/AGENTS.md](docs/AGENTS.md): AI mode, the four MCP tools, the professional style, and your real dictionary untouched | 9/9 (Nov 13) |
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
 | `python3 bench/latency.py` | The speed gate, run before each release: 50 clips through the full pipeline; fails over 150 ms median or 350 ms at the 90th percentile | 80 ms median, 144 ms p90 (Nov 12) |
 | `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |

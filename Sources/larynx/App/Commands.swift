@@ -22,7 +22,7 @@ var autoRewrite: Bool { (option("--rewrite") ?? Settings.shared.string(.rewrite)
 let verbatim = args.contains("--verbatim")
 
 let usage = """
-    larynx: local, offline dictation for macOS (Parakeet TDT v3 on the Neural Engine)
+    larynx: local, offline dictation for macOS (speech models on the Neural Engine)
 
     larynx transcribe <audio file> [--clean]   print the transcript of a file
     larynx listen [--key fn|rightOption|rightCommand|rightControl] [--clean]
@@ -37,7 +37,7 @@ let usage = """
 
     --models-dir <path>   where the speech model lives (downloaded once, about 500 MB)
     --engine clean|parakeet|bark3|ultra|unified   speech model (clean = English, drops ums; see docs/BENCHMARKS.md)
-    --mode ai|correspondence|standard   how much to polish (listen picks it from the front app)
+    --mode ai|correspondence|standard|email   how much to polish (listen picks it from the front app)
     --style casual|professional   professional also drops "you know", "dude", swearing for emphasis and "gonna",
                           and makes spoken lists into lists (listen: the professional key or the menu picks it)
     --verbatim            skip the tidy-up rules

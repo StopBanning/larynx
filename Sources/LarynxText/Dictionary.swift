@@ -2,9 +2,12 @@ import Foundation
 
 /// Your words: "heard this" -> "write that", whole words, any capitalization.
 /// Lives in ~/Library/Application Support/Larynx/dictionary.json, e.g. {"lynx": "Larynx", "locust app": "Locust"}.
+/// `LARYNX_DATA_DIR` moves it along with settings and history, so a test never writes to your real dictionary.
 public enum Dictionary {
-    public static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/Larynx/dictionary.json")
+    public static let url = (ProcessInfo.processInfo.environment["LARYNX_DATA_DIR"]
+        .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath, isDirectory: true) }
+        ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Larynx"))
+        .appendingPathComponent("dictionary.json")
 
     public static func load() -> [String: String] {
         guard let data = try? Data(contentsOf: url),
