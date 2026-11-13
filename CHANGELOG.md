@@ -8,6 +8,9 @@
   a repeat, and the clip joins your test set when its recording is kept.
 - **An app icon**, and in the menu: Send Feedback… (a new issue with your version, macOS and speech model filled in;
   nothing you dictated is attached), Check for Updates… and About Larynx.
+- **Setup shows every wait**: the speech model's download has a bar with megabytes and the time left, and the
+  one-time preparation says how long it usually takes and how long it has been. Each permission says in one
+  sentence why it is needed and what Larynx cannot see.
 - **Uninstall** in one line (`scripts/uninstall.sh`): lists what it will remove, asks, and can keep your data.
 - **Accuracy on real dictation, measured**: 0.87% of words wrong over 57 dictations picked at random
   ([docs/BENCHMARKS.md](docs/BENCHMARKS.md)).

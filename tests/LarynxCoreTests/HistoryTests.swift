@@ -316,3 +316,29 @@ private let tone: [Float] = (0..<16_000).map { sinf(Float($0) * 0.05) * 0.2 }
     let out2 = HistoryFix.apply(row2, fixed: "Ask Zorbax to start the build.", history: g.history, words: words)
     #expect(out2.saved && !out2.addedToGolden && Golden.load(root: g.folder).isEmpty)
 }
+
+@Test func theSetupWindowKnowsWhetherTheModelIsDownloadingPreparingOrReady() throws {
+    let mb: Int64 = 1_048_576
+    // Downloading: a fraction, megabytes, and a time once the speed is known.
+    #expect(ModelSetup.state(loaded: false, bytes: 150 * mb, expected: 600 * mb, bytesPerSecond: 5 * Double(mb))
+            == .downloading(fraction: 0.25, megabytes: 150, of: 600, secondsLeft: 90))
+    #expect(ModelSetup.state(loaded: false, bytes: 0, expected: 600 * mb, bytesPerSecond: nil)
+            == .downloading(fraction: 0, megabytes: 0, of: 600, secondsLeft: nil))
+    // All but the last few percent on disk and not loaded yet: macOS is preparing it.
+    #expect(ModelSetup.state(loaded: false, bytes: 590 * mb, expected: 600 * mb, bytesPerSecond: 0) == .preparing)
+    #expect(ModelSetup.state(loaded: false, bytes: 700 * mb, expected: 600 * mb, bytesPerSecond: nil) == .preparing)
+    // Loaded wins, whatever the folder says.
+    #expect(ModelSetup.state(loaded: true, bytes: 0, expected: 600 * mb, bytesPerSecond: nil) == .ready)
+    #expect(ModelSetup.timeLeft(8) == "about 10 s" && ModelSetup.timeLeft(41) == "about 50 s")
+    #expect(ModelSetup.timeLeft(90) == "about 2 min" && ModelSetup.timeLeft(140) == "about 3 min")
+
+    // The folder's size counts every file under it, and a missing folder is 0.
+    let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("larynx-model-\(UUID())")
+    #expect(ModelSetup.folderBytes(folder) == 0)
+    try FileManager.default.createDirectory(at: folder.appendingPathComponent("a.mlmodelc"), withIntermediateDirectories: true)
+    try Data(count: 300_000).write(to: folder.appendingPathComponent("a.mlmodelc/weights.bin"))
+    try Data(count: 100_000).write(to: folder.appendingPathComponent("vocab.json"))
+    #expect(ModelSetup.folderBytes(folder) >= 400_000)
+    try FileManager.default.removeItem(at: folder)
+    for e in Engine.allCases { #expect(ModelSetup.expectedBytes(e) > 400 * mb) }
+}

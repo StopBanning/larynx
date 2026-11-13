@@ -48,6 +48,11 @@ final class FirstRunModel: ObservableObject {
     @Published var accessibility = false
     @Published var inputMonitoring = false
     @Published var modelReady = false
+    /// Downloading with a fraction, preparing, or ready: every wait gets a bar and a time (PLAN-launch L0.7).
+    @Published var modelState: ModelSetup.State = .preparing
+    @Published var preparingSeconds = 0
+    private var samples: [(time: Date, bytes: Int64)] = []
+    private var preparingSince: Date?
     @Published var level: Float = 0
     @Published var tryText = ""
     private var timer: Timer?
@@ -62,13 +67,36 @@ final class FirstRunModel: ObservableObject {
         modelReady = engine.isDownloaded(in: modelsDir)
     }
 
+    /// The model folder's size against its final size, and the speed over the last ten seconds.
+    func refreshModel() {
+        let bytes = modelsDir.map { ModelSetup.folderBytes($0.appendingPathComponent(engine.folder, isDirectory: true)) } ?? 0
+        let now = Date()
+        samples.append((now, bytes))
+        samples.removeAll { now.timeIntervalSince($0.time) > 10 }
+        let rate = samples.first.flatMap { first -> Double? in
+            let seconds = now.timeIntervalSince(first.time)
+            return seconds >= 2 ? Double(bytes - first.bytes) / seconds : nil
+        }
+        Task { @MainActor in
+            let loaded = await transcriber.isLoaded
+            let state = ModelSetup.state(loaded: loaded, bytes: bytes, expected: ModelSetup.expectedBytes(engine), bytesPerSecond: rate)
+            if state == .preparing {
+                if self.preparingSince == nil { self.preparingSince = now }
+                self.preparingSeconds = Int(now.timeIntervalSince(self.preparingSince ?? now))
+            } else { self.preparingSince = nil }
+            self.modelState = state
+        }
+    }
+
     /// Live status every second while the window is open, and the level meter once the microphone is allowed.
     func start() {
         refresh()
+        refreshModel()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             MainActor.assumeIsolated {
                 FirstRunModel.shared.refresh()
+                FirstRunModel.shared.refreshModel()
                 if FirstRunModel.shared.microphone { FirstRunModel.shared.startMeter() }
             }
         }
@@ -123,27 +151,62 @@ private struct StepRow: View {
     }
 }
 
+/// The speech model's wait, in plain words: a bar with megabytes and time left while it downloads, a moving bar with
+/// the time so far while macOS prepares it, a tick when it is ready.
+struct ModelRow: View {
+    let state: ModelSetup.State
+    let preparingSeconds: Int
+    var body: some View {
+        switch state {
+        case .ready:
+            StepRow(done: true, title: "Ready", detail: "Runs on this Mac's Neural Engine. Nothing is sent anywhere.", button: "") {}
+        case .downloading(let fraction, let megabytes, let total, let secondsLeft):
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Downloading the speech model").font(.headline)
+                ProgressView(value: min(0.99, fraction))
+                Text("\(megabytes) of \(total) MB" + (secondsLeft.map { ", " + ModelSetup.timeLeft($0) + " left" } ?? "") + ". This happens once.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        case .preparing:
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Getting the speech model ready for this Mac").font(.headline)
+                ProgressView().progressViewStyle(.linear)
+                Text("This happens once and usually takes 1 to 3 minutes" + (preparingSeconds >= 5 ? " (\(preparingSeconds / 60):\(String(format: "%02d", preparingSeconds % 60)) so far)" : "")
+                     + ". After that it loads in about a second.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 struct FirstRunView: View {
     @ObservedObject private var model = FirstRunModel.shared
     var body: some View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Talk anywhere. Nothing leaves your Mac.").font(.title3.bold())
-                    Text("Three permissions, then hold a key and speak. Apple Silicon only.").foregroundStyle(.secondary)
+                    Text("Think out loud. Larynx writes it down.").font(.title3.bold())
+                    Text("Three permissions, then hold a key and speak. Nothing leaves your Mac.").foregroundStyle(.secondary)
                 }
             }
             Section("Permissions") {
-                StepRow(done: model.microphone, title: "Microphone", detail: "To hear you while you hold the talk key.",
+                StepRow(done: model.microphone, title: "Microphone",
+                        detail: "To hear you while you hold the talk key. Your voice is turned into text on this Mac and is never sent anywhere.",
                         button: "Allow") {
                     if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
                         AVCaptureDevice.requestAccess(for: .audio) { _ in }
                     } else { FirstRunModel.openPane("Privacy_Microphone") }
                 }
-                StepRow(done: model.inputMonitoring, title: "Input Monitoring", detail: "To notice the talk key from any app.",
+                StepRow(done: model.inputMonitoring, title: "Input Monitoring",
+                        detail: "To notice your talk key in any app. Larynx only looks for that key; it never records what you type.",
                         button: "Open Settings") { Hotkey.requestListen(); FirstRunModel.openPane("Privacy_ListenEvent") }
-                StepRow(done: model.accessibility, title: "Accessibility", detail: "To paste your words where the cursor is.",
+                StepRow(done: model.accessibility, title: "Accessibility",
+                        detail: "To put your words where the cursor is and check they arrived. Password fields are never read or saved.",
                         button: "Open Settings") { Inserter.requestTrust(); FirstRunModel.openPane("Privacy_Accessibility") }
+            }
+            Section {
+                Button("What Larynx can and can't see") { NSWorkspace.shared.open(URL(string: Links.repo + "/blob/main/docs/PRIVACY.md")!) }
+                    .buttonStyle(.link).font(.caption)
             }
             Section("Microphone test") {
                 HStack {
@@ -154,9 +217,7 @@ struct FirstRunView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Speech model") {
-                StepRow(done: model.modelReady, title: model.modelReady ? "Ready" : "Downloading (about 500 MB, once)",
-                        detail: "Runs on this Mac's Neural Engine. The very first load takes a minute or two while macOS prepares it.",
-                        button: "") {}
+                ModelRow(state: model.modelState, preparingSeconds: model.preparingSeconds)
             }
             Section("Try it") {
                 Text("Click in the box, hold \((activeHotkey?.keys ?? listenKeys).map(\.label).joined(separator: " or ")), say a sentence, let go.")

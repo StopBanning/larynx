@@ -29,10 +29,17 @@ final class SettingsWindow {
 @MainActor func snapshotSettings(to dir: String) {
     let panes: [(String, AnyView)] = [("general", AnyView(GeneralPane())), ("speech", AnyView(SpeechPane())),
                                       ("cleanup", AnyView(CleanupPane())), ("privacy", AnyView(PrivacyPane())), ("words", AnyView(WordsPane())),
-                                      ("firstrun", AnyView(FirstRunView()))]
+                                      ("firstrun", AnyView(FirstRunView())),
+                                      ("model-states", AnyView(Form {
+                                          Section("Downloading") { ModelRow(state: .downloading(fraction: 0.35, megabytes: 212, of: 603, secondsLeft: 140), preparingSeconds: 0) }
+                                          Section("Preparing") { ModelRow(state: .preparing, preparingSeconds: 72) }
+                                          Section("Ready") { ModelRow(state: .ready, preparingSeconds: 0) }
+                                      }.formStyle(.grouped)))]
     FirstRunModel.shared.refresh()
+    FirstRunModel.shared.modelState = .ready   // the picture shows a finished setup; "model-states" shows the waits
     for (name, view) in panes {
         let host = NSHostingView(rootView: view.frame(width: 540, height: 760))
+        host.appearance = NSAppearance(named: .aqua)   // the same light look as the other README pictures
         host.frame = NSRect(x: 0, y: 0, width: 540, height: 760)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host

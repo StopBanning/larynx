@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/ins
 It builds `~/Applications/Larynx.app` from source and opens it (a few minutes the first time). Apple's free
 command-line developer tools are needed; the script opens their installer if they are missing. A setup window then
 walks you through the three permissions (Microphone, Input Monitoring, Accessibility), a microphone test and a box
-to try a dictation in. The speech model (about 500 MB) downloads once, on first launch. Run the same line again to
+to try a dictation in. The speech model (about 600 MB) downloads once, on first launch, with a progress bar and the time left. Run the same line again to
 update.
 
 Then hold **Fn**, **Right Option** or **Right Command**, speak, and let go. Everything else is in the menu bar icon
@@ -226,7 +226,7 @@ a sentence for Mail, Slack, Messages and Notes.
 
 | Suite | What it checks | Latest |
 | --- | --- | --- |
-| `swift test` | 62 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
+| `swift test` | 63 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence | all pass (Nov 12) |
 | `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | Nov 11: rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
