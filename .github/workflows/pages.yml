@@ -1,0 +1,34 @@
+name: pages
+
+# Publishes the landing page (site/) to GitHub Pages. The page is built by scripts/make-site.py and committed;
+# this only checks it is up to date and uploads the folder.
+on:
+  push:
+    branches: [main]
+    paths: [site/**, README.md, docs/BENCHMARKS.md, scripts/make-site.py, .github/workflows/pages.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/make-site.py --check
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
