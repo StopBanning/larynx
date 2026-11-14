@@ -7,6 +7,12 @@ Status: **a working prototype, built and tested in CI only.** It dictates into N
 `windows-2025` runner (`.github/workflows/windows.yml`). No one has used it on a real Windows PC yet. The table
 "What still needs a real PC" says exactly what CI cannot show.
 
+![The pill on CI's Windows desktop, mid-dictation: a blue waveform and the words heard so far, just above
+Notepad's caret, while Notepad keeps the focus](images/windows-pill.png)
+
+The pill on the runner's desktop halfway through a dictation, from the end-to-end test. These are the raw words
+heard so far; the cleaned text replaces them at key-up.
+
 ## The stack (decision)
 
 | Part | Choice | Why |
