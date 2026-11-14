@@ -96,6 +96,75 @@ the absolute numbers are a floor. The author's own labels (`larynx golden label`
 | Misheard word | 2 | Speech model |
 | Cleanup removed a word (a "like"; a phrase said three times cut to two) | 2 | The second fixed in 7180b94 |
 
+## Against what a Mac already has (PLAN-launch L0.5, Nov 13 to 14)
+
+The same audio through three systems. `python3 bench/compare.py` reproduces it (the audio is made by macOS voices on
+your Mac; nothing is downloaded).
+
+- **Larynx**: Parakeet Ultra and the cleanup rules, AI rewrite off, so the result is the same on every Mac and in
+  every app (the rewrite only runs in apps for people, on Macs with Apple Intelligence).
+- **Larynx, no cleanup**: the same speech model, verbatim.
+- **Apple's on-device speech**: the `SpeechTranscriber` that macOS 26 gives every app (`bench/apple_transcribe.swift`),
+  on the same files, with no download and no permission prompt. It is not the Dictation key on the keyboard: that
+  model was not installed on this Mac, so it is not measured here.
+
+Two sets:
+
+- **Messy** (`bench/messy.json`): 40 sentences written for this, with fillers, stutters, false starts and spoken
+  numbers, each said by three macOS voices (120 clips). Scored on **edits needed**: the words a person would still
+  change to get from the output to what was meant. This is the number behind the promise of text that needs no fixing.
+- **Jargon**: the bench's names-and-terms sentences (1,002 words), scored on word errors against the words said.
+
+**Run 1, held out (Nov 13, commit before 439a292).** The messy set was written after the rules and had never been
+used to tune them.
+
+| System | Messy: edits needed | Fillers | Stutters | False starts | Numbers | Mixed | Jargon: word errors |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Larynx | **11.9%** | **2.0%** | **9.2%** | **49.3%** | **5.0%** | **2.6%** | **8.8%** |
+| Larynx, no cleanup | 21.0% | 13.3% | 14.4% | 53.3% | 5.0% | 29.4% | 8.8% |
+| Apple on-device | 20.0% | 10.4% | 11.3% | 54.7% | 7.8% | 26.8% | 18.5% |
+
+The row we lost: **false starts**. Half the words still needed fixing ("Send it to Maria, no, send it to Priya" came
+out whole), no better than Apple. Stutters were also weak: any doubled word outside a short list stayed ("add add").
+
+**What changed (commits 439a292, a8e2787):** spoken corrections ("no", "no wait", "sorry", "I mean", "actually")
+are applied when the words after the cue restart something said just before or replace a word of the same kind; any
+word said exactly twice is a stutter unless the double is meant. Both were read against every one of 923 real
+dictations before they were turned on, and each wrong change became an exclusion.
+
+**Run 2 (Nov 14, after the fixes).** This run is **not held out**: the fixes were found by reading run 1's misses on
+this same set, so it shows the gaps closing, not how Larynx does on sentences it has never seen. A fresh held-out set
+is the next step. One sentence was also reworded between the runs (number 7, a filler sentence).
+
+| System | Messy: edits needed | Fillers | Stutters | False starts | Numbers | Mixed | Jargon: word errors |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Larynx | **7.4%** | **2.0%** | **7.2%** | **24.7%** | **5.0%** | **2.6%** | **8.8%** |
+| Larynx, no cleanup | 21.0% | 13.1% | 14.4% | 53.3% | 5.0% | 29.4% | 8.8% |
+| Apple on-device | 19.9% | 10.3% | 11.3% | 54.7% | 7.8% | 26.8% | 18.5% |
+
+What is still left, read clip by clip: the speech model mishears some stutters before the rules see them ("the the
+printer" heard as "that the printer", "we we move" as "we remove"); "that that" stays by design (it is often meant);
+"café" comes out as "cafe"; a cue with no comma before it is not seen ("meet at the actually let's meet at the
+library"); and "never mind" cancelling the sentence before it is not handled. Results: `bench/results/compare-2026-11-13.json`
+(run 1) and `compare-2026-11-14.json` (run 2), with every output.
+
+## The other apps (facts from their own pages, read Nov 13, 2026)
+
+Feeding the same audio to the other apps needs a virtual audio driver, so they are compared on what they say about
+themselves instead. App-against-app on the same audio is PLAN-v1 F2.
+
+| App | Licence | Price | Offline | Speech engine | Cleanup | Stars (Nov 13) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Larynx | MIT | Free, no limits | Yes, always | Parakeet Ultra (Neural Engine) | Rules, instant; optional on-device AI rewrite | (this repo) |
+| [Handy](https://github.com/cjpais/Handy) | MIT | Free | Yes | Whisper, Parakeet v3 | Not stated | 38,697 |
+| [VoiceInk](https://github.com/Beingpax/VoiceInk) | GPL-3.0 | Paid build $25 to $49 one-time; free from source | Yes | Parakeet, WhisperKit | AI enhancement; cloud optional | 7,118 |
+| [FluidVoice](https://github.com/altic-dev/FluidVoice) | GPL-3.0 (its local AI runtime is closed) | Free | Yes | Parakeet, Nemotron, Whisper, Apple Speech and more | Optional AI: cloud, or a closed local model | 13,014 |
+| [OpenWhispr](https://github.com/OpenWhispr/openwhispr) | MIT | Free local; cloud 2,000 words a week free, Pro $80 a year | Optional | Whisper, Parakeet, cloud | AI step, local or cloud | 11,520 |
+| [Wispr Flow](https://wisprflow.ai) | Proprietary | Free tier with a weekly word cap; Pro $12 to $15 a month | Not stated | Not stated | Fillers, punctuation, corrections; where it runs is not stated | n/a |
+| macOS Dictation | Proprietary | Free | Depends on the Mac and language | Not stated | Punctuation; no filler removal mentioned | n/a |
+
+"Not stated" means the app's own pages do not say. Stars are from GitHub's API on Nov 13.
+
 ## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
 
 The speech model's per-word confidence (lowest token confidence in the word) against what was really said, on the
