@@ -1,19 +1,24 @@
-//! The text cleanup: LarynxText (Swift, the same code the Mac runs) through its small C door, LarynxTextC.
+//! The text cleanup: LarynxText (Swift, the same code the Mac runs), as `larynx-text`, a small process that cleans
+//! one JSON line at a time. It starts once and stays up; a round trip over the pipes takes well under a millisecond.
+//! (Loading Swift as a DLL into this process hung on Windows; a separate process also means a crash in the cleanup
+//! can never take the app down: the words then go out as the model heard them.)
 
-use libloading::{Library, Symbol};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ffi::{c_char, CStr, CString};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Mutex;
 
-type CleanFn = unsafe extern "C" fn(*const c_char, *const c_char) -> *mut c_char;
-type FreeFn = unsafe extern "C" fn(*mut c_char);
-type WarmFn = unsafe extern "C" fn();
+struct Proc {
+    child: Child,
+    stdin: ChildStdin,
+    stdout: BufReader<ChildStdout>,
+}
 
 pub struct Cleanup {
-    _lib: Library,
-    clean: CleanFn,
-    free: FreeFn,
+    path: PathBuf,
+    proc: Mutex<Option<Proc>>,
 }
 
 #[derive(Serialize, Default, Clone, Debug)]
@@ -29,6 +34,13 @@ pub struct Options {
     pub stages: Option<Vec<String>>,
 }
 
+#[derive(Serialize)]
+struct Request<'a> {
+    text: &'a str,
+    #[serde(flatten)]
+    options: &'a Options,
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Cleaned {
     pub text: String,
@@ -37,17 +49,15 @@ pub struct Cleaned {
 
 pub fn library_name() -> &'static str {
     if cfg!(windows) {
-        "LarynxTextC.dll"
-    } else if cfg!(target_os = "macos") {
-        "libLarynxTextC.dylib"
+        "larynx-text.exe"
     } else {
-        "libLarynxTextC.so"
+        "larynx-text"
     }
 }
 
-/// Where to look: `LARYNX_TEXT_LIB`, then next to the executable.
+/// Where to look: `LARYNX_TEXT_BIN`, then next to the executable.
 pub fn find_library() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("LARYNX_TEXT_LIB") {
+    if let Ok(p) = std::env::var("LARYNX_TEXT_BIN") {
         return Some(PathBuf::from(p));
     }
     let exe = std::env::current_exe().ok()?;
@@ -55,33 +65,82 @@ pub fn find_library() -> Option<PathBuf> {
     p.exists().then_some(p)
 }
 
+/// JSON with every non-ASCII character as a \u escape (only strings can hold them), so no code page can garble it.
+fn ascii_json(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_ascii() {
+            out.push(c);
+        } else {
+            let mut buf = [0u16; 2];
+            for unit in c.encode_utf16(&mut buf) {
+                out.push_str(&format!("\\u{:04x}", unit));
+            }
+        }
+    }
+    out
+}
+
+fn spawn(path: &Path) -> Result<Proc, String> {
+    let mut cmd = Command::new(path);
+    cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd.spawn().map_err(|e| format!("{}: {e}", path.display()))?;
+    let stdin = child.stdin.take().ok_or("no stdin")?;
+    let mut stdout = BufReader::new(child.stdout.take().ok_or("no stdout")?);
+    let mut line = String::new();
+    stdout.read_line(&mut line).map_err(|e| e.to_string())?;
+    if !line.contains("ready") {
+        let _ = child.kill();
+        return Err(format!("larynx-text did not start (said {line:?})"));
+    }
+    Ok(Proc { child, stdin, stdout })
+}
+
 impl Cleanup {
     pub fn load(path: &Path) -> Result<Self, String> {
-        unsafe {
-            let lib = Library::new(path).map_err(|e| format!("{}: {e}", path.display()))?;
-            let clean: Symbol<CleanFn> = lib.get(b"larynx_clean\0").map_err(|e| e.to_string())?;
-            let free: Symbol<FreeFn> = lib.get(b"larynx_free\0").map_err(|e| e.to_string())?;
-            let (clean, free) = (*clean, *free);
-            if let Ok(warm) = lib.get::<WarmFn>(b"larynx_warm\0") {
-                warm();
-            }
-            Ok(Cleanup { _lib: lib, clean, free })
-        }
+        let proc = spawn(path)?;
+        Ok(Cleanup { path: path.to_path_buf(), proc: Mutex::new(Some(proc)) })
+    }
+
+    fn ask(proc: &mut Proc, request: &str) -> Option<String> {
+        proc.stdin.write_all(request.as_bytes()).ok()?;
+        proc.stdin.write_all(b"\n").ok()?;
+        proc.stdin.flush().ok()?;
+        let mut line = String::new();
+        (proc.stdout.read_line(&mut line).ok()? > 0).then_some(line)
     }
 
     pub fn clean(&self, text: &str, options: &Options) -> Cleaned {
         let fallback = Cleaned { text: text.to_string(), snippet: None };
-        let (Ok(t), Ok(o)) = (CString::new(text), CString::new(serde_json::to_string(options).unwrap_or_default())) else {
-            return fallback;
-        };
-        unsafe {
-            let p = (self.clean)(t.as_ptr(), o.as_ptr());
-            if p.is_null() {
-                return fallback;
+        let request = ascii_json(&serde_json::to_string(&Request { text, options }).unwrap_or_default());
+        let mut guard = self.proc.lock().unwrap();
+        for _ in 0..2 {
+            if guard.is_none() {
+                *guard = spawn(&self.path).ok();
             }
-            let json = CStr::from_ptr(p).to_string_lossy().into_owned();
-            (self.free)(p);
-            serde_json::from_str(&json).unwrap_or(fallback)
+            let Some(proc) = guard.as_mut() else { break };
+            if let Some(reply) = Self::ask(proc, &request) {
+                return serde_json::from_str(reply.trim()).unwrap_or(fallback);
+            }
+            // It died: start it again once.
+            let _ = proc.child.kill();
+            *guard = None;
+        }
+        fallback
+    }
+}
+
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        if let Ok(mut g) = self.proc.lock() {
+            if let Some(p) = g.as_mut() {
+                let _ = p.child.kill();
+            }
         }
     }
 }
@@ -154,11 +213,11 @@ mod tests {
         assert_eq!(mode_for_exe("OUTLOOK.EXE"), "email");
     }
 
-    /// Runs when LARYNX_TEXT_LIB points at a built LarynxTextC (CI on Windows; `swift build` on a Mac).
+    /// Runs when LARYNX_TEXT_BIN points at a built larynx-text (CI on Windows; `swift build` on a Mac).
     #[test]
     fn swift_library_matches_cases() {
-        let Some(path) = std::env::var_os("LARYNX_TEXT_LIB").map(PathBuf::from) else {
-            eprintln!("LARYNX_TEXT_LIB not set: skipped");
+        let Some(path) = std::env::var_os("LARYNX_TEXT_BIN").map(PathBuf::from) else {
+            eprintln!("LARYNX_TEXT_BIN not set: skipped");
             return;
         };
         let lib = Cleanup::load(&path).unwrap();
@@ -172,5 +231,7 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(full.text, "So I think we should move the meeting to Thursday.");
+        let accents = lib.clean("the café is open", &Options { mode: "standard".into(), style: "casual".into(), ..Default::default() });
+        assert!(accents.text.contains("café"), "{}", accents.text);
     }
 }

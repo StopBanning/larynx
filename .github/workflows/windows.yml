@@ -1,5 +1,5 @@
 name: windows
-# Larynx for Windows (windows/): builds the app, checks the Swift cleanup through the same DLL the app loads,
+# Larynx for Windows (windows/): builds the app, checks the Swift cleanup through the same process the app runs,
 # measures the speech model on CPU and DirectML, and dictates into Notepad end to end on the runner's desktop.
 on:
   push:
@@ -14,15 +14,20 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 60
     steps:
+      - name: No crash dialogs (a crashed test must fail, not wait for a click)
+        run: |
+          New-Item -Force "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting" | Out-Null
+          Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Name DontShowUI -Value 1
+          Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Name Disabled -Value 1
       - uses: actions/checkout@v4
       - uses: compnerd/gha-setup-swift@v0.5.1
         with:
           branch: swift-6.1.2-release
           tag: 6.1.2-RELEASE
-      - name: Build the cleanup library (LarynxTextC.dll)
+      - name: Build the cleanup process (larynx-text.exe, Swift)
         run: |
           Copy-Item ci/Package.portable.swift Package.swift -Force
-          swift build -c release --product LarynxTextC
+          swift build -c release --product larynx-text
       - uses: actions/cache@v4
         with:
           path: |
@@ -33,16 +38,16 @@ jobs:
       - name: Build larynx.exe (the app) and larynx-cli.exe (the same code with a console, for tools and tests)
         working-directory: windows
         run: cargo build --release --locked --bins
-      - name: Unit tests (with the cleanup DLL)
+      - name: Unit tests (with the Swift cleanup)
+        timeout-minutes: 10
         working-directory: windows
         run: |
-          $dll = (Get-ChildItem ../.build -Recurse -Filter LarynxTextC.dll | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).FullName
-          $env:LARYNX_TEXT_LIB = $dll
-          $env:PATH = "$(Split-Path $dll);$env:PATH"
-          cargo test --release --locked --lib
+          $env:LARYNX_TEXT_BIN = (Get-ChildItem ../.build -Recurse -Filter larynx-text.exe | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).FullName
+          cargo test --release --locked --lib -- --nocapture
       - name: Stage a self-contained folder
         run: ./windows/ci/stage.ps1 -Dist dist
       - name: Cleanup cases through the staged app, with no toolchain on PATH
+        timeout-minutes: 10
         shell: cmd
         run: |
           set PATH=C:\Windows\System32;C:\Windows
@@ -57,10 +62,12 @@ jobs:
       - name: Synthetic speech for the benchmark
         run: ./windows/ci/make-speech.ps1 -Out speech
       - name: Transcribe the fixture (CPU)
+        timeout-minutes: 10
         run: |
           dist/larynx-cli.exe transcribe --model models/parakeet-int8 --provider cpu tests/fixtures/report.wav speech/short.wav 2>&1 | Tee-Object transcribe.txt
           if (-not (Select-String -Path transcribe.txt -Pattern "send the report tomorrow" -Quiet)) { throw "fixture not transcribed" }
       - name: Dictate into Notepad end to end (hold Right Ctrl, speak, let go)
+        timeout-minutes: 10
         run: |
           dist/larynx-cli.exe e2e --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --feed speech/fillers.wav --expect "launch|next week" --reject "um|uh" --out e2e
       - name: Screenshot of the pill as PNG
@@ -73,8 +80,10 @@ jobs:
             Remove-Item e2e/pill.bmp
           }
       - name: Benchmark on CPU
+        timeout-minutes: 10
         run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
       - name: Benchmark on DirectML (CI has no GPU; this checks the path works, not its speed)
+        timeout-minutes: 10
         continue-on-error: true
         run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json
       - name: Summary
