@@ -135,3 +135,33 @@ private struct Cases: Decodable {
     #expect(Tidy.apply("The bus comes in 10 15 minutes", mode: .ai) == "The bus comes in 10 to 15 minutes")
     #expect(Tidy.apply("Room 20 10 people fit", mode: .ai).contains("20 10 people"))  // the second is smaller: not a range
 }
+
+@Test func spokenCorrectionsKeepWhatWasMeant() {
+    func t(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(t("Forward it to Ellen, no, forward it to Marcus") == "Forward it to Marcus.")
+    #expect(t("The talk begins at nine, sorry, at ten") == "The talk begins at ten.")
+    #expect(t("Order pizza for three, I mean four people") == "Order pizza for four people.")
+    #expect(t("We fly out Friday, no wait, Saturday night") == "We fly out Saturday night.")
+    #expect(t("Park near the, actually park behind the gym") == "Park behind the gym.")
+    // An answer, not a correction: nothing said earlier is restarted, so it stays.
+    #expect(t("I asked if she was coming and no, she can't make it") == "I asked if she was coming and no, she can't make it.")
+}
+
+@Test func aWordSaidTwiceIsAStutterUnlessTheDoubleIsMeant() {
+    func t(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(t("Could you print print the boarding passes") == "Could you print the boarding passes.")
+    #expect(t("I think that that plan works") == "I think that that plan works.")
+    #expect(t("The cake was really really good") == "The cake was really really good.")
+    #expect(t("It's not not ready") == "It's not not ready.")
+    #expect(t("Knock knock, who's there") == "Knock knock, who's there.")
+    #expect(t("Bang bang bang went the drums") == "Bang bang bang went the drums.")
+}
+
+@Test func theProfessionalStyleDropsIMeanAsAFiller() {
+    func pro(_ s: String) -> String { Tidy.apply(s, mode: .ai, style: .professional) }
+    #expect(pro("The draft is done. Is I mean because the client asked early") == "The draft is done. Because the client asked early")
+    #expect(pro("It compiles, I mean the warnings are gone") == "It compiles, the warnings are gone")
+    #expect(pro("Yet I mean the plan holds up") == "Yet the plan holds up")
+    #expect(pro("I mean it, no more delays") == "I mean it, no more delays")
+    #expect(pro("What I mean is we wait") == "What I mean is we wait")
+}

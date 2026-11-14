@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Spoken corrections, every style**: "forward it to Ellen, no, forward it to Marcus", "at nine, sorry, at ten",
+  "for three, I mean four people" and "Friday, no wait, Saturday" keep only what was meant, with no AI rewrite
+  needed (so in coding apps and on Macs without Apple Intelligence too). The cue ("no", "no wait", "sorry", "I mean",
+  "actually", "or rather") must be followed by a restart of something said just before, or a word of the same kind;
+  a plain "no," answering a question stays.
+- **Any word said twice is a stutter** ("print print the passes"), except doubles that are meant ("that that",
+  "really really", "not not", "knock knock") and anything said three or more times.
+- **Professional drops "I mean" as a filler** with a stray word before it ("Is I mean because...") or mid-sentence
+  before the thought ("It compiles, I mean the warnings are gone"). "I mean it" and "what I mean is" stay.
+  All three were read against every real dictation on the author's Mac before they were turned on; each wrong
+  change found that way became an exclusion.
 - **Professional style, cleaner**: filler "like" goes where it cannot be a verb or a comparison ("Like most of
   them...", "but like it needs...", "in like the back row"); a swear said as an exclamation before the sentence
   ("Oh s***, the oven...") goes; "there's two files" becomes "there are two files"; a stray "yep" before "and"

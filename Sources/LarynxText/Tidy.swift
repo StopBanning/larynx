@@ -252,7 +252,13 @@ public enum Tidy {
             previous = s
             s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b", with: "$1", options: .regularExpression)
         }
-        // 2b. "Tuesday, no Wednesday" / "at three. No, four": same kind of word on both sides, so keep the second.
+        // 2a. Any word said twice in a row is a stutter ("please add add oat milk"), except the doubles that are meant:
+        // "that that", "had had", emphasis ("really really"), set phrases ("bye bye") and numbers ("two two" in a code).
+        s = doubledWords(s)
+        // 2b. A correction said out loud: "send it to Maria, no, send it to Priya", "starts at six, sorry, at seven",
+        // "for four, I mean five people". The words after the cue restart something said earlier in the sentence (keep
+        // the restart), or replace a word of the same kind just before the cue (a day, a month, a number).
+        s = cuedCorrections(s)
         s = sameKindCorrections(s)
         // 2c. A question restarted with a different opener: "can you could you take a look" -> "could you take a look".
         s = s.replacingOccurrences(of: "(?i)\\b(?:\(questionOpeners))\\s+(?:you|i|we),?\\s+(?=(?:\(questionOpeners))\\s+(?:you|i|we)\\b)",
@@ -366,6 +372,12 @@ public enum Tidy {
         re(",?\\s+and (?:stuff|shit)(?: like that)?(?:,?\\s+you know)?(?=[.!?,]|$)", "")
         re(start + "I mean,\\s+", "$1")
         re(start + "I mean\\s+(?=(?:if|it's|that's|we|you|they|the|honestly|obviously|i|there's|this|yeah)\\b)", "$1")
+        // A stray word before it ("Is I mean because...", "And I mean, ..."), and "I mean" dropped into the middle before
+        // the reason or the thought it introduces. "I mean it" and "what I mean is" stay.
+        re(start + "(?:is|it's|like)\\s+I mean,?\\s+(?=\\w)", "$1")
+        let afterMean = "(?=(?:because|like|it's|that's|there's|honestly|basically|the|we|you|they)\\b)"
+        re(",\\s+I mean,?\\s+" + afterMean, ", ")
+        re("(?<!what)(?<!\\bif)(?<=\\w)\\s+I mean,?\\s+" + afterMean, " ")
         // Exclamations that are only emphasis.
         if !keepSwearing { re(start + "(?:god ?damn|damn) it[,.!]*\\s*", "$1") }
         re(start + "oh my god[,.!]*\\s*", "$1")
@@ -536,6 +548,74 @@ public enum Tidy {
         "(?:\\d+(?::\\d\\d)?(?:\\s?[ap]\\.?m\\.?)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|"
             + "fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)",
     ]
+
+    static let meantDoubles = "that|had|is|really|very|so|no|yes|yeah|bye|ha|haha|hey|ok|okay|night|knock|chop|well|"
+        + "too|far|much|many|more|long|way|super|tsk|there|now|go|come|do|not|aye|one|two|three|four|five|six|seven|eight|nine|zero|oh"
+    static let correctionCues = "no,?\\s+wait|wait|no|sorry|i mean|actually|or rather|rather"
+
+    /// A word said exactly twice in a row with nothing between ("add add") becomes one. Three or more in a row is meant
+    /// (a chant, a sound: "pow pow pow"), and so are the doubles in `meantDoubles`.
+    static func doubledWords(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([a-z']{2,})(?:\\s+\\1\\b)+") else { return text }
+        let keep = Set(meantDoubles.split(separator: "|").map(String.init))
+        let ns = text as NSString
+        var out = text
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            let run = ns.substring(with: m.range), word = ns.substring(with: m.range(at: 1))
+            guard run.split(whereSeparator: \.isWhitespace).count == 2, !keep.contains(word.lowercased()) else { continue }
+            out = (out as NSString).replacingCharacters(in: m.range, with: word)
+        }
+        return out
+    }
+
+    /// "<head>, <cue> <tail>": when the tail's first word was said earlier in the same sentence, the speaker went back
+    /// to that point, so everything from there to the cue goes. Otherwise a same-kind word just before the cue is
+    /// swapped for the tail's first word. A cue with no restart and no match (", actually, it's fine") is left.
+    static func cuedCorrections(_ text: String) -> String {
+        guard let cue = try? NSRegularExpression(pattern: "(?i),\\s+(?:\(correctionCues)),?\\s+(?=[\\w$])") else { return text }
+        var s = text
+        var guardCount = 0
+        while guardCount < 6, let m = cue.firstMatch(in: s, range: NSRange(location: 0, length: (s as NSString).length)) {
+            guardCount += 1
+            let ns = s as NSString
+            let head = ns.substring(to: m.range.location), tail = ns.substring(from: m.range.location + m.range.length)
+            let sentenceStart = head.range(of: "[.!?]\\s+(?=[^.!?]*$)", options: .regularExpression)?.upperBound ?? head.startIndex
+            let first = tail.prefix { $0.isLetter || $0.isNumber || $0 == "'" || $0 == "$" }.lowercased()
+            guard !first.isEmpty else { break }
+            // Back to where the tail's first word was said before, in this sentence.
+            let sentence = head[sentenceStart...]
+            var cut: String.Index?
+            var search = sentence.startIndex
+            while let r = sentence.range(of: "\\b" + NSRegularExpression.escapedPattern(for: first) + "\\b", options: [.regularExpression, .caseInsensitive], range: search..<sentence.endIndex) {
+                cut = r.lowerBound; search = r.upperBound
+            }
+            // A small first word ("I", "the", "it") is too common to mark the point gone back to: the first two words must
+            // match there. And the jump back is short (six words at most), so a plain "no," answering a question stays.
+            if let at = cut {
+                let small: Set<String> = ["i", "you", "we", "they", "he", "she", "it", "the", "a", "an", "that", "this", "and", "but", "so", "to"]
+                let gone = head[at...].split(whereSeparator: \.isWhitespace)
+                let tailWords = tail.split(whereSeparator: \.isWhitespace).prefix(2).map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) }
+                let headWords = gone.prefix(2).map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) }
+                if gone.count > 6 || (small.contains(first) && (tailWords.count < 2 || headWords != tailWords)) { cut = nil }
+            }
+            if let cut {
+                var restart = String(tail)
+                if cut == sentenceStart || head[..<cut].hasSuffix("\n") { restart = restart.prefix(1).uppercased() + restart.dropFirst() }
+                s = String(head[..<cut]) + restart
+                continue
+            }
+            // Same kind just before the cue: "for four, I mean five people".
+            var replaced = false
+            for kind in correctionKinds {
+                if let r = head.range(of: "(?i)\\b" + kind + "$", options: .regularExpression),
+                   tail.range(of: "(?i)^" + kind + "\\b", options: .regularExpression) != nil {
+                    s = String(head[..<r.lowerBound]) + tail; replaced = true; break
+                }
+            }
+            if !replaced { break }
+        }
+        return s
+    }
 
     /// Replaces "<X>, no <Y>" with "<Y>" when X and Y are the same kind (weekday, month, number or time).
     /// Exact and instant, and the shape Apple's model most often gets backwards.
