@@ -172,3 +172,8 @@ private struct Cases: Decodable {
     #expect(Tidy.apply("It covers pre- and post-launch work", mode: .ai) == "It covers pre- and post-launch work")
     #expect(Tidy.apply("Send the e-mail and the x-ray", mode: .ai) == "Send the e-mail and the x-ray")
 }
+
+@Test func youYouKnowKeepsBothYous() {
+    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .ai) == "Nobody told you, you know, that the shop moved")
+    #expect(Tidy.apply("Did you you finish the report", mode: .ai) == "Did you finish the report")
+}

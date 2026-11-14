@@ -253,7 +253,7 @@ public enum Tidy {
         var previous = ""
         while previous != s {  // "I, I, I think" needs two passes
             previous = s
-            s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b", with: "$1", options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b(?!\\s+know\\b)", with: "$1", options: .regularExpression)  // "tell you, you know" keeps both
         }
         // 2a. Any word said twice in a row is a stutter ("please add add oat milk"), except the doubles that are meant:
         // "that that", "had had", emphasis ("really really"), set phrases ("bye bye") and numbers ("two two" in a code).
