@@ -9,7 +9,7 @@ use windows::Win32::Graphics::Direct2D::Common::*;
 use windows::Win32::Graphics::Direct2D::*;
 use windows::Win32::Graphics::DirectWrite::*;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
-use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT};
+use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, InvalidateRect, GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -229,7 +229,8 @@ fn render() {
             let color = |r: f32, g: f32, b: f32, a: f32| D2D1_COLOR_F { r, g, b, a };
             unsafe {
                 t.BeginDraw();
-                t.Clear(Some(&color(1.0, 0.0, 1.0, 1.0))); // the color key: transparent
+                let key = color(1.0, 0.0, 1.0, 1.0);
+                t.Clear(Some(&key as *const D2D1_COLOR_F)); // the color key: transparent
                 t.SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED); // a crisp edge, so no pink fringe against the key
                 let rim = t.CreateSolidColorBrush(&color(0.36, 0.38, 0.42, 1.0), None);
                 let fill = t.CreateSolidColorBrush(&color(0.11, 0.12, 0.14, 1.0), None);
