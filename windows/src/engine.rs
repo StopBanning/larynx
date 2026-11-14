@@ -5,7 +5,7 @@
 //! audio after the last cut is sent, and the text is the segments joined in order.
 
 use crate::asr::{Parakeet, Timing};
-use crate::stream::{self, Config, Cut, Segmenter};
+use crate::stream::{self, Config, Cut, Segmenter, Word};
 use ort::session::RunOptions;
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
@@ -29,7 +29,8 @@ struct Job {
 struct Done {
     generation: u64,
     kind: Kind,
-    text: Result<String, String>,
+    /// The words kept for this piece, and where its cut starts (s).
+    words: Result<(f32, Vec<Word>), String>,
     timing: Timing,
 }
 
@@ -51,14 +52,12 @@ impl Engine {
             .name("larynx-asr".into())
             .spawn(move || {
                 for job in job_rx {
-                    let (text, timing) = match model.transcribe(&job.audio, job.cancel.as_deref()) {
-                        Ok((tokens, timing)) => {
-                            let kept = stream::keep_inside(&tokens, &job.cut);
-                            (Ok(stream::detokenize(&kept)), timing)
-                        }
+                    let start = job.cut.start as f32 / stream::RATE as f32;
+                    let (words, timing) = match model.transcribe(&job.audio, job.cancel.as_deref()) {
+                        Ok((tokens, timing)) => (Ok((start, stream::keep_inside(&tokens, &job.cut))), timing),
                         Err(e) => (Err(e), Timing::default()),
                     };
-                    if done_tx.send(Done { generation: job.generation, kind: job.kind, text, timing }).is_err() {
+                    if done_tx.send(Done { generation: job.generation, kind: job.kind, words, timing }).is_err() {
                         break;
                     }
                 }
@@ -77,7 +76,7 @@ impl Engine {
         loop {
             let d = self.done.recv().map_err(|e| e.to_string())?;
             if d.generation == self.generation {
-                return d.text.map(|t| (t, d.timing));
+                return d.words.map(|w| (stream::merge(&[w]), d.timing));
             }
         }
     }
@@ -99,9 +98,9 @@ pub struct Outcome {
 pub struct Dictation {
     generation: u64,
     seg: Segmenter,
-    parts: Vec<Option<String>>,
+    parts: Vec<Option<(f32, Vec<Word>)>>,
     preview: Option<Arc<RunOptions>>,
-    preview_text: String,
+    preview_words: Option<(f32, Vec<Word>)>,
     last_preview: Instant,
     previews: usize,
     pub audio: Arc<Mutex<Vec<f32>>>,
@@ -118,7 +117,7 @@ impl Dictation {
             seg: Segmenter::new(cfg),
             parts: Vec::new(),
             preview: None,
-            preview_text: String::new(),
+            preview_words: None,
             last_preview: Instant::now(),
             previews: 0,
             audio,
@@ -139,11 +138,11 @@ impl Dictation {
             return;
         }
         match d.kind {
-            Kind::Segment(i) => self.parts[i] = Some(d.text.unwrap_or_default()),
+            Kind::Segment(i) => self.parts[i] = Some(d.words.unwrap_or_default()),
             Kind::Preview => {
                 self.preview = None;
-                if let Ok(t) = d.text {
-                    self.preview_text = t;
+                if let Ok(w) = d.words {
+                    self.preview_words = Some(w);
                 }
             }
             _ => {}
@@ -165,7 +164,7 @@ impl Dictation {
             self.parts.push(None);
             let i = self.parts.len() - 1;
             self.send(engine, Kind::Segment(i), cut, None);
-            self.preview_text.clear();
+            self.preview_words = None;
         }
         let segments_busy = self.parts.iter().any(Option::is_none);
         if self.live_preview && self.preview.is_none() && !segments_busy && self.last_preview.elapsed() > Duration::from_millis(400) {
@@ -181,9 +180,11 @@ impl Dictation {
                 }
             }
         }
-        let mut done: Vec<String> = self.parts.iter().map_while(|p| p.clone()).collect();
-        done.push(self.preview_text.clone());
-        stream::join(&done)
+        let mut done: Vec<(f32, Vec<Word>)> = self.parts.iter().map_while(|p| p.clone()).collect();
+        if let Some(p) = &self.preview_words {
+            done.push(p.clone());
+        }
+        stream::merge(&done)
     }
 
     /// Key-up: stop any preview, transcribe what's left, and join everything in order.
@@ -195,14 +196,14 @@ impl Dictation {
         let tail = self.seg.tail(&self.audio.lock().unwrap());
         let tail_seconds = (tail.end - tail.start) as f32 / stream::RATE as f32;
         self.send(engine, Kind::Final, tail, None);
-        let mut final_text: Option<String> = None;
+        let mut final_words: Option<(f32, Vec<Word>)> = None;
         let mut final_timing = Timing::default();
-        while final_text.is_none() || self.parts.iter().any(Option::is_none) {
+        while final_words.is_none() || self.parts.iter().any(Option::is_none) {
             match engine.done.recv_timeout(Duration::from_secs(30)) {
                 Ok(d) if d.generation == self.generation => {
                     if let Kind::Final = d.kind {
                         final_timing = d.timing;
-                        final_text = Some(d.text?);
+                        final_words = Some(d.words?);
                     } else {
                         self.take_done(d);
                     }
@@ -212,10 +213,10 @@ impl Dictation {
                 Err(e) => return Err(e.to_string()),
             }
         }
-        let mut all: Vec<String> = self.parts.iter().map(|p| p.clone().unwrap_or_default()).collect();
-        all.push(final_text.unwrap_or_default());
+        let mut all: Vec<(f32, Vec<Word>)> = self.parts.iter().map(|p| p.clone().unwrap_or_default()).collect();
+        all.extend(final_words);
         Ok(Outcome {
-            text: stream::join(&all),
+            text: stream::merge(&all),
             after_key_up_ms: key_up.elapsed().as_secs_f64() * 1000.0,
             tail_seconds,
             segments: self.parts.len(),

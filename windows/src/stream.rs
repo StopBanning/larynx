@@ -141,71 +141,93 @@ pub struct Token {
     pub time: f32,
 }
 
-/// How far past each side of a cut a segment keeps words (s). Two transcriptions of the same audio place a word at
-/// slightly different times, so a word near a cut could be claimed by both segments or by neither. Keeping a margin
-/// on both sides means no word is lost; `join` then removes the words the two pieces have in common.
-pub const MARGIN: f32 = 0.6;
+/// How far before its cut a segment keeps words (s). That audio is in the middle of what the model heard for this
+/// segment (its left context), so the words there are reliable; the previous segment also has them, and `merge`
+/// keeps them once.
+pub const MARGIN_BEFORE: f32 = 0.6;
+/// How far past its cut a segment keeps words (s). Small: words near the end of what the model heard are the least
+/// reliable, and the next segment hears them well.
+pub const MARGIN_AFTER: f32 = 0.15;
 
-/// The tokens of a transcription of [ctx_start, ctx_end) that belong to [start, end), give or take `MARGIN`.
-pub fn keep_inside(tokens: &[Token], cut: &Cut) -> Vec<Token> {
-    let offset = cut.ctx_start as f32 / RATE as f32;
-    let lo = if cut.start == 0 { 0.0 } else { cut.start as f32 / RATE as f32 - MARGIN };
-    let hi = if cut.end == cut.ctx_end { f32::INFINITY } else { cut.end as f32 / RATE as f32 + MARGIN };
-    let mut kept: Vec<Token> = Vec::new();
-    let mut last_kept = false;
-    for (i, t) in tokens.iter().enumerate() {
-        let at = t.time + offset;
-        // A word's pieces and the punctuation after it stay with the word's first piece.
-        let continues = i > 0 && !t.piece.starts_with('\u{2581}');
-        let keep = if continues { last_kept } else { at >= lo && at < hi };
-        if keep {
-            kept.push(t.clone());
-        }
-        last_kept = keep;
-    }
-    kept
+/// A word with when it started, in seconds from the start of the recording.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Word {
+    pub text: String,
+    pub time: f32,
 }
 
-/// Turns SentencePiece pieces into text: ▁ starts a word; no space before punctuation.
-pub fn detokenize(tokens: &[Token]) -> String {
-    let raw: String = tokens.iter().map(|t| t.piece.replace('\u{2581}', " ")).collect();
-    let chars: Vec<char> = raw.chars().collect();
-    let mut out = String::with_capacity(raw.len());
-    for (i, ch) in chars.iter().enumerate() {
-        if ch.is_whitespace() {
-            let next_is_word = chars.get(i + 1).is_some_and(|c| c.is_alphanumeric());
-            if out.is_empty() || !next_is_word || out.ends_with(' ') {
-                continue;
+/// Turns the tokens of a transcription of [ctx_start, ctx_end) into the words that belong to [start, end), give or
+/// take the margins. Times become seconds from the start of the recording.
+pub fn keep_inside(tokens: &[Token], cut: &Cut) -> Vec<Word> {
+    let offset = cut.ctx_start as f32 / RATE as f32;
+    let lo = if cut.start == 0 { f32::NEG_INFINITY } else { cut.start as f32 / RATE as f32 - MARGIN_BEFORE };
+    let hi = if cut.end == cut.ctx_end { f32::INFINITY } else { cut.end as f32 / RATE as f32 + MARGIN_AFTER };
+    let mut words: Vec<Word> = Vec::new();
+    let mut in_word = false;
+    for (i, t) in tokens.iter().enumerate() {
+        let at = t.time + offset;
+        let starts_word = i == 0 || t.piece.starts_with('\u{2581}');
+        let piece = t.piece.replace('\u{2581}', "");
+        if starts_word {
+            in_word = at >= lo && at < hi;
+            if in_word && !piece.is_empty() {
+                words.push(Word { text: piece, time: at });
+            } else if in_word {
+                words.push(Word { text: String::new(), time: at });
             }
-            out.push(' ');
-        } else {
-            out.push(*ch);
+        } else if in_word {
+            // The rest of a word, or the punctuation after it.
+            if let Some(w) = words.last_mut() {
+                w.text.push_str(&piece);
+            }
         }
     }
-    out.trim().to_string()
+    words.retain(|w| !w.text.is_empty());
+    words
 }
 
 fn norm(word: &str) -> String {
     word.chars().filter(|c| c.is_alphanumeric() || *c == '\'').flat_map(char::to_lowercase).collect()
 }
 
-/// Joins segment texts. Neighbouring pieces overlap by up to a second or so (see `MARGIN`): the longest run of
-/// words that ends one piece and starts the next is kept once, in the first piece's spelling.
-pub fn join(parts: &[String]) -> String {
-    let mut words: Vec<String> = Vec::new();
-    for part in parts {
-        let next: Vec<&str> = part.split_whitespace().collect();
+/// Joins segments (each with where its cut started, in seconds). Neighbours overlap: the longest run of words that
+/// ends what we have and starts the next piece is kept once, in the earlier spelling. Where the two don't agree on
+/// any words, the next piece's words from before its cut are dropped instead.
+pub fn merge(pieces: &[(f32, Vec<Word>)]) -> String {
+    let mut out: Vec<Word> = Vec::new();
+    for (start, next) in pieces {
         if next.is_empty() {
             continue;
         }
-        let most = words.len().min(next.len()).min(12);
-        let overlap = (1..=most)
-            .rev()
-            .find(|&k| (0..k).all(|i| norm(&words[words.len() - k + i]) == norm(next[i]) && !norm(next[i]).is_empty()))
-            .unwrap_or(0);
-        words.extend(next[overlap..].iter().map(|w| w.to_string()));
+        let most = out.len().min(next.len()).min(12);
+        let overlap = (1..=most).rev().find(|&k| {
+            (0..k).all(|i| {
+                let (a, b) = (norm(&out[out.len() - k + i].text), norm(&next[i].text));
+                !a.is_empty() && a == b
+            })
+        });
+        match overlap {
+            Some(k) => out.extend(next[k..].iter().cloned()),
+            None if out.is_empty() => out.extend(next.iter().cloned()),
+            None => {
+                // No agreement at the seam: each side keeps only its own side of the cut.
+                out.retain(|w| w.time < *start);
+                out.extend(next.iter().filter(|w| w.time >= *start).cloned());
+            }
+        }
     }
-    words.join(" ")
+    out.iter().map(|w| w.text.as_str()).collect::<Vec<_>>().join(" ")
+}
+
+/// Turns SentencePiece pieces into text: ▁ starts a word; no space before punctuation.
+pub fn detokenize(tokens: &[Token]) -> String {
+    let cut = Cut { start: 0, end: usize::MAX, ctx_start: 0, ctx_end: usize::MAX };
+    merge(&[(0.0, keep_inside(tokens, &cut))])
+}
+
+/// Joins texts with single spaces.
+pub fn join(parts: &[String]) -> String {
+    parts.iter().map(|s| s.trim()).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
 }
 
 /// Word error rate after lowercasing and dropping punctuation: how far `hyp` is from `reference`.
@@ -294,33 +316,47 @@ mod tests {
     }
 
     #[test]
-    fn keeps_tokens_inside_with_a_margin_and_whole_words() {
-        // Context starts at 1.0 s; the segment is [2.0, 4.0), kept with a 0.6 s margin: [1.4, 4.6).
-        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: secs(1.0), ctx_end: secs(5.5) };
+    fn keeps_words_inside_with_margins() {
+        // Context starts at 1.0 s; the segment is [2.0, 4.0), kept from 1.4 s to 4.15 s.
+        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: secs(1.0), ctx_end: secs(5.0) };
         let tokens = vec![
             tok("\u{2581}said", 0.2),
             tok("\u{2581}Please", 1.1),
             tok("\u{2581}se", 2.9),
-            tok("nd", 3.7), // past the margin: stays with its word
-            tok(".", 3.7),
-            tok("\u{2581}And", 3.8),
+            tok("nd", 3.2), // past the margin: stays with its word
+            tok(".", 3.2),
+            tok("\u{2581}And", 3.3),
         ];
-        let kept = keep_inside(&tokens, &cut);
-        assert_eq!(detokenize(&kept), "Please send.");
+        let words = keep_inside(&tokens, &cut);
+        assert_eq!(words.iter().map(|w| w.text.as_str()).collect::<Vec<_>>(), ["Please", "send."]);
+        assert!((words[0].time - 2.1).abs() < 1e-4);
+    }
+
+    fn w(text: &str, time: f32) -> Word {
+        Word { text: text.into(), time }
     }
 
     #[test]
-    fn join_drops_the_overlap_once() {
-        let parts = vec![
-            "I looked at the draft this morning. The".to_string(),
-            "morning. The first section reads well, but".to_string(),
-            "but the numbers do not match.".to_string(),
+    fn merge_keeps_shared_words_once() {
+        let pieces = vec![
+            (0.0, vec![w("I", 0.1), w("looked", 0.3), w("at", 0.6), w("it.", 0.8), w("The", 1.3)]),
+            (1.2, vec![w("it.", 0.8), w("The", 1.3), w("first", 1.5), w("part", 1.8)]),
         ];
-        assert_eq!(join(&parts), "I looked at the draft this morning. The first section reads well, but the numbers do not match.");
-        // No overlap: just joined.
-        assert_eq!(join(&["Hello there.".into(), "How are you?".into()]), "Hello there. How are you?");
-        // A capital after a period in the next piece doesn't stop the match; the first piece's spelling wins.
-        assert_eq!(join(&["we should, so".into(), "So I moved it.".into()]), "we should, so I moved it.");
+        assert_eq!(merge(&pieces), "I looked at it. The first part");
+    }
+
+    #[test]
+    fn merge_falls_back_to_times_when_pieces_disagree() {
+        // The first piece heard its last word badly ("install"); the second heard it well, before its cut.
+        let pieces = vec![
+            (0.0, vec![w("because", 0.2), w("the", 0.6), w("install", 0.8)]),
+            (1.0, vec![w("the", 0.6), w("installer", 0.8), w("needs", 1.2), w("testing.", 1.5)]),
+        ];
+        // No shared run at the seam: the second piece's words before its cut (1.0 s) are dropped.
+        assert_eq!(merge(&pieces), "because the install needs testing.");
+        // With a shared run, the earlier spelling is kept once.
+        let pieces = vec![(0.0, vec![w("so", 0.2), w("we", 0.4)]), (0.5, vec![w("So", 0.2), w("we", 0.4), w("moved", 0.7)])];
+        assert_eq!(merge(&pieces), "so we moved");
     }
 
     #[test]
