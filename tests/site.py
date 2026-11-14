@@ -23,8 +23,8 @@ check(r.returncode == 0, "index.html is built from the template and the README's
 html = (SITE / "index.html").read_text()
 check("{{" not in html, "no unfilled placeholders")
 
-# What a phone downloads to show the first screen and the demo: the page, the icon, the poster and the clip.
-first_load = sum((SITE / f).stat().st_size for f in ("index.html", "icon.png", "demo-poster.jpg", "demo.mp4"))
+# What a phone downloads to show the first screen: the page, the icon and the phone-sized photograph.
+first_load = sum((SITE / f).stat().st_size for f in ("index.html", "icon.png", "dusk-960.jpg"))
 check(first_load < 300_000, f"first load is under 300 KB ({first_load // 1024} KB)")
 
 local = set(re.findall(r'(?:src|href|poster)="([^":#?]+)"', html)) - {""}
