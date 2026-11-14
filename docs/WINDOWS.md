@@ -24,11 +24,51 @@ Status: **a working prototype, built and tested in CI only.** It dictates into N
 
 ## What was measured
 
-All on GitHub's `windows-2025` runner: a virtual machine with a 4-core AMD EPYC and **no GPU**. The audio is
-synthetic: Windows' own text-to-speech voice reading sentences written for the test (`windows/ci/sentences.json`).
-No one's real dictation is used.
+All on GitHub's `windows-2025` runner: a Hyper-V virtual machine with 2 cores / 4 threads of an Intel Xeon
+Platinum 8573C and **no GPU**, so every number below is the CPU path with the int8 model. The audio is synthetic:
+Windows' own text-to-speech voice reading sentences written for the test (`windows/ci/sentences.json`). No one's
+real dictation is used. Runs on different VMs vary by about ±20%.
 
-MEASUREMENTS_PENDING
+**End to end in Notepad** (`larynx-cli e2e`; timed from outside the app, from the synthetic key-up until the
+words are in Notepad's text box; a 7.9 s dictation with fillers):
+
+| Run | First dictation | Second (warm) | Inserted |
+| --- | --- | --- | --- |
+| [43558130163](https://github.com/StopBanning/larynx/actions/runs/43558130163) | 413 ms | 352 ms | "So I think we should push the launch to next week, because the installer still needs testing." |
+| [43560527362](https://github.com/StopBanning/larynx/actions/runs/43560527362) | 539 ms | 423 ms | the same |
+
+Where the time goes (app log, run 43560527362, second dictation): about 396 ms finishing speech after key-up (3.5 s
+of audio was left after the last cut), 16 ms cleanup, 8 ms paste, and the field confirmed changed 7 ms after that.
+The app is ready 4 s after launch (model load plus a timing probe).
+
+**Speech alone** (`larynx-cli bench`, run 43560527362): "whole" transcribes the full recording after key-up, which
+is what a non-streaming app does (the median of 3). "Streamed" plays the recording in real time, the way the app
+hears it, and measures the wait after the key is let go at the end.
+
+| File | Audio (s) | Whole (ms) | RTF | WER | **Streamed: after key-up (ms)** | Left at key-up (s) | Segments | WER |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| short | 2.5 | 232 | 0.094 | 0.0% | **213** | 2.5 | 0 | 0.0% |
+| question | 4.4 | 372 | 0.085 | 0.0% | **294** | 1.7 | 1 | 0.0% |
+| medium | 10.8 | 827 | 0.076 | 0.0% | **386** | 3.1 | 3 | 0.0% |
+| fillers | 7.9 | 624 | 0.079 | 0.0% | **366** | 3.2 | 2 | 0.0% |
+| long | 24.2 | 1858 | 0.077 | 2.9% | **494** | 4.8 | 7 | 2.9% |
+| longer | 36.6 | 2970 | 0.081 | 1.9% | **502** | 4.1 | 11 | 1.9% |
+
+What this says:
+
+- **On CI's slow CPU, the wait after key-up stays at 0.2-0.5 s however long you talk**, against up to 3 s for
+  transcribing at key-up. The Mac is at about 0.15 s on the Neural Engine. A modern laptop CPU should be well
+  ahead of a shared 2-core VM, and a GPU or NPU ahead again. That is the first thing to measure on a real PC.
+- **Streaming costs no accuracy** on these files: the same word error rate as transcribing the whole recording.
+  CI fails if it ever gets worse by more than 3 points. Getting there took three attempts, all kept as unit tests
+  in `stream.rs`: two transcriptions place the same word at slightly different times, so the seam is joined by
+  the words both pieces share, with timing only as the fallback. One known leftover: an occasional repeated word
+  at a seam ("The budget's budget"), within the same error rate as whole-file transcription.
+- The int8 model's real-time factor on this VM is 0.08-0.09 (3 s for 37 s of audio). The Nov 11 sherpa-onnx
+  measurement on a similar runner was 0.147. The difference is ONNX Runtime 1.31 and a per-piece pipeline with no
+  resampling or file overhead.
+- The waits that remain are the right-context rule (a segment is only sent once 1 s of audio exists after its
+  cut), plus the last few seconds. On faster hardware both shrink, and the cut rule can be tuned (`stream::Config`).
 
 ## What works (and how CI proves it)
 
@@ -37,7 +77,7 @@ MEASUREMENTS_PENDING
 | Builds from source into a self-contained folder (no toolchain needed to run it) | `stage.ps1`, then the cleanup cases run from that folder with `PATH` stripped to `C:\Windows\System32` |
 | The cleanup matches the Mac's on every case in `tests/cases.json` (all text cases through tidy, every number case) | `larynx-cli cleanup-check tests/cases.json` through `larynx-text.exe`, plus the Rust unit test that also checks a full sentence and accented text |
 | The model hears the fixture exactly | `larynx-cli transcribe` on `tests/fixtures/report.wav` |
-| DirectML loads and runs the model | the DirectML benchmark step (on CI's software adapter, so it shows correctness, not speed) |
+| DirectML is built in and selectable; `auto` falls back to the CPU when there is no GPU | the DirectML step: on CI it reports "No devices detected that match the filter criteria", because the VM has no GPU. **DirectML has not run the model yet.** |
 | Hold Right Ctrl in Notepad, speak, let go: the cleaned words appear (fillers gone), Notepad keeps the focus, the pill is on screen while talking, the clipboard is restored | `larynx-cli e2e`, twice in a row (cold and warm) |
 | Right Ctrl+C while talking cancels the dictation and types nothing | same test |
 
