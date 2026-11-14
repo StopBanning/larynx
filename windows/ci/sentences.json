@@ -1,0 +1,8 @@
+[
+  {"id": "short", "text": "Please send the report tomorrow."},
+  {"id": "question", "text": "Can you move our call to Thursday afternoon, around three?"},
+  {"id": "medium", "text": "I looked at the draft this morning. The first section reads well, but the numbers in the second table do not match the summary, so let's fix those before we share it."},
+  {"id": "fillers", "text": "Um, so I think we should, uh, push the launch to next week, because the installer still needs testing."},
+  {"id": "long", "text": "Here is the plan for the trip. We leave on Friday at eight in the morning and drive to the coast. On Saturday we hike the northern trail, which takes about five hours, and have dinner in town. On Sunday we pack up early, stop for lunch on the way back, and should be home before dark. Bring warm clothes, because the forecast says it will be windy."},
+  {"id": "longer", "text": "Thanks for the notes on the proposal. I agree that the timeline is too tight, especially for the testing phase, so I moved the beta by two weeks. The budget stays the same, because the extra time comes out of the buffer we kept for the second release. I also rewrote the risks section. The biggest one is still the hardware order, which has not shipped yet. If it slips again, we can start with the old machines and swap them later. Let me know if you want to go through it together on Monday, otherwise I will send it to the whole team on Tuesday morning."}
+]

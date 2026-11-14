@@ -1,0 +1,68 @@
+[package]
+name = "larynx-windows"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Larynx for Windows: hold a key, speak, let go, and clean text lands where the cursor is. All offline."
+publish = false
+
+[lib]
+name = "larynx_windows"
+path = "src/lib.rs"
+
+[features]
+default = ["asr"]
+# The speech engine (ONNX Runtime). Off only for quick checks of the rest on machines without the runtime.
+asr = ["dep:ort"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libloading = "0.8"
+
+[target.'cfg(windows)'.dependencies.ort]
+version = "=2.0.0-rc.15"
+optional = true
+default-features = false
+features = ["std", "download-binaries", "tls-native", "copy-dylibs", "directml", "api-22"]
+
+[target.'cfg(not(windows))'.dependencies.ort]
+version = "=2.0.0-rc.15"
+optional = true
+default-features = false
+features = ["std", "download-binaries", "tls-native", "copy-dylibs", "api-22"]
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Media_Audio",
+  "Win32_Media_KernelStreaming",
+  "Win32_Media_Multimedia",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_DataExchange",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Threading",
+  "Win32_System_Variant",
+  "Win32_System_ProcessStatus",
+  "Win32_Security",
+  "Win32_UI_Accessibility",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
