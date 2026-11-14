@@ -86,6 +86,7 @@ pub fn bench(args: &Args) -> Result<(), String> {
             "stream_previews": streamed.as_ref().map(|s| s.previews),
             "stream_wer": streamed.as_ref().map(|s| stream::wer(reference, &s.text)),
             "stream_text": streamed.as_ref().map(|s| s.text.clone()),
+            "stream_pieces": streamed.as_ref().map(|s| s.pieces.clone()),
             "reference": reference,
         });
         println!("{row}");

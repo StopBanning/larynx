@@ -93,6 +93,8 @@ pub struct Outcome {
     pub segments: usize,
     pub previews: usize,
     pub final_timing: Timing,
+    /// Each piece's words with times, for finding where a join went wrong.
+    pub pieces: Vec<(f32, Vec<Word>)>,
 }
 
 pub struct Dictation {
@@ -216,6 +218,7 @@ impl Dictation {
         let mut all: Vec<(f32, Vec<Word>)> = self.parts.iter().map(|p| p.clone().unwrap_or_default()).collect();
         all.extend(final_words);
         Ok(Outcome {
+            pieces: all.clone(),
             text: stream::merge(&all),
             after_key_up_ms: key_up.elapsed().as_secs_f64() * 1000.0,
             tail_seconds,

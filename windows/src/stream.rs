@@ -144,13 +144,13 @@ pub struct Token {
 /// How far before its cut a segment keeps words (s). That audio is in the middle of what the model heard for this
 /// segment (its left context), so the words there are reliable; the previous segment also has them, and `merge`
 /// keeps them once.
-pub const MARGIN_BEFORE: f32 = 0.6;
+pub const MARGIN_BEFORE: f32 = 1.0;
 /// How far past its cut a segment keeps words (s). Small: words near the end of what the model heard are the least
 /// reliable, and the next segment hears them well.
-pub const MARGIN_AFTER: f32 = 0.15;
+pub const MARGIN_AFTER: f32 = 0.35;
 
 /// A word with when it started, in seconds from the start of the recording.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct Word {
     pub text: String,
     pub time: f32,
@@ -190,27 +190,38 @@ fn norm(word: &str) -> String {
     word.chars().filter(|c| c.is_alphanumeric() || *c == '\'').flat_map(char::to_lowercase).collect()
 }
 
-/// Joins segments (each with where its cut started, in seconds). Neighbours overlap: the longest run of words that
-/// ends what we have and starts the next piece is kept once, in the earlier spelling. Where the two don't agree on
-/// any words, the next piece's words from before its cut are dropped instead.
+/// How many of the words at the seam two pieces share when the last `k` words so far are laid over the first `k`
+/// of the next piece.
+fn shared(out: &[Word], next: &[Word], k: usize) -> usize {
+    (0..k).filter(|&i| {
+        let (a, b) = (norm(&out[out.len() - k + i].text), norm(&next[i].text));
+        !a.is_empty() && a == b
+    })
+    .count()
+}
+
+/// Joins segments (each with where its cut started, in seconds). Neighbours overlap around each cut. The longest
+/// run that ends what we have and starts the next piece, allowing a misheard word in a run of three or more, is
+/// taken from the next piece (it heard those words in the middle of its audio, the earlier piece at the end of
+/// its). Where the two don't line up at all, each keeps its own side of the cut.
 pub fn merge(pieces: &[(f32, Vec<Word>)]) -> String {
     let mut out: Vec<Word> = Vec::new();
     for (start, next) in pieces {
         if next.is_empty() {
             continue;
         }
-        let most = out.len().min(next.len()).min(12);
+        let most = out.len().min(next.len()).min(16);
         let overlap = (1..=most).rev().find(|&k| {
-            (0..k).all(|i| {
-                let (a, b) = (norm(&out[out.len() - k + i].text), norm(&next[i].text));
-                !a.is_empty() && a == b
-            })
+            let n = shared(&out, next, k);
+            if k <= 2 { n == k } else { n + 1 >= k && n * 10 >= k * 7 }
         });
         match overlap {
-            Some(k) => out.extend(next[k..].iter().cloned()),
+            Some(k) => {
+                out.truncate(out.len() - k);
+                out.extend(next.iter().cloned());
+            }
             None if out.is_empty() => out.extend(next.iter().cloned()),
             None => {
-                // No agreement at the seam: each side keeps only its own side of the cut.
                 out.retain(|w| w.time < *start);
                 out.extend(next.iter().filter(|w| w.time >= *start).cloned());
             }
@@ -317,22 +328,22 @@ mod tests {
 
     #[test]
     fn keeps_words_inside_with_margins() {
-        // Context starts at 1.0 s; the segment is [2.0, 4.0), kept from 1.4 s to 4.15 s.
-        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: secs(1.0), ctx_end: secs(5.0) };
+        // The model heard [0, 5); the segment is [2.0, 4.0), kept from 1.0 s to 4.35 s.
+        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: 0, ctx_end: secs(5.0) };
         let tokens = vec![
-            tok("\u{2581}said", 0.2),
-            tok("\u{2581}Please", 1.1),
-            tok("\u{2581}se", 2.9),
-            tok("nd", 3.2), // past the margin: stays with its word
-            tok(".", 3.2),
-            tok("\u{2581}And", 3.3),
+            tok("\u{2581}said", 0.5),
+            tok("\u{2581}Please", 2.1),
+            tok("\u{2581}se", 3.9),
+            tok("nd", 4.4), // past the margin: stays with its word
+            tok(".", 4.4),
+            tok("\u{2581}And", 4.4),
         ];
         let words = keep_inside(&tokens, &cut);
         assert_eq!(words.iter().map(|w| w.text.as_str()).collect::<Vec<_>>(), ["Please", "send."]);
         assert!((words[0].time - 2.1).abs() < 1e-4);
     }
 
-    fn w(text: &str, time: f32) -> Word {
+        fn w(text: &str, time: f32) -> Word {
         Word { text: text.into(), time }
     }
 
@@ -354,9 +365,15 @@ mod tests {
         ];
         // No shared run at the seam: the second piece's words before its cut (1.0 s) are dropped.
         assert_eq!(merge(&pieces), "because the install needs testing.");
-        // With a shared run, the earlier spelling is kept once.
-        let pieces = vec![(0.0, vec![w("so", 0.2), w("we", 0.4)]), (0.5, vec![w("So", 0.2), w("we", 0.4), w("moved", 0.7)])];
+        // With a shared run, the later piece's version is kept once.
+        let pieces = vec![(0.0, vec![w("so", 0.2), w("we", 0.4)]), (0.5, vec![w("so", 0.2), w("we", 0.4), w("moved", 0.7)])];
         assert_eq!(merge(&pieces), "so we moved");
+        // A misheard word inside a longer shared run still lines up; the later piece's words win.
+        let pieces = vec![
+            (0.0, vec![w("the", 0.1), w("hardware", 0.3), w("order,", 0.6), w("which", 0.9), w("has", 1.1), w("not", 1.2), w("shifted.", 1.4)]),
+            (1.0, vec![w("order,", 0.6), w("which", 0.9), w("has", 1.1), w("not", 1.2), w("shipped", 1.4), w("yet.", 1.7)]),
+        ];
+        assert_eq!(merge(&pieces), "the hardware order, which has not shipped yet.");
     }
 
     #[test]
