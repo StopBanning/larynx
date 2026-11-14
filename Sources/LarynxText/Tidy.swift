@@ -237,6 +237,9 @@ public enum Tidy {
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
+        // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
+        // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
+        s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place". Until nothing changes,
         // so a stumble said three times ("we could, we could, we could try") ends as one copy, not two. A phrase said three
         // or more times that ends its sentence ("No way, no way, no way.") is meant, and is marked so this leaves it.

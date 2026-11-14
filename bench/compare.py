@@ -14,6 +14,8 @@ Sets:
           voices. Scored on edits needed: the words a person would still change to get from the output to what was
           meant. Written after the rules and never used to tune them.
   jargon  the bench's jargon set (bench/make_sets.py), scored on word errors against the words said.
+  accents real conversational English from speakers of many first languages (EdAcc, sampled by bench/accents.py),
+          scored on word errors overall and per accent.
 
 Audio lives in ~/work/scratch/larynx-bench (never in git). Results go to bench/results/compare-<date>.json and a
 Markdown table is printed for docs/BENCHMARKS.md.
@@ -56,6 +58,16 @@ def jargon_clips(limit):
         return []
     rows = [json.loads(l) for l in f.read_text().splitlines()]
     return rows[: limit * 3] if limit else rows
+
+
+def accent_clips(limit):
+    f = OUT / "accents/manifest.jsonl"
+    if not f.exists():
+        return []
+    rows = [json.loads(l) for l in f.read_text().splitlines()]
+    for r in rows:
+        r["cat"] = r["accent"]
+    return rows[:limit] if limit else rows
 
 
 def apple(paths):
@@ -108,9 +120,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--binary", default=str(ROOT.parent / ".build/release/larynx"))
     ap.add_argument("--limit", type=int, default=0, help="first N sentences of each set (for a quick run)")
+    ap.add_argument("--sets", default="messy,jargon,accents", help="any of messy, jargon, accents (bench/accents.py)")
     a = ap.parse_args()
 
-    sets = {"messy": (messy_clips(a.limit), "meant"), "jargon": (jargon_clips(a.limit), "text")}
+    wanted = a.sets.split(",")
+    loaders = {"messy": (messy_clips, "meant"), "jargon": (jargon_clips, "text"), "accents": (accent_clips, "text")}
+    sets = {k: (loaders[k][0](a.limit), loaders[k][1]) for k in wanted}
     results = {"date": date.today().isoformat(), "systems": {}}
     for name, run in (("larynx", lambda p: larynx(a.binary, p, False)),
                       ("larynx-raw", lambda p: larynx(a.binary, p, True)),
@@ -125,10 +140,10 @@ def main():
             s["seconds"] = round(time.time() - started, 1)
             results["systems"][name][set_name] = s
             print(f"{name:10} {set_name:7} {s['rate']}% ({s['edits']}/{s['words']}, {s['failed']} failed)", file=sys.stderr)
-            if set_name == "messy":
-                results["systems"][name]["messy_outputs"] = {r["audio"].rsplit("/", 1)[-1]: outputs.get(r["audio"]) for r in rows}
+            if set_name in ("messy", "accents"):
+                results["systems"][name][f"{set_name}_outputs"] = {r["audio"].rsplit("/", 1)[-1]: outputs.get(r["audio"]) for r in rows}
 
-    out = ROOT / "results" / f"compare-{results['date']}.json"
+    out = ROOT / "results" / f"compare-{results['date']}{'' if a.sets == 'messy,jargon,accents' else '-' + a.sets.replace(',', '-')}.json"
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(results, indent=1))
     cats = ["fillers", "stutters", "false starts", "numbers", "mixed"]
@@ -138,6 +153,13 @@ def main():
         m, j = r.get("messy", {}), r.get("jargon", {})
         print(f"| {name} | {m.get('rate')}% | " + " | ".join(f"{m.get('by_category', {}).get(c)}%" for c in cats)
               + f" | {j.get('rate')}% |")
+    if "accents" in sets and sets["accents"][0]:
+        print("\n| Accent | " + " | ".join(results["systems"]) + " |")
+        print("| --- | " + " | ".join("---" for _ in results["systems"]) + " |")
+        cats = sorted({r["cat"] for r in sets["accents"][0]})
+        for c in cats:
+            print(f"| {c} | " + " | ".join(f"{r.get('accents', {}).get('by_category', {}).get(c)}%" for r in results["systems"].values()) + " |")
+        print("| **All** | " + " | ".join(f"**{r.get('accents', {}).get('rate')}%**" for r in results["systems"].values()) + " |")
     print(f"\nwrote {out.relative_to(ROOT.parent)}", file=sys.stderr)
 
 

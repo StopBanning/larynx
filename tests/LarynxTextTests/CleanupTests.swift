@@ -166,3 +166,9 @@ private struct Cases: Decodable {
     #expect(pro("I mean it, no more delays") == "I mean it, no more delays")
     #expect(pro("What I mean is we wait") == "What I mean is we wait")
 }
+
+@Test func aCutOffWordWrittenWithAHyphenGoes() {
+    #expect(Tidy.apply("Ask the design team. Th- okay, just check with them", mode: .ai) == "Ask the design team. Okay, just check with them")
+    #expect(Tidy.apply("It covers pre- and post-launch work", mode: .ai) == "It covers pre- and post-launch work")
+    #expect(Tidy.apply("Send the e-mail and the x-ray", mode: .ai) == "Send the e-mail and the x-ray")
+}
