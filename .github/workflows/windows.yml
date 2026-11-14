@@ -1,0 +1,94 @@
+name: windows
+# Larynx for Windows (windows/): builds the app, checks the Swift cleanup through the same DLL the app loads,
+# measures the speech model on CPU and DirectML, and dictates into Notepad end to end on the runner's desktop.
+on:
+  push:
+    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/fixtures/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/fixtures/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  app:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: compnerd/gha-setup-swift@v0.5.1
+        with:
+          branch: swift-6.1.2-release
+          tag: 6.1.2-RELEASE
+      - name: Build the cleanup library (LarynxTextC.dll)
+        run: |
+          Copy-Item ci/Package.portable.swift Package.swift -Force
+          swift build -c release --product LarynxTextC
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            windows/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('windows/Cargo.lock') }}
+      - name: Build larynx.exe
+        working-directory: windows
+        run: cargo build --release --locked
+      - name: Unit tests (with the cleanup DLL)
+        working-directory: windows
+        run: |
+          $dll = (Get-ChildItem ../.build -Recurse -Filter LarynxTextC.dll | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).FullName
+          $env:LARYNX_TEXT_LIB = $dll
+          $env:PATH = "$(Split-Path $dll);$env:PATH"
+          cargo test --release --locked
+      - name: Stage a self-contained folder
+        run: ./windows/ci/stage.ps1 -Dist dist
+      - name: Cleanup cases through the staged app, with no toolchain on PATH
+        shell: cmd
+        run: |
+          set PATH=C:\Windows\System32;C:\Windows
+          dist\larynx.exe cleanup-check tests\cases.json
+          dist\larynx.exe clean correspondence um so I think we should uh move the meeting to thursday
+      - uses: actions/cache@v4
+        with:
+          path: models
+          key: parakeet-tdt-0.6b-v3-onnx-int8-v1
+      - name: Download the speech model (int8, about 670 MB)
+        run: dist/larynx.exe setup --model models/parakeet-int8
+      - name: Synthetic speech for the benchmark
+        run: ./windows/ci/make-speech.ps1 -Out speech
+      - name: Transcribe the fixture (CPU)
+        run: |
+          dist/larynx.exe transcribe --model models/parakeet-int8 --provider cpu tests/fixtures/report.wav speech/short.wav 2>&1 | Tee-Object transcribe.txt
+          if (-not (Select-String -Path transcribe.txt -Pattern "send the report tomorrow" -Quiet)) { throw "fixture not transcribed" }
+      - name: Benchmark on CPU
+        run: dist/larynx.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
+      - name: Benchmark on DirectML (CI has no GPU; this checks the path works, not its speed)
+        continue-on-error: true
+        run: dist/larynx.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json
+      - name: Summary
+        if: always()
+        run: |
+          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors | Format-List | Out-String | Write-Host
+          Get-CimInstance Win32_VideoController | Select-Object Name | Format-List | Out-String | Write-Host
+          foreach ($f in @("bench-cpu.json", "bench-directml.json")) {
+            if (Test-Path $f) {
+              "### $f" >> $env:GITHUB_STEP_SUMMARY
+              "| file | audio s | whole ms | RTF | WER | streamed: after key-up ms | tail s | WER |" >> $env:GITHUB_STEP_SUMMARY
+              "| --- | --- | --- | --- | --- | --- | --- | --- |" >> $env:GITHUB_STEP_SUMMARY
+              foreach ($r in (Get-Content $f -Raw | ConvertFrom-Json)) {
+                "| $($r.wav) | $([math]::Round($r.seconds,1)) | $([math]::Round($r.whole_ms)) | $([math]::Round($r.whole_rtf,3)) | $([math]::Round($r.whole_wer,3)) | $($r.stream_after_key_up_ms) | $($r.stream_tail_seconds) | $($r.stream_wer) |" >> $env:GITHUB_STEP_SUMMARY
+              }
+            }
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results
+          path: |
+            bench-*.json
+            transcribe.txt
+            speech/manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: larynx-windows-x64
+          path: dist
