@@ -12,7 +12,7 @@ import re, sys, urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SITE = "https://stopbanning.github.io/larynx/"
+SITE = "https://larynx.locust.lol/"
 REPO = "https://github.com/StopBanning/larynx"
 
 

@@ -7,8 +7,8 @@
 <meta name="description" content="Think out loud. Larynx writes it down. Free, open-source, offline dictation for the Mac: text you don't have to fix, in 0.15 s.">
 <meta property="og:title" content="Larynx: think out loud, Larynx writes it down">
 <meta property="og:description" content="Free, open-source, offline dictation for the Mac. Nothing you say leaves your Mac.">
-<meta property="og:image" content="https://stopbanning.github.io/larynx/social-preview.png">
-<meta property="og:url" content="https://stopbanning.github.io/larynx/">
+<meta property="og:image" content="https://larynx.locust.lol/social-preview.png">
+<meta property="og:url" content="https://larynx.locust.lol/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="icon.png">
@@ -89,7 +89,7 @@ footer { color: var(--dim); font-size: 14px; text-align: center; margin-top: 46p
         <button class="primary" id="send">Send this to my Mac</button>
         <div class="row" id="send-fallback">
           <button class="secondary" id="copy-link">Copy link</button>
-          <a class="button secondary" id="mail-link" href="mailto:?subject=Larynx%20for%20my%20Mac&amp;body=https%3A%2F%2Fstopbanning.github.io%2Flarynx%2F">Email it to me</a>
+          <a class="button secondary" id="mail-link" href="mailto:?subject=Larynx%20for%20my%20Mac&amp;body=https%3A%2F%2Flarynx.locust.lol%2F">Email it to me</a>
         </div>
         <p class="note">Larynx is a Mac app. Open this page on your Mac to install it.</p>
       </div>
@@ -146,7 +146,7 @@ footer { color: var(--dim); font-size: 14px; text-align: center; margin-top: 46p
   var mac = /Macintosh/.test(ua) && !touch;  // an iPad says Macintosh too, but has touch
   document.documentElement.classList.add(mac ? "on-mac" : "on-phone");
 
-  var url = "https://stopbanning.github.io/larynx/";
+  var url = "https://larynx.locust.lol/";
   var toast = document.getElementById("toast"), timer;
   function say(text) {
     toast.textContent = text; toast.classList.add("show");
