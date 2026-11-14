@@ -3,7 +3,7 @@ import LarynxTextJSON
 
 // larynx-text: the text cleanup as a small long-running process. One JSON request per line on stdin, one JSON
 // reply per line on stdout (see LarynxTextJSON/Clean.swift). The Windows app starts it once and keeps it.
-setvbuf(stdout, nil, _IOLBF, 0)
+// Every reply is flushed by hand (setvbuf with size 0 aborts in the MSVC runtime).
 warmUp()
 print("{\"ready\":true}")
 fflush(stdout)

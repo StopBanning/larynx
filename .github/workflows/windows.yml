@@ -38,6 +38,12 @@ jobs:
       - name: Build larynx.exe (the app) and larynx-cli.exe (the same code with a console, for tools and tests)
         working-directory: windows
         run: cargo build --release --locked --bins
+      - name: The cleanup process answers
+        timeout-minutes: 2
+        run: |
+          $exe = (Get-ChildItem .build -Recurse -Filter larynx-text.exe | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).FullName
+          '{"text":"um so we should uh meet on friday","mode":"correspondence"}' | & $exe
+          if ($LASTEXITCODE -ne 0) { throw "larynx-text exited with $LASTEXITCODE" }
       - name: Unit tests (with the Swift cleanup)
         timeout-minutes: 10
         working-directory: windows

@@ -83,7 +83,7 @@ fn ascii_json(s: &str) -> String {
 
 fn spawn(path: &Path) -> Result<Proc, String> {
     let mut cmd = Command::new(path);
-    cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
+    cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -96,8 +96,15 @@ fn spawn(path: &Path) -> Result<Proc, String> {
     stdout.read_line(&mut line).map_err(|e| e.to_string())?;
     if !line.contains("ready") {
         let _ = child.kill();
-        return Err(format!("larynx-text did not start (said {line:?})"));
+        let mut err = String::new();
+        if let Some(mut e) = child.stderr.take() {
+            let _ = std::io::Read::read_to_string(&mut e, &mut err);
+        }
+        let status = child.wait().map(|s| s.to_string()).unwrap_or_default();
+        return Err(format!("larynx-text did not start (said {line:?}; {status}; stderr {err:?})"));
     }
+    // Nothing reads its stderr from here on; drop it so a chatty child can never block on a full pipe.
+    drop(child.stderr.take());
     Ok(Proc { child, stdin, stdout })
 }
 
