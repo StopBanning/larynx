@@ -228,6 +228,12 @@ public enum Tidy {
         // Without the comma only after "the/a/my...": "I went to the I drove" (a determiner never comes before "I").
         s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(I)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|my|your|our|their)\\s+(?=I(?:'m|'ll|'ve|'d|\\s+(?:\(restartVerbs))\\b))",
                                    with: "$1", options: .regularExpression)
+        // 1d2. A clause dropped after "going to be"/"trying to" and started again with the same subject: "We're going to be
+        // we're stuck in traffic" -> "We're stuck in traffic". The first part ends on a word that cannot end a clause.
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?,]\\s+)(i'm|i|we're|we|you're|they're|it's|i'll|we'll)\\s+(?:[\\w']+\\s+){0,3}(?:be|to)\\s+(?=\\2\\s+\\w)",
+                                   with: "$1", options: .regularExpression)
+        // 1d3. A range said as two numbers: "15 20 minutes" -> "15 to 20 minutes" (the second larger, then a unit).
+        s = numberRanges(s)
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
@@ -310,6 +316,17 @@ public enum Tidy {
         return s
     }
 
+    static func numberRanges(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "\\b(\\d{1,3})\\s+(\\d{1,3})\\s+(?=(?:minutes|mins|hours|days|weeks|months|years|people|dollars|bucks|percent|miles|times|seconds)\\b)") else { return text }
+        let ns = text as NSString
+        var out = text
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            guard let a = Int(ns.substring(with: m.range(at: 1))), let b = Int(ns.substring(with: m.range(at: 2))), a < b else { continue }
+            out = (out as NSString).replacingCharacters(in: m.range, with: "\(a) to \(b) ")
+        }
+        return out
+    }
+
     static func capitalizeWeekdays(_ text: String) -> String {
         guard let re = try? NSRegularExpression(pattern: "(?<![\\w./_\\-])(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s?)(?![\\w/_\\-])") else { return text }
         let ns = text as NSString
@@ -358,6 +375,8 @@ public enum Tidy {
         while previous != s {
             previous = s
             re(start + "(?:yeah|yep|yup|okay so|ok so|alright|all right|dude|bro|man|big dog|ah|oh)(?:,\\s*|\\s+)(?=\\w)", "$1")
+            // A swear said as an exclamation before the sentence starts: "Oh f***, the oven is still on".
+            if !keepSwearing { re(start + "(?:oh\\s+)?(?:fuck|shit|damn|goddamn|god damn|crap)(?:\\s+(?:me|yeah|man|dude))?[,.!]+\\s*(?=\\w)", "$1") }
             re(start + "so(?:,\\s*|\\s+(?=(?:we|i|you|they|he|she|it|let's|that's|it's|there's|this|if|yeah)\\b))", "$1")
         }
         re(",\\s*(?:dude|bro|man|big dog|brother|my brother|buddy|bud|my guy|homie)(?=[.!?,]|$)", "")
@@ -371,6 +390,16 @@ public enum Tidy {
         re("\\b(it's|it is|it was|that's|that is|is|was)\\s+like,?\\s+(?=(?:can|could|will|would|should|almost|really|so|very|super|totally|pretty|literally|just|not|kind of|sort of)\\b)", "$1 ")
         re("\\balmost like\\s+(?=\\w+ed\\b)", "almost ")
         re("\\b(can|could|will|would|should|must|might)\\s+be\\s+like\\s+(?=\\w)", "$1 be ")
+        // "There's two files": a count after "there's" takes "there are".
+        re("\\bthere's\\s+(?=(?:two|three|four|five|six|seven|eight|nine|ten|[2-9]|several|many|a few|a couple of|some|lots of|a lot of)\\s+\\w+s\\b)", "there are ")
+        // "like" as a filler, where it cannot be a verb or a comparison: opening a sentence before a subject ("Like most of
+        // them are..."; not before "you" or "the", where it is a comparison: "Like her, I...", "Like the blue one"), between commas ("it's, like, fine"), after "and/but/so" before a clause, and between a preposition and "the/a" ("in like the corner").
+        re(start + "like,?\\s+(?=(?:i|i'll|i'm|we|they|he|she|it|it's|that's|there's|most|half|everyone|nobody|honestly|literally|maybe|basically)\\b)", "$1")
+        re(",\\s+like,\\s+", " ")
+        re("\\b(and|but|so|or|because)\\s+like,?\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|the|this|that|most|all)\\b)", "$1 ")
+        re("\\b(in|of|on|at|with|from|into)\\s+like\\s+(?=(?:the|a|an|my|your|our|this|that)\\b)", "$1 ")
+        // "yep" or "yeah" dropped into the middle before "and": "finish the budget yep and call me".
+        re("(?<=\\w),?\\s+(?:yep|yeah|yup)\\s+(?=and\\b)", " ")
         // What the removals leave behind: a comma before a full stop, a doubled mark.
         re(",\\s*([.!?])", "$1")
         re("([!?])\\s*\\.", "$1")

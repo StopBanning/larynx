@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Professional style, cleaner**: filler "like" goes where it cannot be a verb or a comparison ("Like most of
+  them...", "but like it needs...", "in like the back row"); a swear said as an exclamation before the sentence
+  ("Oh s***, the oven...") goes; "there's two files" becomes "there are two files"; a stray "yep" before "and"
+  goes. Checked against every real dictation on the author's Mac first: 10 of 923 change, and the two that read
+  wrong ("Like her, I...", "Like the blue one") shaped the exclusions.
+- **Restarts and ranges, every style**: "we're going to be we're stuck in traffic" keeps only the restart; "10 15 minutes"
+  becomes "10 to 15 minutes".
 - **Days of the week are capitalized** by the cleanup rules ("friday" is "Friday"), outside the AI mode and never
   inside a path or an identifier. The speech model usually does this already; typed text through `tidy` and MCP did not.
 - **Professional style**: the same voice, a cleaner register for work. Drops "you know", "I mean", "dude" and

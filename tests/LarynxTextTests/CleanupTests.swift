@@ -115,3 +115,23 @@ private struct Cases: Decodable {
     #expect(Tidy.apply("rename friday_report to monday", mode: .ai).contains("friday_report"))
     #expect(Tidy.apply("open reports/friday.csv", mode: .standard).contains("reports/friday.csv"))
 }
+
+@Test func theProfessionalStyleDropsFillerLikeSwearOpenersAndRestarts() {
+    func pro(_ s: String) -> String { Tidy.apply(s, mode: .ai, style: .professional) }
+    #expect(pro("Like most of the tickets are gone already") == "Most of the tickets are gone already")
+    #expect(pro("The draft is fine, but like it needs a stronger ending") == "The draft is fine, but it needs a stronger ending")
+    #expect(pro("We sat with them in like the back row") == "We sat with them in the back row")
+    #expect(pro("Oh shit, I left the charger at home") == "I left the charger at home")
+    #expect(pro("There's two files missing from the folder") == "There are two files missing from the folder")
+    // Kept: "like" as a verb or a comparison, and casual is unchanged.
+    #expect(pro("Like her, I would rather wait") == "Like her, I would rather wait")
+    #expect(pro("I like the new layout") == "I like the new layout")
+    #expect(pro("It looks like the build passed") == "It looks like the build passed")
+    #expect(Tidy.apply("Oh shit, I left the charger at home", mode: .ai) == "Oh shit, I left the charger at home")
+}
+
+@Test func aRestartAfterGoingToBeAndANumberRangeAreCleanedInEveryStyle() {
+    #expect(Tidy.apply("We're going to be we're stuck in traffic", mode: .ai) == "We're stuck in traffic")
+    #expect(Tidy.apply("The bus comes in 10 15 minutes", mode: .ai) == "The bus comes in 10 to 15 minutes")
+    #expect(Tidy.apply("Room 20 10 people fit", mode: .ai).contains("20 10 people"))  // the second is smaller: not a range
+}
