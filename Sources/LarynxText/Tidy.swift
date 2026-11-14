@@ -617,12 +617,15 @@ public enum Tidy {
         return s
     }
 
-    /// Replaces "<X>, no <Y>" with "<Y>" when X and Y are the same kind (weekday, month, number or time).
+    /// Replaces "<X>, no <Y>" (or "no wait", "sorry", "I mean") with "<Y>" when X and Y are the same kind (weekday,
+    /// month, number or time).
     /// Exact and instant, and the shape Apple's model most often gets backwards.
     static func sameKindCorrections(_ text: String) -> String {
         var s = text
         for kind in correctionKinds {
-            s = s.replacingOccurrences(of: "(?i)\\b\(kind)[,.]\\s+no,?\\s+(\(kind))\\b", with: "$1", options: .regularExpression)
+            // The comma before the cue is optional here: the speech model often writes "Thursday No, wait, Friday", and a
+            // day or number on both sides of the cue is a correction whatever the punctuation.
+            s = s.replacingOccurrences(of: "(?i)\\b\(kind)[,.]?\\s+(?:no,?\\s+wait|no|wait|sorry|i mean|or rather),?\\s+(\(kind))\\b", with: "$1", options: .regularExpression)
         }
         return s
     }

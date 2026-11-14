@@ -142,6 +142,7 @@ private struct Cases: Decodable {
     #expect(t("The talk begins at nine, sorry, at ten") == "The talk begins at ten.")
     #expect(t("Order pizza for three, I mean four people") == "Order pizza for four people.")
     #expect(t("We fly out Friday, no wait, Saturday night") == "We fly out Saturday night.")
+    #expect(t("Can we push the review to Monday No, wait, Tuesday?") == "Can we push the review to Tuesday?")
     #expect(t("Park near the, actually park behind the gym") == "Park behind the gym.")
     // An answer, not a correction: nothing said earlier is restarted, so it stays.
     #expect(t("I asked if she was coming and no, she can't make it") == "I asked if she was coming and no, she can't make it.")
