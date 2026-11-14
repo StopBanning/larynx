@@ -201,9 +201,9 @@ footer { padding-block: var(--space-xl) var(--space-2xl); color: var(--color-mut
           <img src="icon.png" alt="" width="40" height="40">
           <div class="bars" aria-hidden="true"><i style="--h:.5"></i><i style="--h:.8"></i><i style="--h:.6"></i><i style="--h:1"></i><i style="--h:.7"></i><i style="--h:.9"></i><i style="--h:.55"></i><i style="--h:.85"></i></div>
           <p class="said" aria-hidden="true"><span id="words"></span></p>
-          <p class="wrote">So can you refactor the login function so it returns early.</p>
+          <p class="wrote">Can you move the standup to Friday?</p>
         </div>
-        <figcaption class="caption">Said with two ums and two repeats. Written in <b class="num">0.15 s</b>.</figcaption>
+        <figcaption class="caption">Said with an um, an uh, a repeat and a change of mind. Written in <b class="num">0.15 s</b>.</figcaption>
       </div>
     </figure>
   </header>
@@ -313,7 +313,7 @@ footer { padding-block: var(--space-xl) var(--space-2xl); color: var(--color-mut
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   root.classList.add("js");
   var stage = document.querySelector(".stage"), words = document.getElementById("words");
-  var said = "um so can you uh refactor the the login function so it it returns early".split(" ");
+  var said = "um can you uh move the the standup to Thursday, no wait, Friday".split(" ");
   stage.classList.add("playing");
   setTimeout(function () { stage.classList.remove("playing"); }, 6000);  // never leave the sentence hidden
   var i = 0;
