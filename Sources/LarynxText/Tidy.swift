@@ -301,11 +301,24 @@ public enum Tidy {
         s = s.replacingOccurrences(of: "(?<![\\w'.\\-/$\\[(])(?<!for )i(?=\\s+(?!in\\b)[a-z]{2,})", with: "I", options: .regularExpression)
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)
+        // 5b. Days of the week are names ("friday" is "Friday"). Not in AI mode, where the text may be code.
+        if mode != .ai { s = capitalizeWeekdays(s) }
         // 6. Text for people ends like a sentence.
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
         // 7. Professional: a list you said ("first..., second...", "three things: a, b and c") becomes a real one.
         if style == .professional { s = spokenList(countedList(s)) }
         return s
+    }
+
+    static func capitalizeWeekdays(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?<![\\w./_\\-])(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s?)(?![\\w/_\\-])") else { return text }
+        let ns = text as NSString
+        var out = text
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            let day = ns.substring(with: m.range(at: 1))
+            out = (out as NSString).replacingCharacters(in: m.range(at: 1), with: day.prefix(1).uppercased() + day.dropFirst())
+        }
+        return out
     }
 
     /// The professional style's rules (PLAN-v1 P2). Each was read against every match in 677 real dictations before

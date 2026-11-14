@@ -103,7 +103,7 @@ Then:
 larynx transcribe memo.m4a                       # print a transcript
 larynx transcribe memo.m4a --mode ai             # the same, polished for a prompt
 larynx tidy --mode ai "um so the the build is uh failing"
-larynx tidy --style professional "yeah so we're gonna ship it friday you know"
+larynx tidy --style professional "yeah so we're gonna ship it friday, you know"
 larynx history --json --limit 20 | jq -r '.[].text'   # your last 20 dictations
 ```
 

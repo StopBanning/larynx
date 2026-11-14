@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Days of the week are capitalized** by the cleanup rules ("friday" is "Friday"), outside the AI mode and never
+  inside a path or an identifier. The speech model usually does this already; typed text through `tidy` and MCP did not.
 - **Professional style**: the same voice, a cleaner register for work. Drops "you know", "I mean", "dude" and
   other forms of address, openers like "Yeah," and "Alright,", swearing used for emphasis, and spoken forms like
   "gonna", and turns a list you say ("three things: ...", "first..., second...") into a numbered list. Turn it on

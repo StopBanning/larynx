@@ -107,3 +107,11 @@ private struct Cases: Decodable {
     #expect(Tidy.apply("It was damn good.", mode: .correspondence, style: .professional, keepSwearing: true) == "It was damn good.")
     #expect(Tidy.apply("It was damn good.", mode: .correspondence, style: .professional) == "It was good.")
 }
+
+@Test func daysOfTheWeekAreCapitalizedOutsideTheAIMode() {
+    #expect(Tidy.apply("the review moved to friday", mode: .correspondence) == "The review moved to Friday.")
+    #expect(Tidy.apply("we meet on mondays and thursdays", mode: .standard) == "We meet on Mondays and Thursdays")
+    // In the AI mode the text may be code, and in paths, flags and identifiers a day is not a name.
+    #expect(Tidy.apply("rename friday_report to monday", mode: .ai).contains("friday_report"))
+    #expect(Tidy.apply("open reports/friday.csv", mode: .standard).contains("reports/friday.csv"))
+}

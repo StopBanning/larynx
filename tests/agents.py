@@ -50,7 +50,7 @@ def main():
             {"jsonrpc": "2.0", "id": 5, "method": "tools/call",
              "params": {"name": "clean_text", "arguments": {"text": "run cube control get pods", "mode": "ai"}}},
             {"jsonrpc": "2.0", "id": 6, "method": "tools/call",
-             "params": {"name": "clean_text", "arguments": {"text": "yeah so we're gonna ship it friday you know", "style": "professional"}}},
+             "params": {"name": "clean_text", "arguments": {"text": "yeah so we're gonna ship it friday, you know", "style": "professional"}}},
         ]
         out = subprocess.run([binary, "mcp"], input="".join(json.dumps(m) + "\n" for m in messages), env=env,
                              capture_output=True, text=True, timeout=60).stdout
@@ -65,6 +65,9 @@ def main():
               "add_dictionary_word writes to the data folder")
         check(text(5) == "Run kubectl get pods", "the new word is used straight away")
         check(text(6) == "We're going to ship it Friday.", "clean_text with the professional style")
+        # The rules alone, with no AI rewrite after them: what a Mac without Apple Intelligence, or a coding app, gets.
+        check(tidy("--mode", "correspondence", "--style", "professional", "yeah so we're gonna ship it friday, you know")
+              == "We're going to ship it Friday.", "tidy --style professional, rules only")
         after = REAL_DICTIONARY.stat().st_mtime_ns if REAL_DICTIONARY.exists() else None
         check(before == after, "your real dictionary was not touched")
     finally:
