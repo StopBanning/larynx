@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The AI mode cleans noise, not voice** (Colin, Nov 14): in coding agents and terminals, "you know", "I mean" and
+  filler "like" now go, in casual too. Forms of address ("keep going, big dog"), swearing, "gonna" and an answering
+  "Yeah," stay: they are how the speaker talks. Professional Style still does the rest. Read against every real
+  dictation first: 51 of 1,055 change, all padding; the forms of address the first version dropped were the
+  speaker's voice, so they were put back.
+- **Fixed in the professional style**: "Like I said", "like they do in Japan", "but like it or not" and "and like
+  that, it was gone" keep their "like"; removing "you know" no longer leaves a stray comma. A new test runs every
+  must-not-change sentence that has a "like" through the professional style.
 - **Spoken corrections, every style**: "forward it to Ellen, no, forward it to Marcus", "at nine, sorry, at ten",
   "for three, I mean four people" and "Friday, no wait, Saturday" keep only what was meant, with no AI rewrite
   needed (so in coding apps and on Macs without Apple Intelligence too). The cue ("no", "no wait", "sorry", "I mean",

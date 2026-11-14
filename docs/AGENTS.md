@@ -12,9 +12,11 @@ There are three ways in, from no setup at all to scripting:
 
 ## 1. Dictate into coding agents and terminals
 
-Larynx picks how much to polish from the app in front. In these apps it uses the **AI mode**: fillers, stutters and
-false starts are taken out, but no period is added and the on-device AI rewrite never runs, because the model reading
-your prompt doesn't need polish and waiting for it would only slow you down.
+Larynx picks how much to polish from the app in front. In these apps it uses the **AI mode**: fillers, stutters,
+false starts and spoken padding ("you know", "I mean", filler "like") are taken out, but your voice stays: "dude",
+swearing and "gonna" are how you talk, and they can tell the agent something. No period is added and the on-device AI
+rewrite never runs, because the model reading your prompt doesn't need polish and waiting for it would only slow you
+down. Want the register of a work email instead? Turn on Professional Style.
 
 | Kind | Apps |
 | --- | --- |

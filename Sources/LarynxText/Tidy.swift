@@ -276,8 +276,10 @@ public enum Tidy {
         s = CodeWords.apply(s)
         // 2f. "like" as a filler, only where it cannot be the verb or a comparison.
         s = fillerLike(s)
-        // 2g. The professional style's extra cleanup (PLAN-v1 P2). Casual text never reaches it.
+        // 2g. The professional style's extra cleanup (PLAN-v1 P2). In the AI mode, the part of it that is only noise
+        // ("you know", "I mean", filler "like") runs in casual too: AI mode cleans noise, not voice (Colin, Nov 14).
         if style == .professional { s = professional(s, keepSwearing: keepSwearing) }
+        else if mode == .ai { s = professional(s, keepSwearing: true, voice: false) }
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
@@ -349,30 +351,35 @@ public enum Tidy {
 
     /// The professional style's rules (PLAN-v1 P2). Each was read against every match in 677 real dictations before
     /// it was turned on; the misses that reading found are the exclusions written into the patterns.
-    static func professional(_ text: String, keepSwearing: Bool) -> String {
+    /// `voice: false` runs only the rules that remove noise ("you know", "I mean", filler "like") and leaves the
+    /// speaker's voice alone: forms of address, spoken forms like "gonna", swearing, openers like "Yeah,", grammar.
+    static func professional(_ text: String, keepSwearing: Bool, voice: Bool = true) -> String {
         var s = text
         func re(_ pattern: String, _ template: String) {
             s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
         }
         let start = "(^|[.!?]\\s+)"
         // Spoken forms written out. "it's gotta" is "it has to", not "it's have to".
-        re("\\b(there|it|that|he|she)'s\\s+gotta\\b", "$1 has to")
-        for (spoken, written) in [("wanna", "want to"), ("gonna", "going to"), ("gotta", "have to"), ("kinda", "kind of"),
+        if voice { re("\\b(there|it|that|he|she)'s\\s+gotta\\b", "$1 has to") }
+        let spokenForms: [(String, String)] = voice ? [("wanna", "want to"), ("gonna", "going to"), ("gotta", "have to"), ("kinda", "kind of"),
                                   ("sorta", "sort of"), ("lemme", "let me"), ("gimme", "give me"), ("dunno", "don't know"),
-                                  ("'cause", "because"), ("cuz", "because"), ("cos", "because")] {
+                                  ("'cause", "because"), ("cuz", "because"), ("cos", "because")] : []
+        for (spoken, written) in spokenForms {
             re("(?<![\\w'])" + NSRegularExpression.escapedPattern(for: spoken) + "(?![\\w'])", written)
         }
         // "cause" only where it is "because": opening a clause ("the cause of" stays).
-        re("(^|[.!?,]\\s+)cause\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|this|that)\\b)", "$1because ")
-        re("\\b(for|to|with|at|see|thank|tell|love|miss|help|let|got)\\s+ya\\b", "$1 you")
+        if voice { re("(^|[.!?,]\\s+)cause\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|this|that)\\b)", "$1because ") }
+        if voice { re("\\b(for|to|with|at|see|thank|tell|love|miss|help|let|got)\\s+ya\\b", "$1 you") }
         // Tag fillers: "..., you know?", "or whatever", "and stuff", "I mean, ...".
         re(",?\\s*you know\\?(?=\\s|$)", ".")
-        re(",\\s*you know,\\s*", ", ")
+        re("(?<!\\bif),\\s*you know,\\s*", " ")  // "if, you know, you want" is an aside the shared rules keep
         re(",\\s*you know(?=[.!?]|$)", "")
         re(start + "you know,\\s+", "$1")
         // A trailing tag can stack: "and stuff, you know" (the "you know" goes only with the tag before it).
-        re(",?\\s+or whatever(?:,?\\s+you know)?(?=[.!?,]|$)", "")
-        re(",?\\s+and (?:stuff|shit)(?: like that)?(?:,?\\s+you know)?(?=[.!?,]|$)", "")
+        if voice {
+            re(",?\\s+or whatever(?:,?\\s+you know)?(?=[.!?,]|$)", "")
+            re(",?\\s+and (?:stuff|shit)(?: like that)?(?:,?\\s+you know)?(?=[.!?,]|$)", "")
+        }
         re(start + "I mean,\\s+", "$1")
         re(start + "I mean\\s+(?=(?:if|it's|that's|we|you|they|the|honestly|obviously|i|there's|this|yeah)\\b)", "$1")
         // A stray word before it ("Is I mean because...", "And I mean, ..."), and "I mean" dropped into the middle before
@@ -383,18 +390,19 @@ public enum Tidy {
         re("(?<!what)(?<!\\bif)(?<=\\w)\\s+I mean,?\\s+" + afterMean, " ")
         // Exclamations that are only emphasis.
         if !keepSwearing { re(start + "(?:god ?damn|damn) it[,.!]*\\s*", "$1") }
-        re(start + "oh my god[,.!]*\\s*", "$1")
+        if voice { re(start + "oh my god[,.!]*\\s*", "$1") }
         // Openers and forms of address, as many as are stacked ("Oh yeah, ...", "Alright, yeah, ..."). "So" only
         // when it opens a clause: "So far", "So weird" and "So much" stay.
         var previous = ""
         while previous != s {
             previous = s
-            re(start + "(?:yeah|yep|yup|okay so|ok so|alright|all right|dude|bro|man|big dog|ah|oh)(?:,\\s*|\\s+)(?=\\w)", "$1")
+            if voice { re(start + "(?:yeah|yep|yup|okay so|ok so|alright|all right|dude|bro|man|big dog|ah|oh)(?:,\\s*|\\s+)(?=\\w)", "$1") }
             // A swear said as an exclamation before the sentence starts: "Oh f***, the oven is still on".
             if !keepSwearing { re(start + "(?:oh\\s+)?(?:fuck|shit|damn|goddamn|god damn|crap)(?:\\s+(?:me|yeah|man|dude))?[,.!]+\\s*(?=\\w)", "$1") }
-            re(start + "so(?:,\\s*|\\s+(?=(?:we|i|you|they|he|she|it|let's|that's|it's|there's|this|if|yeah)\\b))", "$1")
+            if voice { re(start + "so(?:,\\s*|\\s+(?=(?:we|i|you|they|he|she|it|let's|that's|it's|there's|this|if|yeah)\\b))", "$1") }
         }
-        re(",\\s*(?:dude|bro|man|big dog|brother|my brother|buddy|bud|my guy|homie)(?=[.!?,]|$)", "")
+        // Forms of address ("keep going, big dog") are the speaker's voice: only the professional style drops them.
+        if voice { re(",\\s*(?:dude|bro|man|big dog|brother|my brother|buddy|bud|my guy|homie)(?=[.!?,]|$)", "") }
         // Swearing used for emphasis. Not where it is the verb ("they kept f***ing the order up").
         if !keepSwearing {
             re("\\b(?:fucking|fuckin'?|freaking|frickin'?|goddamn|god damn|damn)\\s+(?!(?:it|up|around|with|over|off|me|him|her|them|us|you)\\b)(?!(?:\\w+\\s+){1,2}(?:up|over|around|off)\\b)(?=\\w)", "")
@@ -406,12 +414,14 @@ public enum Tidy {
         re("\\balmost like\\s+(?=\\w+ed\\b)", "almost ")
         re("\\b(can|could|will|would|should|must|might)\\s+be\\s+like\\s+(?=\\w)", "$1 be ")
         // "There's two files": a count after "there's" takes "there are".
-        re("\\bthere's\\s+(?=(?:two|three|four|five|six|seven|eight|nine|ten|[2-9]|several|many|a few|a couple of|some|lots of|a lot of)\\s+\\w+s\\b)", "there are ")
+        if voice { re("\\bthere's\\s+(?=(?:two|three|four|five|six|seven|eight|nine|ten|[2-9]|several|many|a few|a couple of|some|lots of|a lot of)\\s+\\w+s\\b)", "there are ") }
         // "like" as a filler, where it cannot be a verb or a comparison: opening a sentence before a subject ("Like most of
         // them are..."; not before "you" or "the", where it is a comparison: "Like her, I...", "Like the blue one"), between commas ("it's, like, fine"), after "and/but/so" before a clause, and between a preposition and "the/a" ("in like the corner").
-        re(start + "like,?\\s+(?=(?:i|i'll|i'm|we|they|he|she|it|it's|that's|there's|most|half|everyone|nobody|honestly|literally|maybe|basically)\\b)", "$1")
+        // Not "Like I said" / "like they do in Japan" (a comparison or a set phrase).
+        re(start + "like,?\\s+(?=(?:i|i'll|i'm|we|they|he|she|it|it's|that's|there's|most|half|everyone|nobody|honestly|literally|maybe|basically)\\b)(?!(?:i|we|they|he|she|you)\\s+(?:said|say|told|mentioned|do|did|does|used to|always|never)\\b)", "$1")
         re(",\\s+like,\\s+", " ")
-        re("\\b(and|but|so|or|because)\\s+like,?\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|the|this|that|most|all)\\b)", "$1 ")
+        // Not "like it or not" or "and like that, it was gone".
+        re("\\b(and|but|so|or|because)\\s+like,?\\s+(?=(?:i|we|you|they|he|she|it|it's|that's|there's|the|this|that|most|all)\\b)(?!it or not\\b)(?!(?:that|this)[,.!?]|(?:that|this)$)(?!(?:i|we|they|he|she|you)\\s+(?:said|say|told|do|did|does)\\b)", "$1 ")
         re("\\b(in|of|on|at|with|from|into)\\s+like\\s+(?=(?:the|a|an|my|your|our|this|that)\\b)", "$1 ")
         // "yep" or "yeah" dropped into the middle before "and": "finish the budget yep and call me".
         re("(?<=\\w),?\\s+(?:yep|yeah|yup)\\s+(?=and\\b)", " ")

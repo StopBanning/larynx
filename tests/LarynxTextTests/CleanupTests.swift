@@ -64,6 +64,15 @@ private struct Cases: Decodable {
     }
 }
 
+/// The professional style removes more ("Yeah," openers, swearing), but never a "like" that is a verb, a comparison or
+/// a set phrase ("Like I said", "like it or not", "and like that, it was gone").
+@Test func theProfessionalStyleKeepsEveryMeaningfulLike() throws {
+    for c in try Cases.load().mustNotChange where c.input.lowercased().contains("like") {
+        #expect(Tidy.apply(c.input, mode: .ai, style: .professional).contains("like") || Tidy.apply(c.input, mode: .ai, style: .professional).contains("Like"),
+                "\(c.id): professional dropped a meaningful like")
+    }
+}
+
 // Exercise rejection paths too: accepting every rewrite would pass the golden-output cases.
 @Test func unsafeRewritesAreRejected() {
     let original = "Please send the final report to Sam tomorrow."
@@ -174,6 +183,20 @@ private struct Cases: Decodable {
 }
 
 @Test func youYouKnowKeepsBothYous() {
-    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .ai) == "Nobody told you, you know, that the shop moved")
+    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .correspondence) == "Nobody told you, you know, that the shop moved.")
+    // The AI mode drops "you know" as noise, and the "you" it follows stays.
+    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .ai) == "Nobody told you that the shop moved")
     #expect(Tidy.apply("Did you you finish the report", mode: .ai) == "Did you finish the report")
+}
+
+@Test func theAIModeCleansNoiseButKeepsTheSpeakersVoice() {
+    func ai(_ s: String) -> String { Tidy.apply(s, mode: .ai) }
+    // Noise goes: discourse fillers carry nothing a model needs.
+    #expect(ai("Can you, you know, rerun the migration") == "Can you rerun the migration")
+    #expect(ai("I mean the schema looks wrong") == "The schema looks wrong")
+    #expect(ai("Like I think the cache is stale") == "I think the cache is stale")
+    // Voice stays: answers, forms of address, swearing and spoken forms are how the speaker talks.
+    #expect(ai("Yeah, ship it") == "Yeah, ship it")
+    #expect(ai("Nice work, buddy") == "Nice work, buddy")
+    #expect(ai("We're gonna fix this damn bug") == "We're gonna fix this damn bug")
 }
