@@ -30,41 +30,53 @@ jobs:
             ~/.cargo/git
             windows/target
           key: cargo-${{ runner.os }}-${{ hashFiles('windows/Cargo.lock') }}
-      - name: Build larynx.exe
+      - name: Build larynx.exe (the app) and larynx-cli.exe (the same code with a console, for tools and tests)
         working-directory: windows
-        run: cargo build --release --locked
+        run: cargo build --release --locked --bins
       - name: Unit tests (with the cleanup DLL)
         working-directory: windows
         run: |
           $dll = (Get-ChildItem ../.build -Recurse -Filter LarynxTextC.dll | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).FullName
           $env:LARYNX_TEXT_LIB = $dll
           $env:PATH = "$(Split-Path $dll);$env:PATH"
-          cargo test --release --locked
+          cargo test --release --locked --lib
       - name: Stage a self-contained folder
         run: ./windows/ci/stage.ps1 -Dist dist
       - name: Cleanup cases through the staged app, with no toolchain on PATH
         shell: cmd
         run: |
           set PATH=C:\Windows\System32;C:\Windows
-          dist\larynx.exe cleanup-check tests\cases.json
-          dist\larynx.exe clean correspondence um so I think we should uh move the meeting to thursday
+          dist\larynx-cli.exe cleanup-check tests\cases.json
+          dist\larynx-cli.exe clean correspondence um so I think we should uh move the meeting to thursday
       - uses: actions/cache@v4
         with:
           path: models
           key: parakeet-tdt-0.6b-v3-onnx-int8-v1
       - name: Download the speech model (int8, about 670 MB)
-        run: dist/larynx.exe setup --model models/parakeet-int8
+        run: dist/larynx-cli.exe setup --model models/parakeet-int8
       - name: Synthetic speech for the benchmark
         run: ./windows/ci/make-speech.ps1 -Out speech
       - name: Transcribe the fixture (CPU)
         run: |
-          dist/larynx.exe transcribe --model models/parakeet-int8 --provider cpu tests/fixtures/report.wav speech/short.wav 2>&1 | Tee-Object transcribe.txt
+          dist/larynx-cli.exe transcribe --model models/parakeet-int8 --provider cpu tests/fixtures/report.wav speech/short.wav 2>&1 | Tee-Object transcribe.txt
           if (-not (Select-String -Path transcribe.txt -Pattern "send the report tomorrow" -Quiet)) { throw "fixture not transcribed" }
+      - name: Dictate into Notepad end to end (hold Right Ctrl, speak, let go)
+        run: |
+          dist/larynx-cli.exe e2e --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --feed speech/fillers.wav --expect "launch|next week" --reject "um|uh" --out e2e
+      - name: Screenshot of the pill as PNG
+        if: always()
+        run: |
+          if (Test-Path e2e/pill.bmp) {
+            Add-Type -AssemblyName System.Drawing
+            $img = [System.Drawing.Image]::FromFile((Resolve-Path e2e/pill.bmp))
+            $img.Save("$PWD/e2e/pill.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+            Remove-Item e2e/pill.bmp
+          }
       - name: Benchmark on CPU
-        run: dist/larynx.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
+        run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
       - name: Benchmark on DirectML (CI has no GPU; this checks the path works, not its speed)
         continue-on-error: true
-        run: dist/larynx.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json
+        run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json
       - name: Summary
         if: always()
         run: |
@@ -88,6 +100,7 @@ jobs:
             bench-*.json
             transcribe.txt
             speech/manifest.json
+            e2e/
       - uses: actions/upload-artifact@v4
         with:
           name: larynx-windows-x64

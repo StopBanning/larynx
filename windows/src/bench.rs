@@ -108,9 +108,9 @@ pub fn stream_once(engine: &mut Engine, audio: &[f32], preview: bool) -> Result<
     let mut d = Dictation::new(engine, buffer.clone(), Config::default());
     d.live_preview = preview;
     while !feeder.is_finished() {
-        d.tick();
+        d.tick(engine);
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
     let _ = feeder.join();
-    d.finish()
+    d.finish(engine)
 }

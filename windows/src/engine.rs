@@ -96,8 +96,7 @@ pub struct Outcome {
     pub final_timing: Timing,
 }
 
-pub struct Dictation<'e> {
-    engine: &'e mut Engine,
+pub struct Dictation {
     generation: u64,
     seg: Segmenter,
     parts: Vec<Option<String>>,
@@ -110,12 +109,11 @@ pub struct Dictation<'e> {
     pub live_preview: bool,
 }
 
-impl<'e> Dictation<'e> {
-    pub fn new(engine: &'e mut Engine, audio: Arc<Mutex<Vec<f32>>>, cfg: Config) -> Self {
+impl Dictation {
+    pub fn new(engine: &mut Engine, audio: Arc<Mutex<Vec<f32>>>, cfg: Config) -> Self {
         engine.generation += 1;
         let generation = engine.generation;
         Dictation {
-            engine,
             generation,
             seg: Segmenter::new(cfg),
             parts: Vec::new(),
@@ -128,12 +126,12 @@ impl<'e> Dictation<'e> {
         }
     }
 
-    fn send(&mut self, kind: Kind, cut: Cut, cancel: Option<Arc<RunOptions>>) {
+    fn send(&mut self, engine: &Engine, kind: Kind, cut: Cut, cancel: Option<Arc<RunOptions>>) {
         let audio = {
             let a = self.audio.lock().unwrap();
             a[cut.ctx_start..cut.ctx_end.min(a.len())].to_vec()
         };
-        let _ = self.engine.jobs.send(Job { generation: self.generation, kind, cut, audio, cancel });
+        let _ = engine.jobs.send(Job { generation: self.generation, kind, cut, audio, cancel });
     }
 
     fn take_done(&mut self, d: Done) {
@@ -153,8 +151,8 @@ impl<'e> Dictation<'e> {
     }
 
     /// Call every 50-100 ms while recording. Returns the words so far, for the pill.
-    pub fn tick(&mut self) -> String {
-        while let Ok(d) = self.engine.done.try_recv() {
+    pub fn tick(&mut self, engine: &mut Engine) -> String {
+        while let Ok(d) = engine.done.try_recv() {
             self.take_done(d);
         }
         let len = self.audio.lock().unwrap().len();
@@ -166,7 +164,7 @@ impl<'e> Dictation<'e> {
             let Some(cut) = cut else { break };
             self.parts.push(None);
             let i = self.parts.len() - 1;
-            self.send(Kind::Segment(i), cut, None);
+            self.send(engine, Kind::Segment(i), cut, None);
             self.preview_text.clear();
         }
         let segments_busy = self.parts.iter().any(Option::is_none);
@@ -179,7 +177,7 @@ impl<'e> Dictation<'e> {
                     self.preview = Some(opts.clone());
                     self.previews += 1;
                     self.last_preview = Instant::now();
-                    self.send(Kind::Preview, tail, Some(opts));
+                    self.send(engine, Kind::Preview, tail, Some(opts));
                 }
             }
         }
@@ -189,18 +187,18 @@ impl<'e> Dictation<'e> {
     }
 
     /// Key-up: stop any preview, transcribe what's left, and join everything in order.
-    pub fn finish(mut self) -> Result<Outcome, String> {
+    pub fn finish(mut self, engine: &mut Engine) -> Result<Outcome, String> {
         let key_up = Instant::now();
         if let Some(p) = self.preview.take() {
             let _ = p.terminate();
         }
         let tail = self.seg.tail(&self.audio.lock().unwrap());
         let tail_seconds = (tail.end - tail.start) as f32 / stream::RATE as f32;
-        self.send(Kind::Final, tail, None);
+        self.send(engine, Kind::Final, tail, None);
         let mut final_text: Option<String> = None;
         let mut final_timing = Timing::default();
         while final_text.is_none() || self.parts.iter().any(Option::is_none) {
-            match self.engine.done.recv_timeout(Duration::from_secs(30)) {
+            match engine.done.recv_timeout(Duration::from_secs(30)) {
                 Ok(d) if d.generation == self.generation => {
                     if let Kind::Final = d.kind {
                         final_timing = d.timing;

@@ -6,9 +6,9 @@ license = "MIT"
 description = "Larynx for Windows: hold a key, speak, let go, and clean text lands where the cursor is. All offline."
 publish = false
 
-[[bin]]
-name = "larynx"
-path = "src/main.rs"
+[lib]
+name = "larynx_windows"
+path = "src/lib.rs"
 
 [features]
 default = ["asr"]

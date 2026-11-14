@@ -1,4 +1,5 @@
-//! Larynx for Windows. `larynx` with no arguments is the app (tray icon, talk key, pill). The rest are tools:
+//! Larynx for Windows. `larynx.exe` is the app (tray icon, talk key, pill); `larynx-cli.exe` runs the same code
+//! with a console, for these tools:
 //!
 //!   larynx transcribe <file.wav>...       print what the model hears, with timings
 //!   larynx bench <manifest.json>          latency and accuracy, whole-file and streamed, as JSON lines
@@ -7,7 +8,6 @@
 //!   larynx setup                          download the speech model (about 670 MB)
 //!
 //! Common options: --model <dir>  --provider auto|cpu|directml  --fp32  --threads N
-#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod stream;
 mod text;
@@ -39,7 +39,7 @@ impl Args {
             if let Some(name) = a.strip_prefix("--") {
                 let takes_value = matches!(
                     name,
-                    "model" | "provider" | "threads" | "feed" | "log" | "key" | "out" | "repeat" | "mode"
+                    "model" | "provider" | "threads" | "feed" | "log" | "key" | "out" | "mode" | "app" | "expect" | "reject"
                 );
                 let value = if takes_value { it.next().unwrap_or_default() } else { "1".into() };
                 flags.insert(name.to_string(), value);
@@ -81,7 +81,9 @@ fn load_cleanup() -> Result<text::Cleanup, String> {
     text::Cleanup::load(&path)
 }
 
-fn main() {
+/// Runs a command line (`app` is what an empty command means: the GUI app, or usage for the console tool).
+pub fn entry(app: bool) {
+    let _ = app; // only the Windows app uses it
     let args = Args::parse();
     let command = args.positional.first().cloned().unwrap_or_default();
     let result = match command.as_str() {
@@ -93,10 +95,12 @@ fn main() {
         #[cfg(feature = "asr")]
         "bench" => bench::bench(&args),
         #[cfg(all(windows, feature = "asr"))]
-        "" | "run" => win::app::run(&args),
+        "run" => win::app::run(&args),
+        #[cfg(all(windows, feature = "asr"))]
+        "" if app => win::app::run(&args),
         #[cfg(all(windows, feature = "asr"))]
         "e2e" => win::e2e::run(&args),
-        _ => Err(format!("unknown command {command:?}; see the top of src/main.rs")),
+        _ => Err(format!("unknown command {command:?}; see the top of windows/src/lib.rs")),
     };
     if let Err(e) = result {
         eprintln!("larynx: {e}");
@@ -129,7 +133,7 @@ fn clean_one(args: &Args) -> Result<(), String> {
 }
 
 /// Downloads the int8 model with Windows' own curl.exe (or any curl), resuming partial files.
-fn setup(args: &Args) -> Result<(), String> {
+pub fn setup(args: &Args) -> Result<(), String> {
     let dir = model_dir(args);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     for f in MODEL_FILES_INT8 {
