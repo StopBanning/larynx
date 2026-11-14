@@ -1,0 +1,83 @@
+{
+ "date": "2026-11-14",
+ "commit": "9ce6642",
+ "machine": "Apple M6, 16 GB, macOS 27.2.1",
+ "results": {
+  "ultra": {
+   "accents": {
+    "clips": 144,
+    "wer": 15.89,
+    "punctF1": null,
+    "names": null,
+    "p50ms": 73,
+    "p90ms": 134,
+    "rtfx": 68.9,
+    "examples": [
+     {
+      "ref": "HI MY PARTICIPANT NUMBER IS C FIVE FOUR DASH P ONE",
+      "hyp": "Hi, my participant number is C54-P1."
+     },
+     {
+      "ref": "HI MY PARTICIPANT NUMBER IS C FIVE FOUR DASH P TWO",
+      "hyp": "Hi, my participant number is C54-P2."
+     },
+     {
+      "ref": "[withheld: shares a phrase with the author's own dictation]",
+      "hyp": "[withheld: shares a phrase with the author's own dictation]"
+     }
+    ]
+   }
+  },
+  "parakeet": {
+   "accents": {
+    "clips": 144,
+    "wer": 17.23,
+    "punctF1": null,
+    "names": null,
+    "p50ms": 68,
+    "p90ms": 112,
+    "rtfx": 78.3,
+    "examples": [
+     {
+      "ref": "HI MY PARTICIPANT NUMBER IS C FIVE FOUR DASH P TWO",
+      "hyp": "Okay, my participant number is C five four dash P two."
+     },
+     {
+      "ref": "OKAY THANK YOU VERY MUCH FOR THE ADVICES",
+      "hyp": "Okay, thank you very much for the advice."
+     },
+     {
+      "ref": "UH I SEE THE THE REMAINING UH MEETING TIME BUT MAYBE THE RECORDING TIME IS FINISHED",
+      "hyp": "Uh I see the uh remaining uh meeting time, but maybe the recording time is finished."
+     }
+    ]
+   }
+  },
+  "unified": {
+   "accents": {
+    "clips": 144,
+    "wer": 19.46,
+    "punctF1": null,
+    "names": null,
+    "p50ms": 75,
+    "p90ms": 116,
+    "rtfx": 14.4,
+    "examples": [
+     {
+      "ref": "HI MY PARTICIPANT NUMBER IS C FIVE FOUR DASH P ONE",
+      "hyp": "Hi, my participant number is C54-P1."
+     },
+     {
+      "ref": "HI MY PARTICIPANT NUMBER IS C FIVE FOUR DASH P TWO",
+      "hyp": "My participant number is C54-P2"
+     },
+     {
+      "ref": "[withheld: shares a phrase with the author's own dictation]",
+      "hyp": "[withheld: shares a phrase with the author's own dictation]"
+     }
+    ]
+   }
+  }
+ },
+ "note": "Strings that share a four-word phrase with the author's own dictations are withheld; scores were computed before."
+}

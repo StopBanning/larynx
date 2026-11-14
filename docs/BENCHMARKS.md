@@ -148,6 +148,52 @@ printer" heard as "that the printer", "we we move" as "we remove"); "that that" 
 library"); and "never mind" cancelling the sentence before it is not handled. Results: `bench/results/compare-2026-11-13.json`
 (run 1) and `compare-2026-11-14.json` (run 2), with every output.
 
+## Accents: real conversational English from many first languages (Nov 14)
+
+The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split
+of EdAcc, the Edinburgh International Accents of English Corpus (CC BY-SA 4.0), six from each of 24 accent labels so
+the common ones do not swamp the rest. `python3 bench/accents.py` takes the same seeded sample; `python3
+bench/compare.py --sets accents` and `python3 bench/run.py --engines ultra,parakeet,unified --sets accents` score it.
+The speech is unscripted conversation, much harder than dictation: even Mainstream US English is 17% here.
+
+Word errors against EdAcc's transcripts, speech model only (the references keep every "um" and repeated word, so the
+cleanup, which removes them, is not scored here; read clip by clip, its removals were right, and the one wrong one,
+"told you, you know" losing a "you", is fixed):
+
+| Accent | Larynx (Ultra) | Apple on-device |
+| --- | --- | --- |
+| Bulgarian | 13.1% | **11.9%** |
+| Catalan | 17.1% | **16.4%** |
+| Chinese | **13.8%** | 19.3% |
+| Eastern European | **10.3%** | 11.5% |
+| European | **7.4%** | 9.8% |
+| French | **13.0%** | 14.8% |
+| Ghanaian English | **21.7%** | **21.7%** |
+| Indian English | **20.0%** | 21.7% |
+| Indonesian | **10.2%** | 14.8% |
+| Irish English | **9.7%** | 19.4% |
+| Israeli | **25.0%** | 26.2% |
+| Italian | **13.0%** | 15.3% |
+| Jamaican English | **23.9%** | 26.9% |
+| Kenyan English | **15.9%** | 20.5% |
+| Latin American | **6.1%** | 14.0% |
+| Lithuanian | **17.5%** | 23.8% |
+| Mainstream US English | **17.2%** | 25.0% |
+| Nigerian English | **11.9%** | 16.3% |
+| Romanian | **19.1%** | 25.2% |
+| Scottish English | **27.9%** | **27.9%** |
+| Southern British English | **13.4%** | 15.8% |
+| Spanish | **21.9%** | 26.7% |
+| Vietnamese | 27.6% | **26.7%** |
+| Not given | **8.9%** | 19.0% |
+| **All 144 clips** | **15.7%** | 19.3% |
+
+Larynx's own models on the same clips: **Ultra 15.9%** (the default), Parakeet v3 17.2%, Parakeet Unified 19.5%, so
+the default is already the best of them for accents. Six clips per accent is about 100 words each: a single accent's
+number moves a few points with a different sample, so read the table for patterns (Scottish, Vietnamese, Israeli and
+Jamaican English are hardest for both), not for close races. Results: `bench/results/compare-2026-11-14-accents.json`
+and `bench-2026-11-14-9ce6642.json`.
+
 ## The other apps (facts from their own pages, read Nov 13, 2026)
 
 Feeding the same audio to the other apps needs a virtual audio driver, so they are compared on what they say about
