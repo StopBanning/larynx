@@ -179,8 +179,8 @@ A measured comparison with the Mac's built-in dictation and other free apps is p
 | Scriptable | CLI, JSON-lines API, MCP server | Limited |
 
 Not there yet: a downloadable signed app, rewriting selected text by voice, measured support for languages other
-than English, and Windows (the text engine and the speech model already run on Windows in CI:
-[docs/WINDOWS.md](docs/WINDOWS.md)).
+than English, and Windows (a first native prototype dictates into Notepad end to end in CI, not yet tried on a
+real PC: [docs/WINDOWS.md](docs/WINDOWS.md)).
 
 ## Build from a checkout
 
@@ -245,6 +245,7 @@ a sentence for Mail, Slack, Messages and Notes.
 | `python3 tests/site.py` | The landing page (`site/`, built by `scripts/make-site.py`): its numbers match this README and BENCHMARKS, the first load stays under 300 KB, and every link into the repo works | 9/9 (Nov 13) |
 | `python3 tests/install.py` | The installer into an empty home folder, signed ad hoc as on someone else's Mac: the bundle, its signature, icon and resources, the binary runs, no data left behind; then the uninstall leaves that home clean. Also runs in CI on a clean Mac | 11/11 (Nov 13) |
 | CI `portable.yml` | The text engine builds and passes its tests on Windows and Linux; Parakeet runs on a Windows CPU | pass |
+| CI `windows.yml` | The Windows prototype (`windows/`): the cleanup cases through `larynx-text.exe`, then hold Right Ctrl in Notepad, speak (a recording played in real time), let go, and the cleaned words arrive with the focus and the clipboard unchanged; latency and streaming accuracy on synthetic speech | pass |
 
 Spoken-suite detail (Parakeet Ultra, AI rewrite on where it would run, Nov 11):
 

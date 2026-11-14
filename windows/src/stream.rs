@@ -190,40 +190,60 @@ fn norm(word: &str) -> String {
     word.chars().filter(|c| c.is_alphanumeric() || *c == '\'').flat_map(char::to_lowercase).collect()
 }
 
-/// How many of the words at the seam two pieces share when the last `k` words so far are laid over the first `k`
-/// of the next piece.
-fn shared(out: &[Word], next: &[Word], k: usize) -> usize {
-    (0..k).filter(|&i| {
-        let (a, b) = (norm(&out[out.len() - k + i].text), norm(&next[i].text));
-        !a.is_empty() && a == b
-    })
-    .count()
+/// How many words two runs of the same length share, position by position.
+fn shared(a: &[Word], b: &[Word]) -> usize {
+    a.iter()
+        .zip(b)
+        .filter(|(x, y)| {
+            let (x, y) = (norm(&x.text), norm(&y.text));
+            !x.is_empty() && x == y
+        })
+        .count()
 }
 
-/// Joins segments (each with where its cut started, in seconds). Neighbours overlap around each cut. The longest
-/// run that ends what we have and starts the next piece, allowing a misheard word in a run of three or more, is
-/// taken from the next piece (it heard those words in the middle of its audio, the earlier piece at the end of
-/// its). Where the two don't line up at all, each keeps its own side of the cut.
+/// Where the next piece lines up with the end of what we have: (words of ours it covers, words of its own before
+/// that). The longest run wins; a run of three or more may have one misheard word; up to three extra words at the
+/// start of the next piece are allowed (words we missed), but only for runs of two or more.
+fn seam(out: &[Word], next: &[Word]) -> Option<(usize, usize)> {
+    let most = out.len().min(next.len()).min(16);
+    for k in (1..=most).rev() {
+        for j in 0..=3usize {
+            if j + k > next.len() || (j > 0 && k < 2) {
+                continue;
+            }
+            let n = shared(&out[out.len() - k..], &next[j..j + k]);
+            let ok = if k <= 2 { n == k } else { n + 1 >= k && n * 10 >= k * 7 };
+            if ok {
+                return Some((k, j));
+            }
+        }
+    }
+    None
+}
+
+/// Joins segments (each with where its cut started, in seconds). Neighbours overlap around each cut, so the next
+/// piece normally repeats the last words we have. Where it lines up (see `seam`), the overlap is taken from the next
+/// piece, which heard those words in the middle of its audio rather than at the end. Where it doesn't, nothing we
+/// already have is dropped: only the next piece's words that come after ours (by time) are added.
 pub fn merge(pieces: &[(f32, Vec<Word>)]) -> String {
     let mut out: Vec<Word> = Vec::new();
-    for (start, next) in pieces {
+    for (_, next) in pieces {
         if next.is_empty() {
             continue;
         }
-        let most = out.len().min(next.len()).min(16);
-        let overlap = (1..=most).rev().find(|&k| {
-            let n = shared(&out, next, k);
-            if k <= 2 { n == k } else { n + 1 >= k && n * 10 >= k * 7 }
-        });
-        match overlap {
-            Some(k) => {
+        if out.is_empty() {
+            out.extend(next.iter().cloned());
+            continue;
+        }
+        match seam(&out, next) {
+            Some((k, _)) => {
                 out.truncate(out.len() - k);
                 out.extend(next.iter().cloned());
             }
-            None if out.is_empty() => out.extend(next.iter().cloned()),
             None => {
-                out.retain(|w| w.time < *start);
-                out.extend(next.iter().filter(|w| w.time >= *start).cloned());
+                let last = out.last().map(|w| w.time).unwrap_or(f32::NEG_INFINITY);
+                // Two transcriptions place the same word up to ~0.15 s apart.
+                out.extend(next.iter().filter(|w| w.time > last + 0.15).cloned());
             }
         }
     }
@@ -357,13 +377,24 @@ mod tests {
     }
 
     #[test]
+    fn merge_lines_up_a_piece_that_starts_with_a_word_we_missed() {
+        // The case CI found: one piece lost "in town."; the next starts with "town." before the words both have.
+        let pieces = vec![
+            (8.76, vec![w("and", 10.78), w("have", 10.94), w("dinner", 11.18)]),
+            (10.9, vec![w("On", 12.84), w("Sunday", 13.0)]),
+            (13.02, vec![w("town.", 12.16), w("On", 12.88), w("Sunday", 13.12), w("we", 13.68), w("pack", 13.92)]),
+        ];
+        assert_eq!(merge(&pieces), "and have dinner town. On Sunday we pack");
+    }
+
+    #[test]
     fn merge_falls_back_to_times_when_pieces_disagree() {
         // The first piece heard its last word badly ("install"); the second heard it well, before its cut.
         let pieces = vec![
             (0.0, vec![w("because", 0.2), w("the", 0.6), w("install", 0.8)]),
             (1.0, vec![w("the", 0.6), w("installer", 0.8), w("needs", 1.2), w("testing.", 1.5)]),
         ];
-        // No shared run at the seam: the second piece's words before its cut (1.0 s) are dropped.
+        // No shared run at the seam: nothing already kept is dropped; only later words are added.
         assert_eq!(merge(&pieces), "because the install needs testing.");
         // With a shared run, the later piece's version is kept once.
         let pieces = vec![(0.0, vec![w("so", 0.2), w("we", 0.4)]), (0.5, vec![w("so", 0.2), w("we", 0.4), w("moved", 0.7)])];
@@ -387,5 +418,31 @@ mod tests {
     fn word_error_rate() {
         assert_eq!(wer("Please send the report tomorrow.", "please send the report tomorrow"), 0.0);
         assert!((wer("a b c d", "a x c") - 0.5).abs() < 1e-6);
+    }
+}
+
+#[cfg(test)]
+mod replay {
+    use super::*;
+
+    /// Re-merges the pieces a CI benchmark recorded (`LARYNX_PIECES=bench-cpu.json`), to try a merge change
+    /// without running the model again.
+    #[test]
+    fn replay_recorded_pieces() {
+        let Ok(path) = std::env::var("LARYNX_PIECES") else { return };
+        let rows: Vec<serde_json::Value> = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        for r in rows {
+            let Some(pieces) = r["stream_pieces"].as_array() else { continue };
+            let pieces: Vec<(f32, Vec<Word>)> = pieces
+                .iter()
+                .map(|p| {
+                    let words = p[1].as_array().unwrap().iter().map(|w| Word { text: w["text"].as_str().unwrap().into(), time: w["time"].as_f64().unwrap() as f32 }).collect();
+                    (p[0].as_f64().unwrap() as f32, words)
+                })
+                .collect();
+            let text = merge(&pieces);
+            let reference = r["reference"].as_str().unwrap();
+            println!("{} stream {:.3} (was {:.3}) whole {:.3}\n  {}", r["wav"], wer(reference, &text), r["stream_wer"].as_f64().unwrap(), r["whole_wer"].as_f64().unwrap(), text);
+        }
     }
 }
