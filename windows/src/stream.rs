@@ -141,17 +141,23 @@ pub struct Token {
     pub time: f32,
 }
 
-/// The tokens of a transcription of [ctx_start, ctx_end) that belong to [start, end).
+/// How far past each side of a cut a segment keeps words (s). Two transcriptions of the same audio place a word at
+/// slightly different times, so a word near a cut could be claimed by both segments or by neither. Keeping a margin
+/// on both sides means no word is lost; `join` then removes the words the two pieces have in common.
+pub const MARGIN: f32 = 0.6;
+
+/// The tokens of a transcription of [ctx_start, ctx_end) that belong to [start, end), give or take `MARGIN`.
 pub fn keep_inside(tokens: &[Token], cut: &Cut) -> Vec<Token> {
     let offset = cut.ctx_start as f32 / RATE as f32;
-    let (lo, hi) = (cut.start as f32 / RATE as f32, cut.end as f32 / RATE as f32);
+    let lo = if cut.start == 0 { 0.0 } else { cut.start as f32 / RATE as f32 - MARGIN };
+    let hi = if cut.end == cut.ctx_end { f32::INFINITY } else { cut.end as f32 / RATE as f32 + MARGIN };
     let mut kept: Vec<Token> = Vec::new();
     let mut last_kept = false;
     for (i, t) in tokens.iter().enumerate() {
         let at = t.time + offset;
         // A word's pieces and the punctuation after it stay with the word's first piece.
         let continues = i > 0 && !t.piece.starts_with('\u{2581}');
-        let keep = if continues { last_kept } else { at >= lo && (at < hi || cut.end == cut.ctx_end) };
+        let keep = if continues { last_kept } else { at >= lo && at < hi };
         if keep {
             kept.push(t.clone());
         }
@@ -179,9 +185,27 @@ pub fn detokenize(tokens: &[Token]) -> String {
     out.trim().to_string()
 }
 
-/// Joins segment texts.
+fn norm(word: &str) -> String {
+    word.chars().filter(|c| c.is_alphanumeric() || *c == '\'').flat_map(char::to_lowercase).collect()
+}
+
+/// Joins segment texts. Neighbouring pieces overlap by up to a second or so (see `MARGIN`): the longest run of
+/// words that ends one piece and starts the next is kept once, in the first piece's spelling.
 pub fn join(parts: &[String]) -> String {
-    parts.iter().map(|s| s.trim()).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
+    let mut words: Vec<String> = Vec::new();
+    for part in parts {
+        let next: Vec<&str> = part.split_whitespace().collect();
+        if next.is_empty() {
+            continue;
+        }
+        let most = words.len().min(next.len()).min(12);
+        let overlap = (1..=most)
+            .rev()
+            .find(|&k| (0..k).all(|i| norm(&words[words.len() - k + i]) == norm(next[i]) && !norm(next[i]).is_empty()))
+            .unwrap_or(0);
+        words.extend(next[overlap..].iter().map(|w| w.to_string()));
+    }
+    words.join(" ")
 }
 
 /// Word error rate after lowercasing and dropping punctuation: how far `hyp` is from `reference`.
@@ -270,19 +294,33 @@ mod tests {
     }
 
     #[test]
-    fn keeps_tokens_inside_and_whole_words() {
-        // Context starts at 1.0 s; the segment is [2.0, 4.0).
-        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: secs(1.0), ctx_end: secs(5.0) };
+    fn keeps_tokens_inside_with_a_margin_and_whole_words() {
+        // Context starts at 1.0 s; the segment is [2.0, 4.0), kept with a 0.6 s margin: [1.4, 4.6).
+        let cut = Cut { start: secs(2.0), end: secs(4.0), ctx_start: secs(1.0), ctx_end: secs(5.5) };
         let tokens = vec![
             tok("\u{2581}said", 0.2),
             tok("\u{2581}Please", 1.1),
             tok("\u{2581}se", 2.9),
-            tok("nd", 3.1), // crosses the end: stays with its word
-            tok(".", 3.2),
-            tok("\u{2581}And", 3.3),
+            tok("nd", 3.7), // past the margin: stays with its word
+            tok(".", 3.7),
+            tok("\u{2581}And", 3.8),
         ];
         let kept = keep_inside(&tokens, &cut);
         assert_eq!(detokenize(&kept), "Please send.");
+    }
+
+    #[test]
+    fn join_drops_the_overlap_once() {
+        let parts = vec![
+            "I looked at the draft this morning. The".to_string(),
+            "morning. The first section reads well, but".to_string(),
+            "but the numbers do not match.".to_string(),
+        ];
+        assert_eq!(join(&parts), "I looked at the draft this morning. The first section reads well, but the numbers do not match.");
+        // No overlap: just joined.
+        assert_eq!(join(&["Hello there.".into(), "How are you?".into()]), "Hello there. How are you?");
+        // A capital after a period in the next piece doesn't stop the match; the first piece's spelling wins.
+        assert_eq!(join(&["we should, so".into(), "So I moved it.".into()]), "we should, so I moved it.");
     }
 
     #[test]

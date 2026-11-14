@@ -91,7 +91,14 @@ jobs:
       - name: Benchmark on DirectML (CI has no GPU; this checks the path works, not its speed)
         timeout-minutes: 10
         continue-on-error: true
-        run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json
+        run: |
+          dist/larynx-cli.exe bench --model models/parakeet-int8 --provider directml --no-stream --out bench-directml.json speech/manifest.json 2>&1 | Tee-Object directml.txt
+          if ($LASTEXITCODE -ne 0) { throw "DirectML did not run (expected on a runner with no GPU): $(Get-Content directml.txt -Raw)" }
+      - name: Streaming is as accurate as transcribing the whole recording
+        run: |
+          $bad = Get-Content bench-cpu.json -Raw | ConvertFrom-Json | Where-Object { $_.stream_wer -gt $_.whole_wer + 0.03 }
+          foreach ($r in $bad) { Write-Host "$($r.wav): streamed WER $($r.stream_wer) vs whole $($r.whole_wer)`n  streamed: $($r.stream_text)`n  whole:    $($r.whole_text)" }
+          if ($bad) { throw "streaming lost accuracy on $(@($bad).Count) file(s)" }
       - name: Summary
         if: always()
         run: |
@@ -113,6 +120,7 @@ jobs:
           name: results
           path: |
             bench-*.json
+            directml.txt
             transcribe.txt
             speech/manifest.json
             e2e/
