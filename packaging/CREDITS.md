@@ -37,3 +37,4 @@ Notes:
 | Data | Licence | Where its text is |
 | --- | --- | --- |
 | [SCOWL](https://wordlist.aspell.net/) English word list, the spelling fallback | Permissive (copyright notice kept) | `Larynx_LarynxText.bundle/.../SCOWL-Copyright.txt` |
+| [Paper Mono](https://github.com/paper-design/paper-mono) typeface, the pill's optional font and the website's headings | SIL OFL 1.1 | `PaperMono-OFL.txt` |

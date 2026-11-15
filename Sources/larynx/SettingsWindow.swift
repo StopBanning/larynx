@@ -137,6 +137,7 @@ private struct GeneralPane: View {
                                           }), in: 0...100)
                     Text("Solid").foregroundStyle(.secondary)
                 }
+                Toggle("Show my words in Paper Mono", isOn: onOff(.pillFont, on: "paper-mono", off: "system"))
                 Toggle("Say when a word was probably misheard", isOn: onOff(.doubtHint))
             }
             Section {

@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "larynx", targets: ["larynx"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.18.3", traits: []),
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.18.3", traits: ["Diarizer"]),  // speaker separation, for meeting mode
     ],
     targets: [
         .target(

@@ -190,6 +190,7 @@ final class Pill {
     /// Sizes the pill around its text (up to three lines, newest words kept) and grows upward from a fixed bottom edge.
     private func layout(text: String, dim: Bool) {
         guard let panel, let content else { return }
+        content.label.font = Pill.wordsFont()
         let font = content.label.font!
         func measure(_ t: String, _ w: CGFloat) -> NSSize {
             let r = (t as NSString).boundingRect(with: NSSize(width: w, height: 10_000),
@@ -512,5 +513,28 @@ final class Waveform: NSView {
             bar.backgroundColor = color.withAlphaComponent(alpha).cgColor
         }
         CATransaction.commit()
+    }
+}
+
+extension Pill {
+    /// The font of the live words: the Mac's own, or Paper Mono when `pillFont` is `paper-mono` (Settings → Pill).
+    static func wordsFont() -> NSFont {
+        if LarynxCore.Settings.shared.string(.pillFont) == "paper-mono", let mono = paperMono(size: 13) { return mono }
+        return .systemFont(ofSize: 14, weight: .medium)
+    }
+
+    /// Paper Mono ships inside the app (Resources/fonts, SIL OFL 1.1) and is registered for this process only.
+    private static let paperMonoReady: Bool = {
+        let candidates = [Bundle.main.resourceURL?.appendingPathComponent("fonts/PaperMono.ttf"),
+                          URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().appendingPathComponent("../../packaging/fonts/PaperMono.ttf")]
+        guard let url = candidates.compactMap({ $0 }).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else { return false }
+        return CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) || NSFontManager.shared.availableMembers(ofFontFamily: "Paper Mono") != nil
+    }()
+
+    static func paperMono(size: CGFloat) -> NSFont? {
+        guard paperMonoReady, NSFontManager.shared.availableMembers(ofFontFamily: "Paper Mono") != nil else { return nil }
+        let descriptor = NSFontDescriptor(fontAttributes: [.family: "Paper Mono"])
+            .addingAttributes([.traits: [NSFontDescriptor.TraitKey.weight: NSFont.Weight.medium.rawValue]])
+        return NSFont(descriptor: descriptor, size: size)
     }
 }

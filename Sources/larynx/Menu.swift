@@ -49,6 +49,21 @@ final class MenuController: NSObject, NSMenuDelegate {
         hint.isEnabled = false
         menu.addItem(hint)
 
+        // Meeting mode (docs/dev/MEETING.md): near the top and in plain words, so it is easy to find. Hidden until it is
+        // ready (meetingMode: on in settings.json shows it).
+        if LarynxCore.Settings.shared.string(.meetingMode) == "on" || MainActor.assumeIsolated({ MeetingController.shared.isRecording }) {
+        menu.addItem(.separator())
+        let recording = MainActor.assumeIsolated { MeetingController.shared.isRecording }
+        let meetingItem = NSMenuItem(title: recording ? "Stop Recording the Meeting" : "Start Recording a Meeting",
+                                     action: #selector(toggleMeeting), keyEquivalent: "m")
+        meetingItem.keyEquivalentModifierMask = [.command, .option]
+        meetingItem.target = self
+        menu.addItem(meetingItem)
+        let meetingsItem = NSMenuItem(title: "Meetings…", action: #selector(openMeetings), keyEquivalent: "")
+        meetingsItem.target = self
+        menu.addItem(meetingsItem)
+        }
+
         menu.addItem(.separator())
         let recentItem = NSMenuItem(title: "Recent", action: nil, keyEquivalent: "")
         let recentMenu = NSMenu()
@@ -352,6 +367,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     @objc func openSettings() { Task { @MainActor in SettingsWindow.shared.show() } }
 
     @objc func openHistory() { Task { @MainActor in HistoryWindow.shared.show() } }
+    @objc func toggleMeeting() { Task { @MainActor in MeetingController.shared.toggle() } }
+    @objc func openMeetings() { Task { @MainActor in MeetingsWindow.shared.show() } }
 
     @objc func fixLast() { Task { @MainActor in HistoryWindow.shared.show(fixLast: true) } }
 

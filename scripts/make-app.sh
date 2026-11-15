@@ -16,6 +16,9 @@ cp packaging/Larynx.icns "$APP/Contents/Resources/Larynx.icns"
 LIC="$APP/Contents/Resources/Licenses"
 mkdir -p "$LIC/FluidAudio"
 cp LICENSE packaging/CREDITS.md "$LIC/"
+mkdir -p "$APP/Contents/Resources/fonts"
+cp packaging/fonts/PaperMono.ttf "$APP/Contents/Resources/fonts/"
+cp packaging/fonts/OFL.txt "$LIC/PaperMono-OFL.txt"
 cp .build/checkouts/FluidAudio/LICENSE "$LIC/FluidAudio/"
 cp -R .build/checkouts/FluidAudio/ThirdPartyLicenses "$LIC/FluidAudio/"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -33,6 +36,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>15.0</string>
   <key>LSUIElement</key><true/>
   <key>NSMicrophoneUsageDescription</key><string>Larynx listens while you hold the talk key and turns your speech into text, on this Mac.</string>
+  <key>NSAudioCaptureUsageDescription</key><string>When you record a meeting, Larynx hears the call (Zoom, Teams, FaceTime and others) so your notes include everyone, not just you. The audio stays on this Mac.</string>
 </dict></plist>
 PLIST
 # A stable identity keeps macOS permissions across rebuilds (see scripts/make-signing-cert.sh); ad hoc otherwise.

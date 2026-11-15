@@ -41,6 +41,10 @@ override allows a later `defaults write` for that key to take effect again.
 | `style` | `casual` | `casual` or `professional`: how every dictation reads. Professional also drops "you know", "I mean", "dude" and other forms of address, openers like "Yeah," and "Alright,", swearing used for emphasis and spoken forms like "gonna" and "wanna", and turns spoken lists into numbered lists. Menu: Professional Style. |
 | `professionalKey` | `none` | `none`, `fn`, `rightOption`, `rightCommand` or `rightControl`. Holding this key dictates in the professional style whatever `style` says. It is also listened to as a talk key. Menu: Professional Key. |
 | `professionalSwearing` | `remove` | `remove` or `keep`: whether the professional style removes swearing used for emphasis ("so damn fast" becomes "so fast"). |
+| `pillFont` | `system` | The pill's live words in the Mac's own font (`system`) or in Paper Mono (`paper-mono`), the website's typeface. Settings → Pill. |
+| `meetingMode` | `off` | Meeting mode (in progress, [dev/MEETING.md](dev/MEETING.md)): `on` shows Start Recording a Meeting and Meetings… in the menu. |
+| `meetingSummary` | `on-device` | Which Apple model writes meeting notes: `on-device` (nothing leaves the Mac) or `private-cloud` (Apple Private Cloud Compute, macOS 27: the transcript goes to Apple's private servers for the summary; reads a two to three hour meeting at once). See [dev/MEETING.md](dev/MEETING.md). |
+| `meetingEmail` | `""` | The address "Email this to me" fills in for meeting notes. Empty: Mail opens with no recipient. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
 | `handsFree` | `on` | `on` or `off`; double-tap a talk key to keep recording with no key held. The next press of a talk key finishes, Esc cancels, and it stops by itself after 30 minutes. |

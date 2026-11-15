@@ -1,0 +1,33 @@
+{
+  "_about": "A synthetic client call (meeting mode tests, docs/dev/MEETING.md). Written for the test, said by macOS voices.",
+  "speakers": {"You": {"voice": "Daniel", "side": "you"}, "Priya": {"voice": "Moira", "side": "call"}},
+  "lines": [
+    ["Priya", "Hi, thanks for making time. I'd like to walk through the renovation schedule before the holidays."],
+    ["You", "Of course. Where are we?"],
+    ["Priya", "The kitchen is on track. The cabinets arrive on the twelfth and the installers start the day after."],
+    ["You", "And the bathroom?"],
+    ["Priya", "That's the problem. The tile you picked is back-ordered for six weeks. We can wait, or I can show you two similar tiles that are in stock."],
+    ["You", "Six weeks pushes us past New Year's, right?"],
+    ["Priya", "It does, into the middle of January."],
+    ["You", "Then send me photos of the two that are in stock. If either is close, we'll switch."],
+    ["Priya", "I'll send them tonight."],
+    ["You", "What about the permit for the deck?"],
+    ["Priya", "Still waiting on the city. I called them Monday. They said two to three weeks."],
+    ["You", "Can you call again next Monday and push a little?"],
+    ["Priya", "Yes, I'll call them Monday morning."],
+    ["You", "And the budget, are we still at sixty two thousand?"],
+    ["Priya", "Sixty two thousand five hundred, with the upgraded faucets you asked for."],
+    ["You", "That's fine. Let's keep the faucets."],
+    ["Priya", "Great. One thing I don't have an answer on yet is whether the electrician can come before the twelfth. I'll find out."],
+    ["You", "Okay. Thanks, Priya, talk soon."]
+  ],
+  "expect": {
+    "decisions": [["faucet"]],
+    "actions": [
+      {"words": ["photo"], "owner": "Priya", "due": "tonight"},
+      {"words": ["permit"], "owner": "Priya", "due": "Monday"}
+    ],
+    "open": [["electrician"]],
+    "facts": ["62,500", "six weeks"]
+  }
+}

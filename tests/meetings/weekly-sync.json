@@ -1,0 +1,37 @@
+{
+  "_about": "A synthetic weekly team sync (meeting mode tests, docs/dev/MEETING.md). Written for the test, said by macOS voices. 'side' is which track the line is on: 'you' (the microphone) or 'call'. 'expect' lists what the notes must contain: each entry is a set of words that must all appear in one item.",
+  "speakers": {"You": {"voice": "Samantha", "side": "you"}, "Dana": {"voice": "Karen", "side": "call"}, "Marcus": {"voice": "Daniel", "side": "call"}},
+  "lines": [
+    ["You", "Morning everyone. Let's get going, we've got three things today: the spring catalog, the warehouse move, and hiring."],
+    ["Dana", "Morning. Um, I can start with the catalog if that's okay."],
+    ["You", "Go ahead, Dana."],
+    ["Dana", "So the printer came back with a quote of eighteen thousand dollars for twenty thousand copies. That's about two thousand over what we budgeted."],
+    ["Marcus", "Is that with the heavier paper?"],
+    ["Dana", "Yes, the heavier paper. If we go back to the standard stock it comes down to about sixteen thousand."],
+    ["You", "Let's stay with the standard stock. The heavier paper isn't worth two thousand dollars to me."],
+    ["Dana", "Okay. I'll tell the printer today and get a revised proof by Thursday."],
+    ["You", "Great. Marcus, the warehouse."],
+    ["Marcus", "Right. The new lease starts on March first. The movers can do the last weekend of February, but they need a deposit by next Friday."],
+    ["You", "How much is the deposit?"],
+    ["Marcus", "Four thousand five hundred dollars."],
+    ["You", "Fine. Send me the invoice and I'll approve it this week."],
+    ["Marcus", "Will do. The other question is whether we keep the old storage unit for overflow. I honestly don't know yet how much space we'll have."],
+    ["You", "Let's decide that after you've walked the new space. No rush on it."],
+    ["Marcus", "Sounds good."],
+    ["You", "Last thing, hiring. We still need someone for customer support. Dana, any good candidates?"],
+    ["Dana", "Two strong ones. I'd like to bring both in for interviews next week."],
+    ["You", "Do it. Set them up for Tuesday or Wednesday, and I'll sit in on both."],
+    ["Dana", "Perfect, I'll send you the times tomorrow."],
+    ["You", "Okay, that's everything. Thanks both of you."]
+  ],
+  "expect": {
+    "decisions": [["standard"], ["deposit"]],
+    "actions": [
+      {"words": ["printer"], "owner": "Dana", "due": "Thursday"},
+      {"words": ["invoice"], "owner": "Marcus"},
+      {"words": ["interview"], "owner": "Dana"}
+    ],
+    "open": [["storage"]],
+    "facts": ["18,000", "16,000", "4,500", "March"]
+  }
+}

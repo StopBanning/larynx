@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Paper Mono in the pill, if you want it** (Settings → Pill → Show my words in Paper Mono, or `pillFont`):
+  the live words in the website's typeface. Off by default; the Mac's own font stays the standard. The font ships
+  inside the app under the SIL Open Font License.
+- **Meeting mode, in progress and hidden** (`meetingMode`, off): record a meeting from the microphone and the call's
+  audio, transcribe it while it runs, tell the speakers apart and write notes (summary, decisions, to-dos with names,
+  open questions) checked against the transcript. `larynx meeting` runs it from recordings; `tests/meeting.py` scores
+  it on scripted meetings. Design and status: [docs/dev/MEETING.md](docs/dev/MEETING.md).
 - **The AI mode cleans noise, not voice** (Colin, Nov 14): in coding agents and terminals, "you know", "I mean" and
   filler "like" now go, in casual too. Forms of address ("keep going, big dog"), swearing, "gonna" and an answering
   "Yeah," stay: they are how the speaker talks. Professional Style still does the rest. Read against every real
