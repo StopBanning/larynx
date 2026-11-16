@@ -200,7 +200,7 @@ private struct CleanupPane: View {
         Form {
             Section("Style") {
                 Picker("Every dictation", selection: setting(.style)) {
-                    Text("Casual").tag("casual"); Text("Professional").tag("professional")
+                    Text("Casual").tag("casual"); Text("Professional").tag("professional"); Text("Texting: lowercase, no final period").tag("texting")
                 }
                 Picker("Professional key", selection: setting(.professionalKey, apply: { _ in
                     if let hotkey = activeHotkey { hotkey.keys = withProfessionalKey(hotkey.keys) }

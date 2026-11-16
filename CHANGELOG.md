@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Texting style** (Settings → Cleanup → Style, or `style: texting`): casual, written the way people text. Sentences start lowercase and the last full stop goes ("sounds good, see you at 7"). Names, "I" and acronyms keep their capitals.
 - Meeting mode (still hidden): Claude writes the notes after every meeting once a Claude key is saved in Settings → Meetings (kept in the Keychain). Only the transcript is sent, never the audio. A meeting without notes gets a "Write the summary now" button.
 - **Paper Mono in the pill, if you want it** (Settings → Pill → Show my words in Paper Mono, or `pillFont`):
   the live words in the website's typeface. Off by default; the Mac's own font stays the standard. The font ships

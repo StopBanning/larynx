@@ -200,3 +200,13 @@ private struct Cases: Decodable {
     #expect(ai("Nice work, buddy") == "Nice work, buddy")
     #expect(ai("We're gonna fix this damn bug") == "We're gonna fix this damn bug")
 }
+
+@Test func theTextingStyleWritesLikeAText() {
+    func text(_ s: String) -> String { Tidy.apply(s, mode: .correspondence, style: .texting) }
+    #expect(text("sounds good, see you at 7") == "sounds good, see you at 7")
+    #expect(text("Are you free for lunch tomorrow? Let's do 12.") == "are you free for lunch tomorrow? let's do 12")
+    #expect(text("I can't make it. Dana can though.") == "I can't make it. Dana can though")  // "I" and names keep capitals
+    #expect(text("NASA called back. Wow!") == "NASA called back. wow!")                     // acronyms and "!" stay
+    #expect(text("Mark is here. Ask Mark.") == "Mark is here. ask Mark")                     // a word capitalized mid-sentence is a name
+    #expect(Tidy.apply("See you Friday.", mode: .correspondence, style: .casual) == "See you Friday.")  // casual untouched
+}

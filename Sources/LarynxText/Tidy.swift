@@ -5,8 +5,10 @@ import Foundation
 /// email); the style is the register. Casual is everything Larynx did before; professional also removes what you'd
 /// leave out when writing to a client: discourse fillers, "dude", swearing used for emphasis, spoken forms like
 /// "gonna", and turns spoken lists into real ones.
+/// Texting is casual written the way people text: sentences start lowercase and the last full stop goes ("sounds
+/// good, see you at 7"). Names, "I" and acronyms keep their capitals.
 public enum Style: String, Codable, Sendable, CaseIterable {
-    case casual, professional
+    case casual, professional, texting
 }
 
 public enum CleanupMode: String, Codable, Sendable {
@@ -324,7 +326,29 @@ public enum Tidy {
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
         // 7. Professional: a list you said ("first..., second...", "three things: a, b and c") becomes a real one.
         if style == .professional { s = spokenList(countedList(s)) }
+        // 8. Texting: lowercase sentence starts, no final full stop.
+        if style == .texting { s = texting(s) }
         return s
+    }
+
+    /// Lowercases the first word of each sentence when it is an ordinary English word (not "I", not a name, not an
+    /// acronym, not a word written with a capital elsewhere in the same text), and drops a final full stop. Question and
+    /// exclamation marks stay: they carry meaning.
+    static func texting(_ text: String, words: WordList = BundledWordList.shared) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(^|[.!?]\\s+|\\n\\s*)([A-Z][\\w']*)") else { return text }
+        let ns = text as NSString
+        let capitalizedMidSentence = Set((try? NSRegularExpression(pattern: "(?<=[a-z,;:] )[A-Z][\\w']*"))?
+            .matches(in: text, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range) } ?? [])
+        var out = text
+        for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            let word = ns.substring(with: m.range(at: 2))
+            let bare = word.split(separator: "'").first.map(String.init) ?? word
+            if bare == "I" || (word.count > 1 && word == word.uppercased()) || capitalizedMidSentence.contains(word) { continue }
+            guard words.contains(bare.lowercased()) else { continue }
+            out = (out as NSString).replacingCharacters(in: m.range(at: 2), with: word.prefix(1).lowercased() + word.dropFirst())
+        }
+        if out.hasSuffix(".") && !out.hasSuffix("..") { out.removeLast() }
+        return out
     }
 
     static func numberRanges(_ text: String) -> String {

@@ -60,7 +60,7 @@ public final class Settings: @unchecked Sendable {
             case .historyDays: return Int(value).map { (1...3650).contains($0) } ?? false
             case .keepAudio: return value == "off" || (Int(value).map { (1...365).contains($0) } ?? false)
             case .loginItemSet, .onboarded: return ["true", "false"].contains(value)
-            case .style: return ["casual", "professional"].contains(value)
+            case .style: return ["casual", "professional", "texting"].contains(value)
             case .professionalKey: return value == "none" || Hotkey.Key(rawValue: value) != nil
             case .professionalSwearing: return ["remove", "keep"].contains(value)
             case .meetingSummary: return ["auto", "claude", "on-device", "private-cloud"].contains(value)
