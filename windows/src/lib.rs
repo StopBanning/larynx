@@ -6,9 +6,14 @@
 //!   larynx cleanup-check <cases.json>     run tests/cases.json through the Swift cleanup library
 //!   larynx clean <mode> <text>            clean one sentence the way a dictation would be
 //!   larynx setup                          download the speech model (about 670 MB)
+//!   larynx meeting <you.wav> [them.wav]   transcribe a meeting (you, and the call), write its notes, save its page
+//!   larynx meeting-notes <meeting.json>   write the notes for a meeting already transcribed (--save keeps them)
+//!   larynx set-claude-key                 read the Anthropic API key from standard input into Credential Manager
 //!
 //! Common options: --model <dir>  --provider auto|cpu|directml  --fp32  --threads N
 
+pub mod credential;
+pub mod meeting;
 mod stream;
 mod text;
 mod wav;
@@ -90,6 +95,10 @@ pub fn entry(app: bool) {
         "cleanup-check" => cleanup_check(&args),
         "clean" => clean_one(&args),
         "setup" => setup(&args),
+        "meeting-notes" => meeting_notes(&args),
+        "set-claude-key" => set_claude_key(),
+        #[cfg(feature = "asr")]
+        "meeting" => bench::meeting(&args),
         #[cfg(feature = "asr")]
         "transcribe" => bench::transcribe(&args),
         #[cfg(feature = "asr")]
@@ -106,6 +115,38 @@ pub fn entry(app: bool) {
         eprintln!("larynx: {e}");
         std::process::exit(1);
     }
+}
+
+/// Notes for a meeting already transcribed (a saved meeting's JSON). Prints the notes; `--save` stores the meeting
+/// with them and prints the page's path.
+fn meeting_notes(args: &Args) -> Result<(), String> {
+    let path = args.positional.get(1).ok_or("usage: larynx meeting-notes <meeting.json> [--save]")?;
+    let mut m = meeting::load(std::path::Path::new(path))?;
+    let notes = meeting::write_notes(&m, credential::claude_key().as_deref(), &meeting::curl_post, &meeting::sleep_seconds)
+        .map_err(|e| e.to_string())?;
+    println!("{}", serde_json::to_string_pretty(&notes).map_err(|e| e.to_string())?);
+    if args.has("save") {
+        m.notes = Some(notes);
+        println!("{}", meeting::save(&m, &meeting_email())?.display());
+    }
+    Ok(())
+}
+
+/// The address "Email this to me" fills in: `LARYNX_MEETING_EMAIL`, else <data dir>\meetings\email.txt.
+pub fn meeting_email() -> String {
+    std::env::var("LARYNX_MEETING_EMAIL")
+        .ok()
+        .or_else(|| std::fs::read_to_string(meeting::folder().join("email.txt")).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
+}
+
+fn set_claude_key() -> Result<(), String> {
+    let mut key = String::new();
+    std::io::stdin().read_line(&mut key).map_err(|e| e.to_string())?;
+    credential::save(key.trim())?;
+    println!("{}", if key.trim().is_empty() { "Claude key removed." } else { "Claude key saved. Meeting notes will be written by Claude." });
+    Ok(())
 }
 
 fn cleanup_check(args: &Args) -> Result<(), String> {

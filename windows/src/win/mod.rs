@@ -5,5 +5,6 @@ pub mod e2e;
 pub mod focus;
 pub mod hotkey;
 pub mod insert;
+pub mod meeting;
 pub mod pill;
 pub mod tray;

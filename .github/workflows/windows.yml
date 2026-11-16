@@ -67,6 +67,21 @@ jobs:
         run: dist/larynx-cli.exe setup --model models/parakeet-int8
       - name: Synthetic speech for the benchmark
         run: ./windows/ci/make-speech.ps1 -Out speech
+      - name: A meeting end to end (two tracks, transcribed, notes from a stand-in for the Claude API)
+        timeout-minutes: 15
+        run: |
+          ./windows/ci/make-meeting.ps1 -Out meeting
+          $server = Start-Process python -ArgumentList "windows/ci/fake-claude.py","meeting/request.json" -PassThru -NoNewWindow
+          Start-Sleep 2
+          $env:ANTHROPIC_API_KEY = "ci-stand-in-key"
+          $env:LARYNX_CLAUDE_URL = "http://127.0.0.1:8765"
+          $env:LARYNX_DATA_DIR = "$PWD/meeting/data"
+          dist/larynx-cli.exe meeting --model models/parakeet-int8 --provider cpu meeting/you.wav meeting/call.wav --save | Out-File -Encoding utf8 meeting/out.json
+          $code = $LASTEXITCODE
+          Stop-Process -Id $server.Id -ErrorAction SilentlyContinue
+          if ($code -ne 0) { throw "larynx meeting exited with $code" }
+          python windows/ci/check-meeting.py meeting/out.json meeting/request.json meeting/data
+          if ($LASTEXITCODE -ne 0) { throw "the meeting check failed" }
       - name: Transcribe the fixture (CPU)
         timeout-minutes: 10
         run: |
@@ -124,6 +139,8 @@ jobs:
             transcribe.txt
             speech/manifest.json
             e2e/
+            meeting/out.json
+            meeting/data/
       - uses: actions/upload-artifact@v4
         with:
           name: larynx-windows-x64

@@ -115,3 +115,55 @@ pub fn stream_once(engine: &mut Engine, audio: &[f32], preview: bool) -> Result<
     let _ = feeder.join();
     d.finish(engine)
 }
+
+/// Turns one meeting track into lines: split at pauses, each piece transcribed. `speaker` labels every line.
+pub fn transcribe_track(engine: &mut Engine, samples: &[f32], speaker: &str) -> Result<Vec<crate::meeting::Segment>, String> {
+    let rate = wav::RATE as f64;
+    let mut out = Vec::new();
+    for (a, b) in crate::meeting::utterances(samples, 25.0) {
+        let (text, _) = engine.transcribe_all(&samples[a..b])?;
+        let text = text.trim().to_string();
+        if text.chars().any(char::is_alphanumeric) {
+            out.push(crate::meeting::Segment { speaker: speaker.into(), start: a as f64 / rate, end: b as f64 / rate, text });
+        }
+    }
+    Ok(out)
+}
+
+/// Both tracks into one transcript, in time order.
+pub fn meeting_transcript(engine: &mut Engine, you: &[f32], call: Option<&[f32]>) -> Result<Vec<crate::meeting::Segment>, String> {
+    let mut segments = transcribe_track(engine, you, "You")?;
+    if let Some(call) = call {
+        segments.extend(transcribe_track(engine, call, "On the call")?);
+    }
+    segments.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(segments)
+}
+
+/// `larynx meeting you.wav [them.wav]`: the meeting from recordings, as the app does it after Stop. Prints the
+/// meeting as JSON (with notes when a Claude key is set) and saves its page with `--save`.
+pub fn meeting(args: &Args) -> Result<(), String> {
+    let you_path = args.positional.get(1).ok_or("usage: larynx meeting <you.wav> [them.wav] [--save]")?;
+    let you = wav::read(Path::new(you_path))?;
+    let call = match args.positional.get(2) {
+        Some(p) => Some(wav::read(Path::new(p))?),
+        None => None,
+    };
+    let (mut engine, load_ms) = load_engine(args, provider(args)?)?;
+    let t = Instant::now();
+    let segments = meeting_transcript(&mut engine, &you, call.as_deref())?;
+    let transcribe_ms = t.elapsed().as_secs_f64() * 1000.0;
+    let duration = you.len().max(call.as_ref().map_or(0, |c| c.len())) as f64 / wav::RATE as f64;
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
+    let mut m = crate::meeting::Meeting { id: format!("meeting-{}", now as u64), started: now, duration, utc_offset: 0, segments, notes: None };
+    let mut failure = None;
+    match crate::meeting::write_notes(&m, crate::credential::claude_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
+        Ok(n) => m.notes = Some(n),
+        Err(e) => failure = Some(e.to_string()),
+    }
+    if args.has("save") {
+        eprintln!("saved {}", crate::meeting::save(&m, &crate::meeting_email())?.display());
+    }
+    println!("{}", serde_json::json!({"meeting": m, "load_ms": load_ms, "transcribe_ms": transcribe_ms, "notes_failure": failure}));
+    Ok(())
+}
