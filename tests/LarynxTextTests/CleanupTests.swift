@@ -210,3 +210,14 @@ private struct Cases: Decodable {
     #expect(text("Mark is here. Ask Mark.") == "Mark is here. ask Mark")                     // a word capitalized mid-sentence is a name
     #expect(Tidy.apply("See you Friday.", mode: .correspondence, style: .casual) == "See you Friday.")  // casual untouched
 }
+
+@Test func stutterRestartsInsideAWordAreCleaned() {
+    func ai(_ s: String) -> String { Tidy.apply(s, mode: .ai) }
+    #expect(ai("Could th could we move the call?") == "Could we move the call?")          // word, fragment, word
+    #expect(ai("Please book it for the conf for the conference room.") == "Please book it for the conference room.")
+    #expect(ai("We pr probably need more chairs.") == "We probably need more chairs.")    // fragment, then its word
+    #expect(ai("Can we st start at noon?") == "Can we start at noon?")
+    #expect(ai("We walked in into the hall.") == "We walked in into the hall.")           // "in" is a word: kept
+    #expect(ai("Bam bam bam, here we go.") == "Bam bam bam, here we go.")                 // a chant is not a stutter
+    #expect(ai("Go with plan b because it's cheaper.") == "Go with plan b because it's cheaper.")
+}

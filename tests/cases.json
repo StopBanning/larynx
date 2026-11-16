@@ -888,6 +888,18 @@
       "mode": "standard",
       "in": "Groceries, new line, eggs, new line, milk",
       "expect": "Groceries\nEggs\nMilk"
+    },
+    {
+      "id": "t-stutter-word-fragment-word",
+      "mode": "ai",
+      "in": "Could th could we move the call?",
+      "expect": "Could we move the call?"
+    },
+    {
+      "id": "t-stutter-phrase-restart",
+      "mode": "standard",
+      "in": "Please book it for the conf for the conference room.",
+      "expect": "Please book it for the conference room."
     }
   ],
   "rewrite": [
@@ -2006,6 +2018,16 @@
       "id": "keep-layout-04",
       "in": "We need a new line manager by Friday.",
       "expect": "We need a new line manager by Friday."
+    },
+    {
+      "id": "keep-chant-bam",
+      "in": "Bam bam bam, here we go.",
+      "expect": "Bam bam bam, here we go."
+    },
+    {
+      "id": "keep-in-into",
+      "in": "We walked in into the hall.",
+      "expect": "We walked in into the hall."
     }
   ],
   "numbers": {

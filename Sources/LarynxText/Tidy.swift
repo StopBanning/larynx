@@ -239,6 +239,9 @@ public enum Tidy {
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
+        // 1e1. Stutter restarts: "Would sh would you" -> "Would you", "for the dict for the dictation" -> "for the
+        // dictation", "sh should" -> "should".
+        s = stutterRestarts(s)
         // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
         // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
         s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)
@@ -554,6 +557,43 @@ public enum Tidy {
             if fragment != fragment.lowercased() || shortWords.contains(fragment) { continue }
             // "them th them": nothing in between, so the word itself was said twice; keep the one that follows.
             s.replaceSubrange(whole, with: s[between].isEmpty ? "" : s[word] + " " + s[between])
+        }
+        return s
+    }
+
+    /// Restarts partway through a word, the way a stutter sounds:
+    /// - a word, a fragment that is no word, then the same word again: "Would sh would you" -> "Would you";
+    /// - a phrase cut off mid-word and said again whole: "for the dict for the dictation" -> "for the dictation", and on
+    ///   its own, a fragment that is no word right before the word it starts: "sh should" -> "should".
+    /// A fragment that is a real word ("in into", "be because") is never dropped on its own.
+    static func stutterRestarts(_ text: String, words: WordList = BundledWordList.shared) -> String {
+        var s = text
+        // No vowel ("sh", "th", "pr") is never a word, whatever the word list says ("sh" is in it, as "shh").
+        func isFragment(_ f: String) -> Bool {
+            f == f.lowercased() && !shortWords.contains(f) && (!words.contains(f) || !f.contains(where: { "aeiouy".contains($0) }))
+        }
+        if let re = try? NSRegularExpression(pattern: "(?i)\\b([a-z']+)\\s+([a-z]{1,3}),?\\s+\\1\\b") {
+            for m in re.matches(in: s, range: NSRange(location: 0, length: (s as NSString).length)).reversed() {
+                let ns = s as NSString
+                let fragment = ns.substring(with: m.range(at: 2))
+                // "pow pow pow" is a chant: the middle copy is the same word, not a fragment of it.
+                guard isFragment(fragment), fragment.lowercased() != ns.substring(with: m.range(at: 1)).lowercased() else { continue }
+                s = ns.replacingCharacters(in: m.range, with: ns.substring(with: m.range(at: 1)))
+            }
+        }
+        if let re = try? NSRegularExpression(pattern: "(?i)\\b((?:[a-z']+\\s+){0,3})([a-z]{2,8}),?\\s+\\1(\\2[a-z']+)\\b") {
+            for m in re.matches(in: s, range: NSRange(location: 0, length: (s as NSString).length)).reversed() {
+                let ns = s as NSString
+                let lead = ns.substring(with: m.range(at: 1)), fragment = ns.substring(with: m.range(at: 2))
+                // Alone, the fragment must be no word; after a repeated lead-in, the repeat already shows the restart.
+                if lead.isEmpty && !isFragment(fragment) { continue }
+                if fragment != fragment.lowercased() { continue }
+                let secondStart = m.range(at: 3).location - (lead as NSString).length
+                let second = ns.substring(with: NSRange(location: secondStart, length: m.range.location + m.range.length - secondStart))
+                // Keep the first copy's capital when the sentence started with it.
+                let kept = lead.first?.isUppercase == true ? second.prefix(1).uppercased() + second.dropFirst() : second
+                s = ns.replacingCharacters(in: m.range, with: kept)
+            }
         }
         return s
     }
