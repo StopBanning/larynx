@@ -54,7 +54,9 @@ public enum MeetingSummarizer {
         case .onDevice:
             if #available(macOS 26.0, *) { if case .available = SystemLanguageModel.default.availability { return true } }
         case .privateCloud:
-            if #available(macOS 27.0, *) { return PrivateCloudComputeLanguageModel().isAvailable }
+            // Needs Apple's private-cloud-compute entitlement (Larynx doesn't have it) and the macOS 27 SDK (CI's macOS
+            // 26 machines don't have it), so it is left out; notes come from Claude (docs/dev/MEETING.md).
+            break
         }
         #endif
         return false
@@ -184,8 +186,7 @@ public enum MeetingSummarizer {
             return LanguageModelSession(model: SystemLanguageModel(useCase: .general, guardrails: .permissiveContentTransformations),
                                         instructions: rules)
         case .privateCloud:
-            if #available(macOS 27.0, *) { return LanguageModelSession(model: PrivateCloudComputeLanguageModel(), instructions: rules) }
-            throw Failure.unavailable("Private Cloud Compute needs macOS 27")
+            throw Failure.unavailable("Apple's Private Cloud Compute needs an entitlement Larynx doesn't have")
         case .claude:
             throw Failure.unavailable("Claude is not an Apple model")
         }
