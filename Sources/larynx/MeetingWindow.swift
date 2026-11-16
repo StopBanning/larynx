@@ -80,7 +80,7 @@ final class MeetingController: ObservableObject {
                     return
                 }
                 self.phase = .finishing("Writing your summary… \(Self.estimate(duration))")
-                let model = MeetingSummarizer.Model(rawValue: Settings.shared.string(.meetingSummary)) ?? .onDevice
+                let model = MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary))
                 do {
                     meeting.notes = try await MeetingSummarizer.summarize(meeting, model: model)
                 } catch {
@@ -240,7 +240,25 @@ final class MeetingsModel: ObservableObject {
     @Published var selected: String?
     @Published var showTranscript = false
 
+    @Published var writing: String?
+    @Published var writeFailure: [String: String] = [:]
+
     func reload() { meetings = MeetingStore.all() }
+
+    /// Writes the notes again for a meeting that has none (the internet was down, or the key was added later).
+    func writeNotes(_ m: Meeting) {
+        guard writing == nil else { return }
+        writing = m.id; writeFailure[m.id] = nil
+        Task {
+            var meeting = m
+            do {
+                meeting.notes = try await MeetingSummarizer.summarize(meeting, model: MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary)))
+                try MeetingStore.save(meeting)
+                reload()
+            } catch { writeFailure[m.id] = "\(error)" }
+            writing = nil
+        }
+    }
     var current: Meeting? { meetings.first { $0.id == selected } }
 
     func copy(_ m: Meeting) {
@@ -324,8 +342,18 @@ struct MeetingDetail: View {
                         })
                     }
                     if !n.openQuestions.isEmpty { Section(title: "Still open", items: n.openQuestions) }
+                    if n.model == "claude" { Text("Summary written by Claude.").font(.system(size: 13)).foregroundStyle(.secondary) }
                 } else {
-                    Text("There's no summary for this meeting, but the full transcript is below.").font(.system(size: 16)).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("There's no summary for this meeting yet. The full transcript is below.").font(.system(size: 16)).foregroundStyle(.secondary)
+                        if model.writing == meeting.id {
+                            HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Writing the summary…").font(.system(size: 16)) }
+                        } else {
+                            Button { model.writeNotes(meeting) } label: { Label("Write the summary now", systemImage: "text.badge.star").font(.system(size: 15)) }
+                                .controlSize(.large)
+                        }
+                        if let why = model.writeFailure[meeting.id] { Text(why).font(.system(size: 15)).foregroundStyle(.red) }
+                    }
                 }
                 DisclosureGroup(isExpanded: $model.showTranscript) {
                     VStack(alignment: .leading, spacing: 12) {

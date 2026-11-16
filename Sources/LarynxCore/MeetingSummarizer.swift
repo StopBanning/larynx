@@ -13,6 +13,13 @@ public enum MeetingSummarizer {
     public enum Model: String, Sendable, CaseIterable {
         case onDevice = "on-device"
         case privateCloud = "private-cloud"
+        case claude
+
+        /// The model the `meetingSummary` setting names. `auto`: Claude when a Claude key is set, else the Mac's own.
+        public static func chosen(_ setting: String) -> Model {
+            if let model = Model(rawValue: setting) { return model }
+            return ClaudeKey.isSet ? .claude : .onDevice
+        }
     }
 
     public enum Failure: Error, CustomStringConvertible {
@@ -40,8 +47,10 @@ public enum MeetingSummarizer {
         """
 
     public static func isAvailable(_ model: Model) -> Bool {
+        if model == .claude { return ClaudeKey.isSet }
         #if canImport(FoundationModels)
         switch model {
+        case .claude: break
         case .onDevice:
             if #available(macOS 26.0, *) { if case .available = SystemLanguageModel.default.availability { return true } }
         case .privateCloud:
@@ -65,6 +74,11 @@ public enum MeetingSummarizer {
         let meeting = original.namingTheCall()
         let transcript = meeting.transcriptText
         guard transcript.rangeOfCharacter(from: .letters) != nil else { throw Failure.empty }
+        if model == .claude {
+            let started = Date()
+            let notes = verify(try await ClaudeNotes.write(meeting), against: meeting)
+            return MeetingNotes(notes, model: model, seconds: Date().timeIntervalSince(started))
+        }
         guard isAvailable(model) else { throw Failure.unavailable(model == .onDevice ? "Apple Intelligence is off or not supported on this Mac" : "Private Cloud Compute needs macOS 27 and Apple Intelligence") }
         let started = Date()
         #if canImport(FoundationModels)
@@ -103,9 +117,7 @@ public enum MeetingSummarizer {
             }
             let notes = verify(GeneratedNotes(title: title, summary: summary, decisions: decisions, actionItems: actions, openQuestions: open),
                                against: meeting)
-            return MeetingNotes(title: notes.title, summary: notes.summary, decisions: notes.decisions,
-                                actionItems: notes.actionItems.map { MeetingActionItem(task: $0.task, owner: $0.owner.nilIfBlank, due: $0.due.nilIfBlank) },
-                                openQuestions: notes.openQuestions, model: model.rawValue, seconds: Date().timeIntervalSince(started))
+            return MeetingNotes(notes, model: model, seconds: Date().timeIntervalSince(started))
         }
         #endif
         throw Failure.unavailable("Foundation Models are not on this Mac")
@@ -174,6 +186,8 @@ public enum MeetingSummarizer {
         case .privateCloud:
             if #available(macOS 27.0, *) { return LanguageModelSession(model: PrivateCloudComputeLanguageModel(), instructions: rules) }
             throw Failure.unavailable("Private Cloud Compute needs macOS 27")
+        case .claude:
+            throw Failure.unavailable("Claude is not an Apple model")
         }
     }
 
@@ -231,6 +245,14 @@ public enum MeetingSummarizer {
         }
     }
     #endif
+}
+
+extension MeetingNotes {
+    init(_ notes: GeneratedNotes, model: MeetingSummarizer.Model, seconds: Double) {
+        self.init(title: notes.title, summary: notes.summary, decisions: notes.decisions,
+                  actionItems: notes.actionItems.map { MeetingActionItem(task: $0.task, owner: $0.owner.nilIfBlank, due: $0.due.nilIfBlank) },
+                  openQuestions: notes.openQuestions, model: model.rawValue, seconds: seconds)
+    }
 }
 
 struct GeneratedNotes {

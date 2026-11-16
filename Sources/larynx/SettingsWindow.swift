@@ -140,6 +140,7 @@ private struct GeneralPane: View {
                 Toggle("Show my words in Paper Mono", isOn: onOff(.pillFont, on: "paper-mono", off: "system"))
                 Toggle("Say when a word was probably misheard", isOn: onOff(.doubtHint))
             }
+            if LarynxCore.Settings.shared.string(.meetingMode) == "on" { MeetingsSection() }
             Section {
                 Toggle("Open Larynx at login", isOn: Binding(get: { model.login }, set: { on in
                     do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } } catch { log("login item: \(error)") }
@@ -273,5 +274,41 @@ private struct WordsPane: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Who writes meeting notes, and the Claude key (kept in the Keychain, never in settings.json). Shown while meeting
+/// mode is on (docs/dev/MEETING.md). An ObservableObject, not @State: the command-line tools the installer builds with
+/// have no SwiftUI macro plugin.
+@MainActor private final class ClaudeKeyModel: ObservableObject {
+    @Published var hasKey = ClaudeKey.isSet
+    @Published var draft = ""
+    @Published var note = ""
+    func save() {
+        if ClaudeKey.save(draft) { hasKey = true; draft = ""; note = "Saved. Notes for your next meeting will be written by Claude." }
+        else { note = "The key couldn't be saved in the Keychain." }
+    }
+    func remove() { _ = ClaudeKey.remove(); hasKey = ClaudeKey.isSet; note = "" }
+}
+
+private struct MeetingsSection: View {
+    @StateObject private var model = ClaudeKeyModel()
+    var body: some View {
+        Section("Meetings") {
+            if model.hasKey {
+                LabeledContent("Notes") { Text("Written by Claude after every meeting").foregroundStyle(.secondary) }
+                Button("Remove the Claude key", action: model.remove)
+            } else {
+                HStack {
+                    SecureField("Claude key", text: $model.draft)
+                    Button("Save", action: model.save).disabled(model.draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                Text("Without a key, notes are written by this Mac's own model. A key comes from console.anthropic.com → API keys.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if !model.note.isEmpty { Text(model.note).font(.caption) }
+            Text("With Claude, the meeting's transcript (never the audio) is sent to Anthropic to write the notes.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 }

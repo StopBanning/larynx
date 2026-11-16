@@ -43,7 +43,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `professionalSwearing` | `remove` | `remove` or `keep`: whether the professional style removes swearing used for emphasis ("so damn fast" becomes "so fast"). |
 | `pillFont` | `system` | The pill's live words in the Mac's own font (`system`) or in Paper Mono (`paper-mono`), the website's typeface. Settings → Pill. |
 | `meetingMode` | `off` | Meeting mode (in progress, [dev/MEETING.md](dev/MEETING.md)): `on` shows Start Recording a Meeting and Meetings… in the menu. |
-| `meetingSummary` | `on-device` | Which Apple model writes meeting notes: `on-device` (nothing leaves the Mac) or `private-cloud` (Apple Private Cloud Compute, macOS 27: the transcript goes to Apple's private servers for the summary; reads a two to three hour meeting at once). See [dev/MEETING.md](dev/MEETING.md). |
+| `meetingSummary` | `auto` | Who writes meeting notes. `auto`: Claude when a Claude key is saved (Settings → Meetings), otherwise the Mac's own model. `claude`: Claude Opus 5.5 through the Anthropic API; the transcript (never the audio) is sent for the notes and needs the key. `on-device`: Apple's on-device model, nothing leaves the Mac. `private-cloud`: Apple Private Cloud Compute (macOS 27; needs an entitlement we don't have yet). See [dev/MEETING.md](dev/MEETING.md). |
 | `meetingEmail` | `""` | The address "Email this to me" fills in for meeting notes. Empty: Mail opens with no recipient. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
 | `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |

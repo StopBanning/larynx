@@ -40,7 +40,7 @@ public final class Settings: @unchecked Sendable {
             case .style: return "casual"
             case .professionalKey: return "none"
             case .professionalSwearing: return "remove"
-            case .meetingSummary: return "on-device"
+            case .meetingSummary: return "auto"
             case .meetingEmail: return ""
             case .meetingMode: return "off"
             case .pillFont: return "system"
@@ -63,7 +63,7 @@ public final class Settings: @unchecked Sendable {
             case .style: return ["casual", "professional"].contains(value)
             case .professionalKey: return value == "none" || Hotkey.Key(rawValue: value) != nil
             case .professionalSwearing: return ["remove", "keep"].contains(value)
-            case .meetingSummary: return ["on-device", "private-cloud"].contains(value)
+            case .meetingSummary: return ["auto", "claude", "on-device", "private-cloud"].contains(value)
             case .meetingEmail: return value.isEmpty || (value.contains("@") && !value.contains(" "))
             case .meetingMode: return ["on", "off"].contains(value)
             case .pillFont: return ["system", "paper-mono"].contains(value)

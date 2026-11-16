@@ -2,7 +2,7 @@ import Foundation
 import LarynxCore
 import LarynxText
 
-/// `larynx meeting --you mic.wav [--them call.wav] [--summary on-device|private-cloud|both|none] [--json] [--save]`
+/// `larynx meeting --you mic.wav [--them call.wav] [--summary auto|claude|on-device|private-cloud|all|none] [--json] [--save]`
 ///
 /// Meeting mode from files (docs/dev/MEETING.md): the same transcript and notes the app makes from a live meeting, so
 /// tests and benchmarks need no microphone, no call and no permission prompt. Prints Markdown, or JSON with --json.
@@ -14,7 +14,7 @@ func runMeeting() async {
             let data = try Data(contentsOf: URL(fileURLWithPath: (from as NSString).expandingTildeInPath))
             struct Saved: Decodable { let meeting: Meeting }
             let meeting = try (try? decoder.decode(Saved.self, from: data).meeting) ?? decoder.decode(Meeting.self, from: data)
-            let model = MeetingSummarizer.Model(rawValue: option("--summary") ?? "on-device") ?? .onDevice
+            let model = MeetingSummarizer.Model.chosen(option("--summary") ?? "auto")
             let notes = try await MeetingSummarizer.summarize(meeting, model: model)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             print(String(decoding: try encoder.encode(notes), as: UTF8.self))
@@ -22,7 +22,7 @@ func runMeeting() async {
         } catch { FileHandle.standardError.write(Data("larynx meeting: \(error)\n".utf8)); exit(1) }
     }
     guard let youPath = option("--you") else {
-        FileHandle.standardError.write(Data("usage: larynx meeting --you mic.wav [--them call.wav] [--summary on-device|private-cloud|both|none] [--json] [--save]\n".utf8))
+        FileHandle.standardError.write(Data("usage: larynx meeting --you mic.wav [--them call.wav] [--summary auto|claude|on-device|private-cloud|all|none] [--json] [--save]\n".utf8))
         exit(2)
     }
     do {
@@ -60,9 +60,9 @@ func runMeeting() async {
         let duration = Double(longest) / Recorder.sampleRate
         var meeting = Meeting(id: MeetingStore.newID(started), started: started, duration: duration, segments: segments)
 
-        let which = option("--summary") ?? "on-device"
-        let models: [MeetingSummarizer.Model] = which == "both" ? MeetingSummarizer.Model.allCases
-            : which == "none" ? [] : [MeetingSummarizer.Model(rawValue: which) ?? .onDevice]
+        let which = option("--summary") ?? "auto"
+        let models: [MeetingSummarizer.Model] = which == "both" || which == "all" ? MeetingSummarizer.Model.allCases
+            : which == "none" ? [] : [MeetingSummarizer.Model.chosen(which)]
         var allNotes: [MeetingNotes] = []
         var failures: [String: String] = [:]
         for model in models {

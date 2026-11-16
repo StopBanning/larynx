@@ -35,7 +35,16 @@ fix afterwards.
 | Never losing it | The crash spool: audio written to disk as it comes in, so a crash or a closed lid loses nothing | Yes (spool), extended |
 | Summary | Apple's Foundation Models with guided generation: the summary comes back as a typed structure (summary, decisions, action items with owner and date, open questions), so the layout never breaks | Framework yes, meeting prompts new |
 
-**The summary model is the one real choice** (Colin decides):
+**Decided (Nov 14): Claude writes the notes, automatically after every meeting.** Apple's on-device model (8,192
+tokens) was too weak on the test meetings, and Private Cloud Compute needs an entitlement we can't get yet. So the
+notes come from Claude Opus 5.5 through the Anthropic API (`Sources/LarynxCore/ClaudeNotes.swift`): one request with
+the whole transcript (never the audio), structured output in a fixed shape (title, summary, decisions, action items
+with owner and due, open questions), then the same `verify()` check against the transcript before anyone sees it.
+The key is saved in the Keychain from Settings → Meetings; without one, `auto` falls back to the Mac's own model. If
+the request fails (no internet, no credit), the transcript is saved and the meeting shows "Write the summary now".
+The Windows app uses the same request and schema, so both write the same notes.
+
+The comparison that led there:
 
 | | On the Mac (Apple on-device model) | Apple Private Cloud Compute |
 | --- | --- | --- |
