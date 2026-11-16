@@ -127,6 +127,19 @@ public actor Transcriber {
         vocabularySize = boosting?.vocabulary.terms.count ?? 0
     }
 
+    /// The alphabet the speaker writes in (`alphabet` setting), as the decoder's script hint: a token in another
+    /// alphabet is swapped for the best one in this one. The 25-language models otherwise sometimes write a short
+    /// English word in Cyrillic ("manual" came out as "Меню"). FluidAudio's hint constrains only the script, so any
+    /// Latin-alphabet language works with `.english`. `any` turns it off.
+    nonisolated static func alphabetHint() -> Language? {
+        switch Settings.shared.string(.alphabet) {
+        case "any": return nil
+        case "cyrillic": return .russian
+        case "greek": return .greek
+        default: return .english
+        }
+    }
+
     /// Returns the transcript for 16 kHz mono samples. Clips shorter than a quarter second come back empty.
     public func transcribe(_ samples: [Float]) async throws -> String { try await transcribeDetailed(samples).text }
 
@@ -140,7 +153,7 @@ public actor Transcriber {
             result = try await unified.transcribeDetailed(samples)
         } else {
             var state = try TdtDecoderState()
-            result = try await manager!.transcribe(samples, decoderState: &state)
+            result = try await manager!.transcribe(samples, decoderState: &state, language: Transcriber.alphabetHint())
         }
         var text = result.text
         if let boosting, let timings = result.tokenTimings, !timings.isEmpty,

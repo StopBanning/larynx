@@ -169,6 +169,12 @@ private struct SpeechPane: View {
                 }
                 Text("Switching loads the new model in the background (a minute or two the first time) and keeps using the current one until it's ready.")
                     .font(.caption).foregroundStyle(.secondary)
+                Picker("Alphabet", selection: setting(.alphabet)) {
+                    Text("Latin: English, Spanish, French, German…").tag("latin")
+                    Text("Cyrillic: Russian, Ukrainian, Bulgarian…").tag("cyrillic")
+                    Text("Greek").tag("greek")
+                    Text("Any").tag("any")
+                }
             }
             Section("Microphone") {
                 Picker("Microphone", selection: setting(.micDevice)) {

@@ -15,7 +15,7 @@ public final class Settings: @unchecked Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
         case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded, micDevice
         case style, professionalKey, professionalSwearing
-        case meetingSummary, meetingEmail, meetingMode, pillFont
+        case meetingSummary, meetingEmail, meetingMode, pillFont, alphabet
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -44,6 +44,7 @@ public final class Settings: @unchecked Sendable {
             case .meetingEmail: return ""
             case .meetingMode: return "off"
             case .pillFont: return "system"
+            case .alphabet: return "latin"
             default: return "on"
             }
         }
@@ -67,6 +68,7 @@ public final class Settings: @unchecked Sendable {
             case .meetingEmail: return value.isEmpty || (value.contains("@") && !value.contains(" "))
             case .meetingMode: return ["on", "off"].contains(value)
             case .pillFont: return ["system", "paper-mono"].contains(value)
+            case .alphabet: return ["latin", "cyrillic", "greek", "any"].contains(value)
             case .keys, .vocabularyRoots, .toggleKeys, .micDevice: return true
             default: return StageMode(rawValue: value) != nil
             }

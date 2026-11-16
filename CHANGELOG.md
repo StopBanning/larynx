@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **English stays in the English alphabet.** The 25-language models sometimes wrote a short word in Cyrillic (a one-word "manual" came out as "Меню"). Larynx now keeps them to your alphabet (Settings → Speech → Alphabet, `alphabet`: Latin by default, or Cyrillic, Greek, Any).
 - **Restarts partway through a word are cleaned up**, the way a stutter sounds: "Could th could we" becomes "Could we", "for the conf for the conference room" becomes "for the conference room", "pr probably" becomes "probably". Checked against 1,590 real dictations: 14 changes, all restarts; chants ("bam bam bam") and real words ("in into") are kept. Also on Windows, which uses the same cleanup.
 - **Windows: meeting mode.** Right-click the Larynx icon → Start recording this meeting: the microphone and the computer's sound, a big "Recording · 12:04" window with a Stop button, then notes written by Claude open as a page with Email, Copy and Print. Key in Windows Credential Manager (Set Claude key…).
 - **Texting style** (Settings → Cleanup → Style, or `style: texting`): casual, written the way people text. Sentences start lowercase and the last full stop goes ("sounds good, see you at 7"). Names, "I" and acronyms keep their capitals.
