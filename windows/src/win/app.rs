@@ -11,6 +11,7 @@ use super::audio::Recorder;
 use super::focus::{self, Target, Uia};
 use super::hotkey::{self, KeyEvent};
 use super::insert::{self, Delivery};
+use super::meeting::{self as meet, Panel, Recording, Show};
 use super::pill::{Mode, Pill};
 use super::tray::{self, Tray};
 use crate::asr::{default_threads, Parakeet, Provider};
@@ -35,8 +36,10 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 const WAKE: u32 = WM_APP + 1;
 const FINISHED: u32 = WM_APP + 2;
 const READY: u32 = WM_APP + 4;
+const MEETING_DONE: u32 = WM_APP + 10;
 const TICK: usize = 1;
 const HIDE: usize = 2;
+const MEETING_TICK: usize = 3;
 
 /// JSON-lines log: timings always; the dictated words only with --log (tests), never by default.
 struct Log {
@@ -119,6 +122,11 @@ struct App {
     last_latency: Option<f64>,
     status: String,
     taskbar_created: u32,
+    panel: Option<Panel>,
+    meeting: Option<Recording>,
+    meeting_busy: bool,
+    meeting_done: Receiver<meet::Outcome>,
+    meeting_tx: Sender<meet::Outcome>,
 }
 
 thread_local! {
@@ -149,6 +157,8 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
     match msg {
         WAKE => with_app(|a| a.on_keys()),
         FINISHED => with_app(|a| a.on_finished()),
+        MEETING_DONE => with_app(|a| a.on_meeting_done()),
+        WM_TIMER if wparam.0 == MEETING_TICK => with_app(|a| a.on_meeting_tick()),
         WM_TIMER if wparam.0 == TICK => with_app(|a| a.on_tick()),
         WM_TIMER if wparam.0 == HIDE => with_app(|a| {
             unsafe {
@@ -171,6 +181,15 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                     insert::copy_only(&a.last_text);
                 }
             }),
+            tray::ID_MEETING | meet::ID_PANEL_STOP => with_app(|a| a.meeting_button()),
+            tray::ID_MEETING_RETRY => with_app(|a| a.retry_notes()),
+            tray::ID_CLAUDE_KEY => meet::ask_for_key(),
+            tray::ID_MEETINGS => {
+                let dir = crate::meeting::folder();
+                let _ = std::fs::create_dir_all(&dir);
+                let _ = crate::meeting::write_index(&dir);
+                meet::open(&dir.join("index.html"));
+            }
             tray::ID_OPEN_LOGS => {
                 let dir: Vec<u16> = data_dir().to_string_lossy().encode_utf16().chain(std::iter::once(0)).collect();
                 unsafe {
@@ -195,7 +214,143 @@ impl App {
     }
 
     fn show_menu(&self) {
-        self.tray.menu(self.hwnd, &self.status_lines());
+        let meeting = tray::MeetingMenu {
+            recording: self.meeting.is_some(),
+            busy: self.meeting_busy,
+            can_retry: meet::latest_without_notes().is_some(),
+        };
+        self.tray.menu(self.hwnd, &self.status_lines(), &meeting);
+    }
+
+    fn show(&mut self, show: Show) {
+        if let Some(p) = &mut self.panel {
+            p.show = show;
+            p.render();
+        }
+    }
+
+    /// The tray item and the panel's button: start, stop, or (on a problem) dismiss.
+    fn meeting_button(&mut self) {
+        let showing = self.panel.as_ref().map(|p| p.show.clone()).unwrap_or(Show::Hidden);
+        match showing {
+            Show::Problem(_) if self.meeting.is_none() => self.show(Show::Hidden),
+            _ if self.meeting.is_some() => self.stop_meeting(),
+            _ if self.meeting_busy => {}
+            _ => self.start_meeting(),
+        }
+    }
+
+    fn start_meeting(&mut self) {
+        if !matches!(self.phase, Phase::Idle) {
+            return;
+        }
+        if self.engine.is_none() {
+            self.show(Show::Problem("Larynx is still getting ready. Try again in a minute.".into()));
+            return;
+        }
+        let you = self.recorder.begin();
+        match Recording::start(you) {
+            Ok(rec) => {
+                self.log.write(serde_json::json!({"event": "meeting_start", "id": rec.info.id}));
+                self.show(Show::Recording { since: rec.began, note: None });
+                self.meeting = Some(rec);
+                self.tray.set("Larynx: recording a meeting", true);
+                unsafe {
+                    SetTimer(Some(self.hwnd), MEETING_TICK, 1000, None);
+                }
+            }
+            Err(e) => {
+                self.recorder.end();
+                self.show(Show::Problem(format!("The meeting couldn't start recording ({e}).")));
+            }
+        }
+    }
+
+    fn on_meeting_tick(&mut self) {
+        let Some(rec) = &self.meeting else {
+            if let Some(p) = &mut self.panel {
+                p.render();
+            }
+            return;
+        };
+        let note = if self.recorder.last_error.lock().unwrap().is_some() {
+            Some("I can't hear the microphone. Check it isn't muted.".to_string())
+        } else if rec.call_problem.lock().unwrap().is_some() {
+            Some("Only the microphone is being recorded: the computer's sound couldn't be captured.".to_string())
+        } else {
+            None
+        };
+        let since = rec.began;
+        self.show(Show::Recording { since, note });
+    }
+
+    fn stop_meeting(&mut self) {
+        let Some(rec) = self.meeting.take() else { return };
+        self.recorder.end();
+        let minutes = rec.began.elapsed().as_secs() / 60;
+        let info = rec.stop();
+        self.log.write(serde_json::json!({"event": "meeting_stop", "id": info.id, "minutes": minutes}));
+        let wait = match minutes {
+            0..=10 => "This takes under a minute.",
+            11..=40 => "This takes a minute or two.",
+            _ => "This takes a few minutes for a long meeting.",
+        };
+        self.show(Show::Working(format!("{wait} The notes will open by themselves.")));
+        self.tray.set(&format!("Larynx: hold {} to talk", self.key_name), true);
+        self.finish_in_background(info);
+    }
+
+    fn finish_in_background(&mut self, info: meet::Started) {
+        let Some(engine) = self.engine.clone() else { return };
+        self.meeting_busy = true;
+        let (tx, hwnd_raw) = (self.meeting_tx.clone(), self.hwnd.0 as isize);
+        std::thread::Builder::new()
+            .name("larynx-meeting-finish".into())
+            .spawn(move || {
+                let outcome = meet::finish(&info, &engine, &crate::meeting_email());
+                let _ = tx.send(outcome);
+                unsafe {
+                    let _ = PostMessageW(Some(HWND(hwnd_raw as *mut _)), MEETING_DONE, WPARAM(0), LPARAM(0));
+                }
+            })
+            .ok();
+    }
+
+    fn retry_notes(&mut self) {
+        let Some(mut m) = meet::latest_without_notes() else { return };
+        self.meeting_busy = true;
+        self.show(Show::Working("Trying the summary again.".into()));
+        let (tx, hwnd_raw) = (self.meeting_tx.clone(), self.hwnd.0 as isize);
+        std::thread::spawn(move || {
+            let outcome = match crate::meeting::write_notes(&m, crate::credential::claude_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
+                Ok(n) => {
+                    m.notes = Some(n);
+                    meet::Outcome { page: crate::meeting::save(&m, &crate::meeting_email()).ok(), problem: None }
+                }
+                Err(e) => meet::Outcome { page: None, problem: Some(format!("The summary couldn't be written. {e}")) },
+            };
+            let _ = tx.send(outcome);
+            unsafe {
+                let _ = PostMessageW(Some(HWND(hwnd_raw as *mut _)), MEETING_DONE, WPARAM(0), LPARAM(0));
+            }
+        });
+    }
+
+    fn on_meeting_done(&mut self) {
+        while let Ok(out) = self.meeting_done.try_recv() {
+            self.meeting_busy = false;
+            unsafe {
+                let _ = KillTimer(Some(self.hwnd), MEETING_TICK);
+            }
+            self.log.write(serde_json::json!({"event": "meeting_done", "saved": out.page.is_some(), "problem": out.problem}));
+            if let Some(page) = &out.page {
+                meet::open(page);
+            }
+            self.show(match out.problem {
+                Some(p) => Show::Problem(p),
+                None => Show::Hidden,
+            });
+        }
     }
 
     fn on_keys(&mut self) {
@@ -209,8 +364,8 @@ impl App {
     }
 
     fn start(&mut self, at: Instant) {
-        if !matches!(self.phase, Phase::Idle) {
-            return;
+        if !matches!(self.phase, Phase::Idle) || self.meeting.is_some() {
+            return; // the microphone belongs to the meeting while one is recording
         }
         let Some(engine) = self.engine.clone() else {
             let status = self.status.clone();
@@ -340,6 +495,11 @@ impl App {
                 self.finisher = Some(start_finisher(engine.clone(), cleanup, self.finished_tx.clone(), self.hwnd));
                 self.engine = Some(engine);
                 self.tray.set(&format!("Larynx: hold {} to talk", self.key_name), true);
+                // A meeting that was recording when the app closed or crashed: finish it now.
+                if let Some(info) = meet::interrupted().into_iter().next() {
+                    self.show(Show::Working("Finishing a meeting that was interrupted.".into()));
+                    self.finish_in_background(info);
+                }
             }
             Err(e) => {
                 self.status = format!("Speech model unavailable: {e}");
@@ -504,6 +664,8 @@ pub fn run(args: &Args) -> Result<(), String> {
     )?;
 
     let (finished_tx, finished) = channel();
+    let (meeting_tx, meeting_done) = channel();
+    let panel = Panel::create(hwnd).ok();
     let app = App {
         hwnd,
         pill,
@@ -522,6 +684,11 @@ pub fn run(args: &Args) -> Result<(), String> {
         last_latency: None,
         status: "Loading the speech model".into(),
         taskbar_created,
+        panel,
+        meeting: None,
+        meeting_busy: false,
+        meeting_done,
+        meeting_tx,
     };
     APP.with(|a| *a.borrow_mut() = Some(app));
 

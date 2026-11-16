@@ -9,6 +9,17 @@ pub const CALLBACK: u32 = WM_APP + 3;
 pub const ID_QUIT: usize = 100;
 pub const ID_COPY_LAST: usize = 101;
 pub const ID_OPEN_LOGS: usize = 102;
+pub const ID_MEETING: usize = 103;
+pub const ID_MEETINGS: usize = 104;
+pub const ID_CLAUDE_KEY: usize = 105;
+pub const ID_MEETING_RETRY: usize = 106;
+
+/// What the meeting part of the menu offers.
+pub struct MeetingMenu {
+    pub recording: bool,
+    pub busy: bool,
+    pub can_retry: bool,
+}
 
 fn copy_wide(dst: &mut [u16], s: &str) {
     let w: Vec<u16> = s.encode_utf16().take(dst.len() - 1).collect();
@@ -92,13 +103,21 @@ impl Tray {
         }
     }
 
-    pub fn menu(&self, hwnd: HWND, lines: &[String]) {
+    pub fn menu(&self, hwnd: HWND, lines: &[String], meeting: &MeetingMenu) {
         unsafe {
             let Ok(menu) = CreatePopupMenu() else { return };
             for line in lines {
                 let w: Vec<u16> = line.encode_utf16().chain(std::iter::once(0)).collect();
                 let _ = AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, windows::core::PCWSTR(w.as_ptr()));
             }
+            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            let start = if meeting.recording { windows::core::w!("Stop recording this meeting") } else { windows::core::w!("Start recording this meeting") };
+            let _ = AppendMenuW(menu, if meeting.busy { MF_STRING | MF_GRAYED } else { MF_STRING }, ID_MEETING, start);
+            let _ = AppendMenuW(menu, MF_STRING, ID_MEETINGS, windows::core::w!("Your meetings"));
+            if meeting.can_retry && !meeting.busy && !meeting.recording {
+                let _ = AppendMenuW(menu, MF_STRING, ID_MEETING_RETRY, windows::core::w!("Write the summary again"));
+            }
+            let _ = AppendMenuW(menu, MF_STRING, ID_CLAUDE_KEY, windows::core::w!("Set Claude key…"));
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let _ = AppendMenuW(menu, MF_STRING, ID_COPY_LAST, windows::core::w!("Copy last dictation"));
             let _ = AppendMenuW(menu, MF_STRING, ID_OPEN_LOGS, windows::core::w!("Open Larynx folder"));

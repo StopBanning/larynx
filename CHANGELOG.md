@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Windows: meeting mode.** Right-click the Larynx icon → Start recording this meeting: the microphone and the computer's sound, a big "Recording · 12:04" window with a Stop button, then notes written by Claude open as a page with Email, Copy and Print. Key in Windows Credential Manager (Set Claude key…).
 - **Texting style** (Settings → Cleanup → Style, or `style: texting`): casual, written the way people text. Sentences start lowercase and the last full stop goes ("sounds good, see you at 7"). Names, "I" and acronyms keep their capitals.
 - Meeting mode (still hidden): Claude writes the notes after every meeting once a Claude key is saved in Settings → Meetings (kept in the Keychain). Only the transcript is sent, never the audio. A meeting without notes gets a "Write the summary now" button.
 - **Paper Mono in the pill, if you want it** (Settings → Pill → Show my words in Paper Mono, or `pillFont`):

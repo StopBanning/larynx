@@ -95,6 +95,31 @@ what is happening, and what to do next, without asking anyone?
 - **A real meeting** recorded by Colin (or a public meeting recording with permission to use it) before the demo.
 - Summaries from both models read side by side by Colin.
 
+## On Windows
+
+The first person this is for uses Windows, so the Windows app has meeting mode too (`windows/src/meeting.rs`, portable
+and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
+
+- **Right-click the Larynx icon → Start recording this meeting.** The microphone is "You"; the computer's sound (WASAPI
+  loopback, so Zoom, Teams, Meet or a phone app all work) is "On the call". Both go to disk every second under
+  `%LOCALAPPDATA%\Larynx\meetings\spool`, so a crash loses nothing; an interrupted recording is finished the next
+  time Larynx starts.
+- A small window in the corner, always on top, says "Recording · 12:04" beside a red dot, with a big Stop button.
+  While recording, the talk key is ignored (the microphone belongs to the meeting).
+- Stop: "Writing your summary…", then the notes open by themselves as a page in the browser: summary, decisions, to
+  do with names, still open, and everything that was said underneath; Email this to me, Copy and Print buttons; large
+  type. **Your meetings** (same menu) lists them all.
+- The notes are the Mac's: the same Claude request, schema and `verify()`, through Windows' own `curl.exe` (the tool
+  `larynx setup` already uses), with the key going in on standard input. The key lives in Windows Credential Manager:
+  right-click → **Set Claude key…**. If the notes fail, the transcript is saved and the menu offers **Write the summary
+  again**.
+- "Email this to me" fills in the address in `%LOCALAPPDATA%\Larynx\meetings\email.txt` (or `LARYNX_MEETING_EMAIL`).
+- CI speaks the scripted client call with Windows' voices into two tracks, runs `larynx-cli meeting you.wav call.wav
+  --save` against a stand-in for the API, and checks both sides, the request and the saved page.
+
+Not yet on Windows: transcribing while the meeting runs (it happens after Stop, about a minute per 20 minutes of
+meeting on a CPU) and telling several people on the call apart.
+
 ## What is not in version 1
 
 Calendar integration, live captions during the meeting, translation, sharing links, teams. Each is easy to add later
