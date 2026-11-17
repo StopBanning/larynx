@@ -29,7 +29,25 @@ final class MeetingController: ObservableObject {
     /// Leaves the call recording and silences your side, for a noisy room or a call played through the speakers.
     func toggleMute() {
         micMuted.toggle()
-        capture?.setMicMuted(micMuted)
+        capture?.setMicMuted(micMuted || dictating)
+        log("meeting: microphone \(micMuted ? "muted" : "unmuted")")
+    }
+
+    /// While the dictation key is held the meeting's microphone side is silent: those words go to another app. Ends by
+    /// itself after two minutes in case the key-up is never seen.
+    private var dictating = false
+    private var dictationTimeout: Task<Void, Never>?
+    func setDictating(_ on: Bool) {
+        guard isRecording || !on else { return }
+        dictating = on
+        capture?.setMicMuted(micMuted || on)
+        dictationTimeout?.cancel()
+        if on {
+            dictationTimeout = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 120_000_000_000)
+                if !Task.isCancelled { self?.setDictating(false) }
+            }
+        }
     }
 
     func start() {
@@ -51,6 +69,7 @@ final class MeetingController: ObservableObject {
         }
         phase = .recording(started)
         RecordingPanel.shared.show()
+        log("meeting: recording \(id)\(capture?.callAudioError.map { ", microphone only: \($0)" } ?? "")")
         // Keep the transcript caught up while the meeting runs, so stopping is quick.
         stepper = Task { [weak self] in
             try? await Loader.shared.task.value
@@ -75,6 +94,7 @@ final class MeetingController: ObservableObject {
         stepper?.cancel(); stepper = nil
         capture?.stop(); capture = nil
         let duration = Date().timeIntervalSince(started)
+        log("meeting: stopped \(id) after \(Int(duration)) s")
         phase = .finishing("Finishing the transcript…")
         let id = self.id, started = self.started
         Task { await self.finish(id: id, started: started, duration: duration, session: session, first: "Finishing the transcript…") }
@@ -87,7 +107,9 @@ final class MeetingController: ObservableObject {
         RecordingPanel.shared.show()
         do {
             try await Loader.shared.task.value
+            let t0 = Date()
             let segments = try await session.finish()
+            log("meeting: \(id) transcript ready in \(String(format: "%.1f", Date().timeIntervalSince(t0))) s, \(segments.count) lines (\(segments.filter { $0.speaker == "You" }.count) yours)")
             var meeting = Meeting(id: id, started: started, duration: duration, segments: segments)
             if segments.isEmpty {
                 try? MeetingStore.save(meeting)
@@ -104,6 +126,11 @@ final class MeetingController: ObservableObject {
                 // The transcript is still worth having: save it and say so plainly.
                 summaryFailure = "\(error)"
             }
+            if let n = meeting.notes {
+                log("meeting: \(id) notes by \(n.model == "claude" ? "Claude " + ClaudeNotes.choice : n.model) in \(String(format: "%.1f", n.seconds)) s")
+            } else {
+                log("meeting: \(id) notes failed: \(summaryFailure ?? "?")")
+            }
             try MeetingStore.save(meeting)
             MeetingStore.removeSpool(id)
             if let summaryFailure {
@@ -114,6 +141,7 @@ final class MeetingController: ObservableObject {
             }
             MeetingsWindow.shared.show(selecting: meeting.id)
         } catch {
+            log("meeting: \(id) could not be finished: \(error)")
             phase = .failed("Something went wrong finishing the meeting: \(error). The recording is kept and will be tried again the next time Larynx starts.")
         }
     }
@@ -349,12 +377,14 @@ final class MeetingsModel: ObservableObject {
 
     func reload() { meetings = MeetingStore.all() }
 
-    /// Writes the notes again for a meeting that has none (the internet was down, or the key was added later).
+    /// Writes the notes for a meeting that has none (the internet was down, or the key was added later), or again for
+    /// one that has them (a better model or rules since). A meeting recorded before the echo filter loses its echoes.
     func writeNotes(_ m: Meeting) {
         guard writing == nil else { return }
         writing = m.id; writeFailure[m.id] = nil
         Task {
             var meeting = m
+            meeting.segments = MeetingEcho.remove(meeting.segments)
             do {
                 meeting.notes = try await MeetingSummarizer.summarize(meeting, model: MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary)))
                 try MeetingStore.save(meeting)
@@ -446,7 +476,15 @@ struct MeetingDetail: View {
                         })
                     }
                     if !n.openQuestions.isEmpty { Section(title: "Still open", items: n.openQuestions) }
-                    if n.model == "claude" { Text("Summary written by Claude.").font(.system(size: 13)).foregroundStyle(.secondary) }
+                    HStack(spacing: 12) {
+                        if n.model == "claude" { Text("Summary written by Claude.").font(.system(size: 13)).foregroundStyle(.secondary) }
+                        if model.writing == meeting.id {
+                            ProgressView().controlSize(.small); Text("Writing the notes again…").font(.system(size: 13))
+                        } else {
+                            Button("Write the notes again") { model.writeNotes(meeting) }.controlSize(.small)
+                        }
+                    }
+                    if let why = model.writeFailure[meeting.id] { Text(why).font(.system(size: 15)).foregroundStyle(.red) }
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("There's no summary for this meeting yet. The full transcript is below.").font(.system(size: 16)).foregroundStyle(.secondary)

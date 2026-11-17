@@ -83,12 +83,18 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
     recorder.deviceUID = { Settings.shared.string(.micDevice) }
     let keys = withProfessionalKey(keys)
     let hotkey = Hotkey(keys: keys, onDown: {
+        // A dictation during a meeting is for another app, not the meeting: the meeting's microphone side pauses.
+        if inApp { DispatchQueue.main.async { MeetingController.shared.setDictating(true) } }
         let session = ListenSession(target: NSWorkspace.shared.frontmostApplication)
         session.style = dictationStyle(key: activeHotkey?.pressedKey)
         // Which key started it (no text): a macro pad or a keyboard without some keys makes this the only way to know.
         log("dictation key: \(activeHotkey?.pressedKey?.label ?? "?")\(session.style == .professional ? ", professional" : "")")
         let micStart = Date()
-        do { try recorder.start() } catch { session.reset(); log("\(error)"); return }
+        do { try recorder.start() } catch {
+            session.reset(); log("\(error)")
+            if inApp { DispatchQueue.main.async { MeetingController.shared.setDictating(false) } }
+            return
+        }
         let micMs = ms(since: micStart)
         session.timing.micMs = micMs
         if let pid = session.target?.processIdentifier { session.timing.accessibilityWasOff = !AccessibilityModes.isHeld(pid: pid) }
@@ -134,6 +140,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         }
     }, onUp: {
         guard let session = ListenSession.current, session.state.finish() else { return }
+        if inApp { DispatchQueue.main.async { MeetingController.shared.setDictating(false) } }
         session.stopPreview()
         let keyUp = Date()
         session.timing.load = loadAverage()
