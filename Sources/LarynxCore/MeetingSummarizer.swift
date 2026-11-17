@@ -42,7 +42,11 @@ public enum MeetingSummarizer {
         - The summary is three to five short sentences: what the meeting was about and what came of it.
         - A decision is something the people agreed on. Leave the list empty if nothing was decided.
         - An action item is a task someone said they or someone else would do. Give the owner and the due date only
-          when they were said; otherwise leave them empty. Never guess.
+          when they were said; otherwise leave them empty. Never guess. A company's or presenter's own plans, told to
+          an audience ("we will ship the new pods early next year"), are not action items: they go in the summary.
+        - If "You" mostly listened (a talk, a webcast, an earnings call, a lecture) and did not speak with the people on
+          the call, write the notes about what was said on the call. Leave out your side remarks unless they are about
+          what was said.
         - Open questions are things raised and left unanswered.
         - Short, clear sentences. No filler, no "the speaker said", no timestamps.
         """
@@ -72,6 +76,16 @@ public enum MeetingSummarizer {
         other people; work out their names from how they are addressed ("Go ahead, Dana" means the next person to speak
         is Dana) and use the names.
         """
+
+    /// A line for the notes model when "You" said little (under a quarter of the words in a meeting of 150 words or
+    /// more): the share, so it can tell a talk you listened to from a meeting you took part in. Nil otherwise.
+    static func listeningNote(_ meeting: Meeting) -> String? {
+        func count(_ t: String) -> Int { t.split { !($0.isLetter || $0.isNumber) }.count }
+        let total = meeting.segments.reduce(0) { $0 + count($1.text) }
+        let mine = meeting.segments.filter { $0.speaker == "You" }.reduce(0) { $0 + count($1.text) }
+        guard total >= 150, Double(mine) < 0.25 * Double(total) else { return nil }
+        return "You said \(Int((100 * Double(mine) / Double(total)).rounded()))% of the words in this meeting."
+    }
 
     /// Claude Code on the person's own plan first; the API key if Claude Code isn't there or fails and a key is saved.
     static func writeWithClaude(_ meeting: Meeting) async throws -> GeneratedNotes {

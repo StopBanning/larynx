@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Meetings without headphones.** When the call plays through the speakers, the microphone hears it again and those lines used to land in the transcript as yours. Larynx now drops a line of yours when it repeats what the call was saying at that moment. A reply that reuses the call's words ("Let's stay with the standard paper then") stays. On a real 6-minute call played through speakers: 36 echoes out, nothing you said lost.
+- **Notes for calls you listened to.** For a talk, webcast or earnings call, the notes now cover what was said, not your side remarks. A presenter's own plans ("we'll ship early next year") go in the summary instead of your to-dos.
 - **Choose which Claude writes meeting notes** (Settings → Meetings → Claude model, `meetingClaude`): Opus (the default) or Sonnet, which is lighter on a Claude plan. Tested on four meetings, twice each: Sonnet was twice as fast but left out due dates that Opus kept. Also: the recording panel is now Liquid Glass, with a red Stop button.
 - **Mute me, while a meeting records.** A button beside the level meters keeps recording the call but stops recording your microphone, for a noisy room or a call playing through the speakers. Your side is kept as silence, so the transcript's times stay lined up. Mac.
 - **Meeting notes on your Claude plan.** When Claude Code is installed and signed in, Larynx has it write the notes: no API key and nothing extra to pay. It runs with no tools, no MCP servers and none of your settings, and gets only the transcript. A saved API key is the backup; with neither, the Mac's own model writes them. Mac and Windows.

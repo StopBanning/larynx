@@ -56,6 +56,7 @@ public enum ClaudeNotes {
     static func prompt(for meeting: Meeting) -> (system: String, user: String) {
         let names = meeting.addressedNames
         let system = MeetingSummarizer.instructions + "\n" + MeetingSummarizer.legend
+            + (MeetingSummarizer.listeningNote(meeting).map { "\n" + $0 } ?? "")
             + (names.isEmpty ? "" : "\nNames said in this meeting: \(names.joined(separator: ", ")).")
             + "\nWrite in plain words a 75-year-old would read without effort. Keep every number with its unit, exactly as said."
         let formatter = DateFormatter(); formatter.dateStyle = .full; formatter.timeStyle = .short

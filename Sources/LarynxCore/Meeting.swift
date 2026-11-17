@@ -259,7 +259,59 @@ public actor MeetingSession {
 
     public func finish() async throws -> [MeetingSegment] {
         try await step(final: true)
-        return segments
+        return MeetingEcho.remove(segments)
+    }
+}
+
+/// The call heard twice: with no headphones, the microphone picks up the call from the speakers, and those lines land
+/// in the transcript as "You". A "You" line is an echo when most of its words were said on the call while it played
+/// (it overlaps a call line for at least half its length and 60% of its words match), or, just after a call line, when
+/// it has three or more words and nearly all of them match. A real reply comes after the call has spoken and is rarely
+/// a copy, so it stays ("Let's stay with the standard stock" after "the standard stock saves two thousand"). Short
+/// garbled echoes can slip through; the rule would rather keep an echo than lose something you said.
+public enum MeetingEcho {
+    public static func remove(_ segments: [MeetingSegment], you: String = "You") -> [MeetingSegment] {
+        let call = segments.filter { $0.speaker != you }
+        guard !call.isEmpty else { return segments }
+        return segments.filter { s in s.speaker != you || !isEcho(s, call: call) }
+    }
+
+    static func isEcho(_ s: MeetingSegment, call: [MeetingSegment]) -> Bool {
+        let ws = words(s.text)
+        guard !ws.isEmpty else { return false }
+        var during: Set<String> = [], near: Set<String> = [], overlap = 0.0
+        for c in call {
+            let o = min(s.end, c.end) - max(s.start, c.start)
+            if o > 0 { overlap += o; during.formUnion(words(c.text)) }
+            if c.start - 1.5 <= s.start && s.start <= c.end + 1.5 { near.formUnion(words(c.text)) }
+        }
+        func share(_ pool: Set<String>) -> Double { Double(ws.filter { matches($0, pool) }.count) / Double(ws.count) }
+        if overlap >= 0.5 * (s.end - s.start) && share(during) >= 0.6 { return true }
+        return ws.count >= 3 && share(near) >= 0.85
+    }
+
+    static func words(_ text: String) -> [String] {
+        text.lowercased().replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "’", with: "")
+            .split { !($0.isLetter || $0.isNumber) }.map(String.init)
+    }
+
+    /// The same word, or one the speech model heard a little differently from the speakers ("carweave", "coreweave").
+    static func matches(_ w: String, _ pool: Set<String>) -> Bool {
+        if pool.contains(w) { return true }
+        guard w.count >= 4 else { return false }
+        return pool.contains { p in p.count >= 4 && (p.prefix(4) == w.prefix(4) || similarity(w, p) >= 0.75) }
+    }
+
+    /// Like Python's difflib ratio, simplified: twice the longest common subsequence over the total length.
+    static func similarity(_ a: String, _ b: String) -> Double {
+        let x = Array(a), y = Array(b)
+        var prev = [Int](repeating: 0, count: y.count + 1)
+        for i in 1...x.count {
+            var cur = [Int](repeating: 0, count: y.count + 1)
+            for j in 1...y.count { cur[j] = x[i - 1] == y[j - 1] ? prev[j - 1] + 1 : max(prev[j], cur[j - 1]) }
+            prev = cur
+        }
+        return 2 * Double(prev[y.count]) / Double(x.count + y.count)
     }
 }
 

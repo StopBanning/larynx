@@ -14,7 +14,16 @@ func runMeeting() async {
             let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
             let data = try Data(contentsOf: URL(fileURLWithPath: (from as NSString).expandingTildeInPath))
             struct Saved: Decodable { let meeting: Meeting }
-            let meeting = try (try? decoder.decode(Saved.self, from: data).meeting) ?? decoder.decode(Meeting.self, from: data)
+            var meeting = try (try? decoder.decode(Saved.self, from: data).meeting) ?? decoder.decode(Meeting.self, from: data)
+            // --echo-report: which "You" lines the echo filter takes out (the call picked up from the speakers).
+            if args.contains("--echo-report") {
+                let kept = MeetingEcho.remove(meeting.segments)
+                for s in meeting.segments where s.speaker == "You" {
+                    print("\(kept.contains(s) ? "keep" : "echo") \(Meeting.clock(s.start)) \(s.text)")
+                }
+                exit(0)
+            }
+            meeting.segments = MeetingEcho.remove(meeting.segments)
             let model = MeetingSummarizer.Model.chosen(option("--summary") ?? "auto")
             let notes = try await MeetingSummarizer.summarize(meeting, model: model)
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
