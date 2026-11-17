@@ -131,15 +131,20 @@ final class RecordingPanel {
 
     func show() {
         if panel == nil {
-            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 132),
-                            styleMask: [.titled, .nonactivatingPanel, .fullSizeContentView], backing: .buffered, defer: false)
-            p.titleVisibility = .hidden
-            p.titlebarAppearsTransparent = true
+            // Borderless and clear: the view draws its own glass (macOS 26) or frosted blur, and casts its own shadow.
+            let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 440, height: 150),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            p.isOpaque = false
+            p.backgroundColor = .clear
+            p.hasShadow = false
             p.isMovableByWindowBackground = true
             p.level = .floating
             p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             p.isReleasedWhenClosed = false
-            p.contentView = NSHostingView(rootView: RecordingView(controller: MeetingController.shared))
+            let host = NSHostingView(rootView: RecordingView(controller: MeetingController.shared))
+            host.wantsLayer = true
+            host.layer?.backgroundColor = .clear
+            p.contentView = host
             panel = p
         }
         if let screen = NSScreen.main, let p = panel {
@@ -169,17 +174,23 @@ struct RecordingView: View {
                     Button(action: { controller.stop() }) {
                         Text("Stop").font(.system(size: 18, weight: .semibold)).frame(minWidth: 72, minHeight: 34)
                     }
+                    .glassButton(prominent: true)
+                    .tint(.red)
                     .keyboardShortcut(.defaultAction)
                     .controlSize(.large)
                 }
                 HStack(spacing: 14) {
-                    Meter(label: controller.micMuted ? "Muted" : "You", level: controller.levels.you)
+                    Meter(label: controller.micMuted ? "Muted" : "You", level: controller.micMuted ? 0 : controller.levels.you,
+                          off: controller.micMuted)
                     Meter(label: "The call", level: controller.levels.call)
                     Button(action: { controller.toggleMute() }) {
                         Label(controller.micMuted ? "Unmute" : "Mute me",
                               systemImage: controller.micMuted ? "mic.slash.fill" : "mic.fill")
                             .font(.system(size: 14, weight: .medium))
+                            .frame(minHeight: 22)
                     }
+                    .glassButton(prominent: false)
+                    .tint(controller.micMuted ? .orange : nil)
                     .fixedSize()
                     .help(controller.micMuted ? "Record your microphone again" : "Keep recording the call, but not your microphone")
                 }
@@ -199,21 +210,49 @@ struct RecordingView: View {
                 EmptyView()
             }
         }
-        .padding(18)
+        .padding(20)
         .frame(width: 420)
+        .panelGlass(cornerRadius: 26)
+        .padding(10)  // room for the shadow inside the clear panel
+    }
+}
+
+extension View {
+    /// Liquid Glass behind the recording panel on macOS 26, a frosted blur with a shadow before that.
+    @ViewBuilder func panelGlass(cornerRadius: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.regularMaterial, in: shape)
+                .overlay(shape.strokeBorder(Color.primary.opacity(0.08)))
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+        }
+    }
+
+    /// Glass buttons on macOS 26 (prominent ones take the tint), the ordinary bordered style before that.
+    @ViewBuilder func glassButton(prominent: Bool) -> some View {
+        if #available(macOS 26.0, *) {
+            if prominent { self.buttonStyle(.glassProminent) } else { self.buttonStyle(.glass) }
+        } else {
+            if prominent { self.buttonStyle(.borderedProminent) } else { self.buttonStyle(.bordered) }
+        }
     }
 }
 
 struct Meter: View {
     let label: String
     let level: Float
+    var off = false
     var body: some View {
         HStack(spacing: 8) {
             Text(label).font(.system(size: 14)).foregroundStyle(.secondary).frame(width: 64, alignment: .leading)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.secondary.opacity(0.2))
-                    Capsule().fill(Color.green).frame(width: max(4, g.size.width * CGFloat(min(1, level * 3))))
+                    if !off {
+                        Capsule().fill(Color.green).frame(width: max(4, g.size.width * CGFloat(min(1, level * 3))))
+                    }
                 }
             }
             .frame(height: 8)
