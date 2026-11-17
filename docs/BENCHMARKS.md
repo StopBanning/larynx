@@ -148,6 +148,33 @@ printer" heard as "that the printer", "we we move" as "we remove"); "that that" 
 library"); and "never mind" cancelling the sentence before it is not handled. Results: `bench/results/compare-2026-11-13.json`
 (run 1) and `compare-2026-11-14.json` (run 2), with every output.
 
+**Run 3, held out again (Nov 16, commit 0676db9).** Forty new sentences (`bench/messy2.json`), written after run 2's
+fixes and never used to tune them, same five kinds and the same three voices. This is the honest number for sentences
+Larynx has not seen:
+
+| System | Messy 2: edits needed | Fillers | Stutters | False starts | Numbers | Mixed |
+| --- | --- | --- | --- | --- | --- | --- |
+| Larynx | **11.8%** | **4.3%** | **5.6%** | **47.6%** | **0.0%** | **14.4%** |
+| Larynx, no cleanup | 23.9% | 13.7% | 17.3% | 66.7% | 0.0% | 40.9% |
+| Apple on-device | 21.7% | 10.3% | 9.9% | 71.4% | 1.7% | 35.6% |
+
+About half the edits Apple's text needs, but false starts were still the row lost: run 2's fixes had only caught the
+shapes in the first set. The misses, read clip by clip: a short swap after a small word ("to Denver, sorry, to
+Boulder", "the first, sorry, the fifth"), a one-word swap ("blue, no wait, green"), and the speech model ending the
+sentence before the cue ("at seven. No, let's leave at eight"). Also "Tell, tell Nina", "more more", a leading "Hum,"
+for "hmm", and "eight thirty" written as "8.30".
+
+**What changed (this commit):** each of those, read against all 1,561 real dictations before turning on. The first
+version changed 9 of them and 4 were wrong ("I mean" adding to a sentence rather than correcting it, and meant
+repeats like "Testing, testing"), so a cue after a full stop must be "no", "sorry", "I mean" or "no wait" and repeat
+the first words, and a repeat with a comma only counts opening a sentence. After that, 2 changed, both real
+corrections. "Actually" after a full stop still starts a new thought and is left.
+
+**Run 4 (Nov 16, after the fixes), not held out** for either set: Messy 2 at **3.3%** (false starts 4.0%), and the
+first set at **6.9%** (run 2: 7.4%), so nothing it had right got worse. Apple and the uncleaned model are unchanged.
+The next held-out check needs a third set. Results: `compare-2026-11-16-messy2.json` (run 3) and
+`compare-2026-11-16-messy-messy2.json` (run 4).
+
 ## Accents: real conversational English from many first languages (Nov 14)
 
 The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split

@@ -900,6 +900,60 @@
       "mode": "standard",
       "in": "Please book it for the conf for the conference room.",
       "expect": "Please book it for the conference room."
+    },
+    {
+      "id": "t-correction-sorry-short-swap",
+      "mode": "standard",
+      "in": "Mail the forms to Austin, sorry, to Dallas.",
+      "expect": "Mail the forms to Dallas."
+    },
+    {
+      "id": "t-correction-sorry-ordinal",
+      "mode": "standard",
+      "in": "The party is on the third, sorry, the fourth.",
+      "expect": "The party is on the fourth."
+    },
+    {
+      "id": "t-correction-no-wait-one-word",
+      "mode": "standard",
+      "in": "Make the banner red, no wait, orange.",
+      "expect": "Make the banner orange."
+    },
+    {
+      "id": "t-correction-after-full-stop",
+      "mode": "standard",
+      "in": "We land at nine. No, we land at ten.",
+      "expect": "We land at ten."
+    },
+    {
+      "id": "t-correction-i-mean-after-full-stop",
+      "mode": "standard",
+      "in": "Leave the keys in the kitchen. I mean the hallway.",
+      "expect": "Leave the keys in the hallway."
+    },
+    {
+      "id": "t-repeat-word-comma-sentence-start",
+      "mode": "standard",
+      "in": "Ask, ask the neighbors about the fence.",
+      "expect": "Ask the neighbors about the fence."
+    },
+    {
+      "id": "t-doubled-more",
+      "mode": "standard",
+      "in": "We need more more napkins.",
+      "expect": "We need more napkins."
+    },
+    {
+      "id": "t-hum-opening",
+      "mode": "standard",
+      "in": "Hum, the printer is out of paper.",
+      "expect": "The printer is out of paper."
+    },
+    {
+      "id": "t-time-with-dot",
+      "mode": "standard",
+      "in": "The store opens at 9.45 on Sunday.",
+      "expect": "The store opens at 9:45 on Sunday."
     }
   ],
   "rewrite": [
@@ -2018,6 +2072,41 @@
       "id": "keep-layout-04",
       "in": "We need a new line manager by Friday.",
       "expect": "We need a new line manager by Friday."
+    },
+    {
+      "id": "keep-actually-new-thought",
+      "in": "We could eat at the diner. Actually, the diner closes early.",
+      "expect": "We could eat at the diner. Actually, the diner closes early."
+    },
+    {
+      "id": "keep-sorry-no-restart",
+      "in": "Sorry, the meeting ran long.",
+      "expect": "Sorry, the meeting ran long."
+    },
+    {
+      "id": "keep-sorry-apology",
+      "in": "I'll be a few minutes late, sorry, the bus broke down.",
+      "expect": "I'll be a few minutes late, sorry, the bus broke down."
+    },
+    {
+      "id": "keep-comma-repeat-meant",
+      "in": "Check, check, is this thing on?",
+      "expect": "Check, check, is this thing on?"
+    },
+    {
+      "id": "keep-no-answer-after-stop",
+      "in": "I looked for the receipt. No, it was gone.",
+      "expect": "I looked for the receipt. No, it was gone."
+    },
+    {
+      "id": "keep-decimal-price",
+      "in": "Apples went up to 2.50 a pound.",
+      "expect": "Apples went up to 2.50 a pound."
+    },
+    {
+      "id": "keep-percent-decimal",
+      "in": "Rates settled at 4.25 percent.",
+      "expect": "Rates settled at 4.25 percent."
     },
     {
       "id": "keep-chant-bam",

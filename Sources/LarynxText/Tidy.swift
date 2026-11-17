@@ -221,6 +221,8 @@ public enum Tidy {
         if text.range(of: "(?i)\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b", options: .regularExpression) != nil {
             s = s.replacingOccurrences(of: "^(?:Ah|Eh),?\\s+", with: "", options: .regularExpression)
         }
+        // "Hum," starting a sentence is "hmm" as the speech model hears it.
+        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)Hum,\\s+", with: "$1", options: .regularExpression)
         // 1c. "Aye, I, I": a stuttered "I" written as "Aye".
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .regularExpression)
         // 1d. A false start: an unfinished clause ending on a small word, then the same speaker starts again.
@@ -236,6 +238,10 @@ public enum Tidy {
                                    with: "$1", options: .regularExpression)
         // 1d3. A range said as two numbers: "15 20 minutes" -> "15 to 20 minutes" (the second larger, then a unit).
         s = numberRanges(s)
+        // A clock time the speech model wrote with a dot: "opens at 8.30 tomorrow" -> "8:30". Only after a word that
+        // introduces a time, with an hour of 1 to 12 and minutes under 60, and never before "percent" or a unit.
+        s = s.replacingOccurrences(of: "(?i)(?<=\\b(?:at|by|until|till|around|before|after|from)\\s)(1[0-2]|[1-9])\\.([0-5]\\d)(?![\\d.,]\\d|\\s*(?:%|percent|per|times|miles|km|kg|pounds|dollars))\\b",
+                                   with: "$1:$2", options: .regularExpression)
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
@@ -627,7 +633,7 @@ public enum Tidy {
     ]
 
     static let meantDoubles = "that|had|is|really|very|so|no|yes|yeah|bye|ha|haha|hey|ok|okay|night|knock|chop|well|"
-        + "too|far|much|many|more|long|way|super|tsk|there|now|go|come|do|not|aye|one|two|three|four|five|six|seven|eight|nine|zero|oh"
+        + "too|far|much|many|long|wait|way|super|tsk|there|now|go|come|do|not|aye|one|two|three|four|five|six|seven|eight|nine|zero|oh"
     static let correctionCues = "no,?\\s+wait|wait|no|sorry|i mean|actually|or rather|rather"
 
     /// A word said exactly twice in a row with nothing between ("add add") becomes one. Three or more in a row is meant
@@ -642,6 +648,15 @@ public enum Tidy {
             guard run.split(whereSeparator: \.isWhitespace).count == 2, !keep.contains(word.lowercased()) else { continue }
             out = (out as NSString).replacingCharacters(in: m.range, with: word)
         }
+        // With a comma between, only opening a sentence and running straight on: "Tell, tell Nina the news". Elsewhere
+        // the comma is usually meant ("into sound, sound into code", "tell me, me first", "Testing, testing, one").
+        guard let lead = try? NSRegularExpression(pattern: "(?i)(^|[.!?]\\s+)([a-z']{2,}),\\s+\\2\\s+(?=\\p{Ll})") else { return out }
+        let o = out as NSString
+        for m in lead.matches(in: out, range: NSRange(location: 0, length: o.length)).reversed() {
+            let word = o.substring(with: m.range(at: 2))
+            guard !keep.contains(word.lowercased()) else { continue }
+            out = (out as NSString).replacingCharacters(in: m.range, with: o.substring(with: m.range(at: 1)) + word + " ")
+        }
         return out
     }
 
@@ -649,7 +664,9 @@ public enum Tidy {
     /// to that point, so everything from there to the cue goes. Otherwise a same-kind word just before the cue is
     /// swapped for the tail's first word. A cue with no restart and no match (", actually, it's fine") is left.
     static func cuedCorrections(_ text: String) -> String {
-        guard let cue = try? NSRegularExpression(pattern: "(?i),\\s+(?:\(correctionCues)),?\\s+(?=[\\w$])") else { return text }
+        // The cue usually follows a comma; the speech model sometimes ends the sentence there instead ("leave at seven. No,
+        // let's leave at eight"), so a full stop counts too.
+        guard let cue = try? NSRegularExpression(pattern: "(?i)([,.])\\s+(\(correctionCues)),?\\s+(?=[\\w$])") else { return text }
         var s = text
         var guardCount = 0
         while guardCount < 6, let m = cue.firstMatch(in: s, range: NSRange(location: 0, length: (s as NSString).length)) {
@@ -659,6 +676,16 @@ public enum Tidy {
             let sentenceStart = head.range(of: "[.!?]\\s+(?=[^.!?]*$)", options: .regularExpression)?.upperBound ?? head.startIndex
             let first = tail.prefix { $0.isLetter || $0.isNumber || $0 == "'" || $0 == "$" }.lowercased()
             guard !first.isEmpty else { break }
+            let said0 = ns.substring(with: m.range(at: 2)).lowercased()
+            // After a full stop only a cue that means "I said it wrong" counts: ". Actually, the diner closes early" is a
+            // new thought, even when its first words match.
+            if ns.substring(with: m.range(at: 1)) == ".", !(said0 == "no" || said0.hasPrefix("sorry") || said0 == "i mean"
+                || said0 == "or rather" || said0.contains("wait") && said0.hasPrefix("no")) { break }
+            let said = ns.substring(with: m.range(at: 2)).lowercased(), afterStop = ns.substring(with: m.range(at: 1)) == "."
+            // The cues that only ever mean "I said it wrong". "Actually" and "wait" also start a new thought, and a "no"
+            // after a full stop is often an answer.
+            let strong = said.hasPrefix("sorry") || said == "i mean" || said == "or rather" || said.hasPrefix("no") && said.contains("wait")
+                || (said == "no" && !afterStop)
             // Back to where the tail's first word was said before, in this sentence.
             let sentence = head[sentenceStart...]
             var cut: String.Index?
@@ -673,7 +700,13 @@ public enum Tidy {
                 let gone = head[at...].split(whereSeparator: \.isWhitespace)
                 let tailWords = tail.split(whereSeparator: \.isWhitespace).prefix(2).map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) }
                 let headWords = gone.prefix(2).map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) }
-                if gone.count > 6 || (small.contains(first) && (tailWords.count < 2 || headWords != tailWords)) { cut = nil }
+                // A strong cue with a short swap after a small word is a correction even when the next word differs:
+                // "goes to Denver, sorry, to Boulder", "due on the first, sorry, the fifth".
+                let shortSwap = strong && gone.count == 2 && tailWords.count == 2
+                // After a full stop the restart must repeat the first two words: "They're not going. I mean, they're
+                // late" adds to the sentence before rather than replacing it.
+                let mustMatch = (small.contains(first) || afterStop) && !shortSwap
+                if gone.count > 6 || (mustMatch && (tailWords.count < 2 || headWords != tailWords)) { cut = nil }
             }
             if let cut {
                 var restart = String(tail)
@@ -688,6 +721,14 @@ public enum Tidy {
                    tail.range(of: "(?i)^" + kind + "\\b", options: .regularExpression) != nil {
                     s = String(head[..<r.lowerBound]) + tail; replaced = true; break
                 }
+            }
+            // One word swapped for one word, ending the sentence: "paint it blue, no wait, green".
+            if !replaced, strong, said != "no", !said.hasPrefix("sorry"),
+               tail.range(of: "^[\\w']+(?=[.!?]?\\s*$)", options: .regularExpression) != nil,
+               let last = head.range(of: "\\b[\\w']+$", options: .regularExpression),
+               !["i", "it", "you", "we", "they", "the", "a", "an", "is", "was"].contains(head[last].lowercased()) {
+                s = String(head[..<last.lowerBound]) + tail
+                replaced = true
             }
             if !replaced { break }
         }
