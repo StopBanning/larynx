@@ -13,6 +13,7 @@ final class MeetingController: ObservableObject {
     @Published var phase: Phase = .idle
     @Published var levels: (you: Float, call: Float) = (0, 0)
     @Published var callNote: String?
+    @Published var micMuted = false
 
     private var capture: MeetingCapture?
     private var session: MeetingSession?
@@ -25,8 +26,15 @@ final class MeetingController: ObservableObject {
 
     func toggle() { isRecording ? stop() : start() }
 
+    /// Leaves the call recording and silences your side, for a noisy room or a call played through the speakers.
+    func toggleMute() {
+        micMuted.toggle()
+        capture?.setMicMuted(micMuted)
+    }
+
     func start() {
         guard !isRecording else { return }
+        micMuted = false
         id = MeetingStore.newID()
         started = Date()
         let session = MeetingSession { samples in try await transcriber.transcribe(samples) }
@@ -164,9 +172,16 @@ struct RecordingView: View {
                     .keyboardShortcut(.defaultAction)
                     .controlSize(.large)
                 }
-                HStack(spacing: 16) {
-                    Meter(label: "You", level: controller.levels.you)
+                HStack(spacing: 14) {
+                    Meter(label: controller.micMuted ? "Muted" : "You", level: controller.levels.you)
                     Meter(label: "The call", level: controller.levels.call)
+                    Button(action: { controller.toggleMute() }) {
+                        Label(controller.micMuted ? "Unmute" : "Mute me",
+                              systemImage: controller.micMuted ? "mic.slash.fill" : "mic.fill")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .fixedSize()
+                    .help(controller.micMuted ? "Record your microphone again" : "Keep recording the call, but not your microphone")
                 }
                 if let note = controller.callNote {
                     Text(note).font(.system(size: 13)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

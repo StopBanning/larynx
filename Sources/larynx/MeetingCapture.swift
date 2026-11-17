@@ -18,6 +18,10 @@ final class MeetingCapture: @unchecked Sendable {
     private let lock = NSLock()
     private(set) var levels: [String: Float] = ["You": 0, "On the call": 0]
     private(set) var callAudioError: String?
+    /// Muted: the microphone side is written as silence, not skipped, so the two tracks stay the same length and the
+    /// transcript's times stay lined up with the call.
+    private var micMuted = false
+    func setMicMuted(_ muted: Bool) { lock.lock(); micMuted = muted; lock.unlock() }
 
     static let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
 
@@ -78,10 +82,11 @@ final class MeetingCapture: @unchecked Sendable {
             fed = true; status.pointee = .haveData; return buffer
         }
         guard error == nil, let data = out.floatChannelData, out.frameLength > 0 else { return }
-        let samples = Array(UnsafeBufferPointer(start: data[0], count: Int(out.frameLength)))
+        var samples = Array(UnsafeBufferPointer(start: data[0], count: Int(out.frameLength)))
+        lock.lock()
+        if side == "You" && micMuted { samples = [Float](repeating: 0, count: samples.count) }
         var peak: Float = 0
         for s in samples { peak = max(peak, abs(s)) }
-        lock.lock()
         levels[side] = peak
         let handle = spool[side]
         lock.unlock()
