@@ -282,8 +282,8 @@ fn civil(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + if m <= 2 { 1 } else { 0 }, m, d)
 }
 
-/// The request body for one meeting (the Mac's `ClaudeNotes.body`).
-pub fn body(meeting: &Meeting) -> String {
+/// The instructions and the transcript for one meeting, the same for the API and for Claude Code.
+pub fn prompt(meeting: &Meeting) -> (String, String) {
     let names = meeting.addressed_names();
     let mut system = format!("{INSTRUCTIONS}\n{LEGEND}");
     if !names.is_empty() {
@@ -298,6 +298,12 @@ pub fn body(meeting: &Meeting) -> String {
         if minutes == 1 { "" } else { "s" },
         meeting.transcript()
     );
+    (system, user)
+}
+
+/// The request body for one meeting (the Mac's `ClaudeNotes.body`).
+pub fn body(meeting: &Meeting) -> String {
+    let (system, user) = prompt(meeting);
     json!({
         "model": MODEL,
         "max_tokens": 16000,
@@ -319,6 +325,8 @@ pub enum Failure {
     CutOff,
     Malformed(String),
     Api(u16, String),
+    ClaudeCodeNotSignedIn,
+    ClaudeCode(String),
 }
 
 impl std::fmt::Display for Failure {
@@ -332,6 +340,8 @@ impl std::fmt::Display for Failure {
             Failure::CutOff => write!(f, "Claude's notes came back cut off."),
             Failure::Malformed(why) => write!(f, "Claude's notes came back in an unexpected shape ({why})."),
             Failure::Api(status, message) => write!(f, "Claude returned an error ({status}): {message}"),
+            Failure::ClaudeCodeNotSignedIn => write!(f, "Claude Code isn't signed in. Open Terminal, type claude, and sign in with the Claude account."),
+            Failure::ClaudeCode(why) => write!(f, "Claude Code couldn't write the notes ({why})."),
         }
     }
 }
@@ -424,6 +434,10 @@ pub fn parse(text: &str) -> Result<Notes, Failure> {
         .and_then(|b| b["text"].as_str())
         .and_then(|t| serde_json::from_str::<Value>(t).ok())
         .ok_or_else(|| Failure::Malformed("no notes in the reply".into()))?;
+    Ok(notes_from(&inner))
+}
+
+fn notes_from(inner: &Value) -> Notes {
     let strings = |key: &str| -> Vec<String> {
         inner[key]
             .as_array()
@@ -451,7 +465,7 @@ pub fn parse(text: &str) -> Result<Notes, Failure> {
                 .collect()
         })
         .unwrap_or_default();
-    Ok(Notes {
+    Notes {
         title: inner["title"]
             .as_str()
             .and_then(blank_to_none)
@@ -462,7 +476,142 @@ pub fn parse(text: &str) -> Result<Notes, Failure> {
         open_questions: strings("openQuestions"),
         model: String::new(),
         seconds: 0.0,
-    })
+    }
+}
+
+/// Where Claude Code is (the native install, `claude.exe`), so notes can use the person's own Claude plan with no API
+/// key. `LARYNX_CLAUDE_CODE` names it for tests; with `LARYNX_DATA_DIR` set (tests, CI) the real one is never used.
+pub fn claude_code_path() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("LARYNX_CLAUDE_CODE") {
+        return (!p.is_empty()).then(|| PathBuf::from(p));
+    }
+    if std::env::var_os("LARYNX_DATA_DIR").is_some() {
+        return None;
+    }
+    let name = if cfg!(windows) { "claude.exe" } else { "claude" };
+    let mut places: Vec<PathBuf> = Vec::new();
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        places.push(PathBuf::from(&home).join(".local").join("bin"));
+    }
+    if let Some(path) = std::env::var_os("PATH") {
+        places.extend(std::env::split_paths(&path));
+    }
+    places.into_iter().map(|d| d.join(name)).find(|p| p.is_file())
+}
+
+/// The arguments for `claude -p`: no tools, no MCP servers, none of the person's settings or hooks, the notes' shape as
+/// a JSON schema (the Mac's `ClaudeCode.arguments`).
+pub fn claude_code_args(system: &str) -> Vec<String> {
+    [
+        "-p", "--output-format", "json", "--json-schema", &schema().to_string(), "--model", "opus", "--tools", "",
+        "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system,
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+/// Notes through Claude Code on the person's own plan. The transcript goes in on stdin; `ANTHROPIC_API_KEY` is taken
+/// out of its environment, or Claude Code would bill that key instead of the plan.
+pub fn claude_code_notes(meeting: &Meeting, binary: &Path) -> Result<Notes, Failure> {
+    use std::io::{Read, Write};
+    use std::process::{Command, Stdio};
+    let meeting = meeting.naming_the_call();
+    let (system, user) = prompt(&meeting);
+    let dir = std::env::temp_dir().join(format!("larynx-notes-cc-{}", std::process::id()));
+    let _ = std::fs::create_dir_all(&dir);
+    let started = std::time::Instant::now();
+    let mut child = Command::new(binary)
+        .args(claude_code_args(&system))
+        .current_dir(&dir)
+        .env_remove("ANTHROPIC_API_KEY")
+        .env_remove("ANTHROPIC_AUTH_TOKEN")
+        .env_remove("CLAUDECODE")
+        .env_remove("CLAUDE_CODE_ENTRYPOINT")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| Failure::ClaudeCode(e.to_string()))?;
+    let mut stdin = child.stdin.take().unwrap();
+    let feed = std::thread::spawn(move || {
+        let _ = stdin.write_all(user.as_bytes());
+    });
+    let mut out_pipe = child.stdout.take().unwrap();
+    let mut err_pipe = child.stderr.take().unwrap();
+    let out_thread = std::thread::spawn(move || {
+        let mut v = Vec::new();
+        let _ = out_pipe.read_to_end(&mut v);
+        v
+    });
+    let err_thread = std::thread::spawn(move || {
+        let mut v = Vec::new();
+        let _ = err_pipe.read_to_end(&mut v);
+        v
+    });
+    let _ = feed.join();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if started.elapsed().as_secs() > 600 => {
+                let _ = child.kill();
+                let _ = std::fs::remove_dir_all(&dir);
+                return Err(Failure::ClaudeCode("it took longer than 10 minutes".into()));
+            }
+            Ok(None) => std::thread::sleep(Duration::from_millis(200)),
+            Err(e) => return Err(Failure::ClaudeCode(e.to_string())),
+        }
+    }
+    let out = String::from_utf8_lossy(&out_thread.join().unwrap_or_default()).to_string();
+    let err = String::from_utf8_lossy(&err_thread.join().unwrap_or_default()).to_string();
+    let _ = std::fs::remove_dir_all(&dir);
+    let signed_out = |t: &str| {
+        let t = t.to_lowercase();
+        t.contains("log in") || t.contains("login") || t.contains("not logged") || t.contains("authenticat")
+    };
+    let reply: Value = match serde_json::from_str(&out) {
+        Ok(v) => v,
+        Err(_) if signed_out(&out) || signed_out(&err) => return Err(Failure::ClaudeCodeNotSignedIn),
+        Err(_) => {
+            let why = err.trim().chars().take(300).collect::<String>();
+            return Err(Failure::ClaudeCode(if why.is_empty() { "its reply wasn't JSON".into() } else { why }));
+        }
+    };
+    if reply["is_error"].as_bool() == Some(true) {
+        let why = reply["result"].as_str().or(reply["subtype"].as_str()).unwrap_or("error").to_string();
+        return Err(if signed_out(&why) { Failure::ClaudeCodeNotSignedIn } else { Failure::ClaudeCode(why.chars().take(300).collect()) });
+    }
+    let inner = if reply["structured_output"].is_object() {
+        reply["structured_output"].clone()
+    } else {
+        reply["result"]
+            .as_str()
+            .and_then(|t| serde_json::from_str::<Value>(t).ok())
+            .ok_or_else(|| Failure::ClaudeCode("no notes in its reply".into()))?
+    };
+    let mut notes = verify(notes_from(&inner), &meeting);
+    notes.model = "claude".into();
+    notes.seconds = started.elapsed().as_secs_f64();
+    Ok(notes)
+}
+
+/// Claude Code on the person's own plan first; the API key if Claude Code isn't installed, or fails and a key is saved.
+pub fn notes_by_claude(
+    meeting: &Meeting,
+    claude_code: Option<&Path>,
+    key: Option<&str>,
+    post: Transport,
+    pause: &dyn Fn(f64),
+) -> Result<Notes, Failure> {
+    let has_key = key.map_or(false, |k| !k.trim().is_empty());
+    match claude_code {
+        Some(binary) => match claude_code_notes(meeting, binary) {
+            Ok(n) => Ok(n),
+            Err(_) if has_key => write_notes(meeting, key, post, pause),
+            Err(e) => Err(e),
+        },
+        None => write_notes(meeting, key, post, pause),
+    }
 }
 
 fn blank_to_none(s: &str) -> Option<String> {
@@ -903,6 +1052,55 @@ mod tests {
     }
 
     const GOOD: &str = r#"{"title":"Renovation schedule","summary":["Priya's tile is back-ordered for six weeks.","The budget is 62,500."],"decisions":["Switch tile if one in stock is close."],"actionItems":[{"task":"Send photos of two tiles in stock","owner":"Priya","due":"tonight"},{"task":"Order 900 tiles","owner":"Bob","due":"Friday"}],"openQuestions":[]}"#;
+
+    /// A stand-in for Claude Code: saves its arguments, environment and stdin, prints `reply`.
+    #[cfg(unix)]
+    fn fake_claude(reply: &str) -> (PathBuf, PathBuf) {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("larynx-fake-cc-{}-{}", std::process::id(), reply.len()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("reply.json"), reply).unwrap();
+        let d = dir.display();
+        let script = format!("#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\"; done > \"{d}/args.txt\"\nenv > \"{d}/env.txt\"\ncat > \"{d}/stdin.txt\"\ncat \"{d}/reply.json\"\n");
+        let bin = dir.join("claude");
+        std::fs::write(&bin, script).unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        (bin, dir)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn claude_code_writes_the_notes_with_no_tools_and_no_key() {
+        let reply = json!({"type": "result", "is_error": false, "result": GOOD, "structured_output": serde_json::from_str::<Value>(GOOD).unwrap()}).to_string();
+        let (bin, dir) = fake_claude(&reply);
+        std::env::set_var("ANTHROPIC_API_KEY", "must-not-reach-claude-code");
+        let never = |_: &str, _: &[(String, String)], _: &str| -> Result<(u16, String, Option<f64>), String> { panic!("the API was used") };
+        let notes = notes_by_claude(&meeting(), Some(&bin), Some("k"), &never, &|_| {}).unwrap();
+        std::env::remove_var("ANTHROPIC_API_KEY");
+        assert_eq!(notes.title, "Renovation schedule");
+        assert_eq!(notes.model, "claude");
+        let args: Vec<String> = std::fs::read_to_string(dir.join("args.txt")).unwrap().lines().map(String::from).collect();
+        assert_eq!(args[0], "-p");
+        let at = |flag: &str| args[args.iter().position(|a| a == flag).unwrap() + 1].clone();
+        assert_eq!(at("--tools"), "");
+        assert_eq!(at("--setting-sources"), "");
+        assert_eq!(at("--model"), "opus");
+        assert!(args.contains(&"--strict-mcp-config".to_string()));
+        assert!(!std::fs::read_to_string(dir.join("env.txt")).unwrap().contains("ANTHROPIC_API_KEY"));
+        assert!(std::fs::read_to_string(dir.join("stdin.txt")).unwrap().contains("back-ordered for six weeks"));
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn claude_code_signed_out_falls_back_to_the_key_or_says_so() {
+        let (bin, dir) = fake_claude(r#"{"type":"result","is_error":true,"result":"Not logged in · Please run /login"}"#);
+        let none = |_: &str, _: &[(String, String)], _: &str| -> Result<(u16, String, Option<f64>), String> { Err("no".into()) };
+        assert_eq!(notes_by_claude(&meeting(), Some(&bin), None, &none, &|_| {}).unwrap_err(), Failure::ClaudeCodeNotSignedIn);
+        let api = |_: &str, _: &[(String, String)], _: &str| Ok((200, reply(GOOD, "end_turn"), None));
+        assert_eq!(notes_by_claude(&meeting(), Some(&bin), Some("k"), &api, &|_| {}).unwrap().title, "Renovation schedule");
+        let _ = std::fs::remove_dir_all(dir);
+    }
 
     #[test]
     fn the_request_matches_the_mac() {

@@ -122,7 +122,7 @@ pub fn entry(app: bool) {
 fn meeting_notes(args: &Args) -> Result<(), String> {
     let path = args.positional.get(1).ok_or("usage: larynx meeting-notes <meeting.json> [--save]")?;
     let mut m = meeting::load(std::path::Path::new(path))?;
-    let notes = meeting::write_notes(&m, credential::claude_key().as_deref(), &meeting::curl_post, &meeting::sleep_seconds)
+    let notes = meeting::notes_by_claude(&m, meeting::claude_code_path().as_deref(), credential::claude_key().as_deref(), &meeting::curl_post, &meeting::sleep_seconds)
         .map_err(|e| e.to_string())?;
     println!("{}", serde_json::to_string_pretty(&notes).map_err(|e| e.to_string())?);
     if args.has("save") {

@@ -15,10 +15,11 @@ public enum MeetingSummarizer {
         case privateCloud = "private-cloud"
         case claude
 
-        /// The model the `meetingSummary` setting names. `auto`: Claude when a Claude key is set, else the Mac's own.
+        /// The model the `meetingSummary` setting names. `auto`: Claude when Claude Code or a Claude key is there, else
+        /// the Mac's own.
         public static func chosen(_ setting: String) -> Model {
             if let model = Model(rawValue: setting) { return model }
-            return ClaudeKey.isSet ? .claude : .onDevice
+            return MeetingSummarizer.isAvailable(.claude) ? .claude : .onDevice
         }
     }
 
@@ -47,7 +48,7 @@ public enum MeetingSummarizer {
         """
 
     public static func isAvailable(_ model: Model) -> Bool {
-        if model == .claude { return ClaudeKey.isSet }
+        if model == .claude { return ClaudeCode.isInstalled || ClaudeKey.isSet }
         #if canImport(FoundationModels)
         switch model {
         case .claude: break
@@ -72,13 +73,23 @@ public enum MeetingSummarizer {
         is Dana) and use the names.
         """
 
+    /// Claude Code on the person's own plan first; the API key if Claude Code isn't there or fails and a key is saved.
+    static func writeWithClaude(_ meeting: Meeting) async throws -> GeneratedNotes {
+        guard ClaudeCode.isInstalled else { return try await ClaudeNotes.write(meeting) }
+        do { return try await ClaudeCode.write(meeting) }
+        catch {
+            guard ClaudeKey.isSet else { throw error }
+            return try await ClaudeNotes.write(meeting)
+        }
+    }
+
     public static func summarize(_ original: Meeting, model: Model) async throws -> MeetingNotes {
         let meeting = original.namingTheCall()
         let transcript = meeting.transcriptText
         guard transcript.rangeOfCharacter(from: .letters) != nil else { throw Failure.empty }
         if model == .claude {
             let started = Date()
-            let notes = verify(try await ClaudeNotes.write(meeting), against: meeting)
+            let notes = verify(try await writeWithClaude(meeting), against: meeting)
             return MeetingNotes(notes, model: model, seconds: Date().timeIntervalSince(started))
         }
         guard isAvailable(model) else { throw Failure.unavailable(model == .onDevice ? "Apple Intelligence is off or not supported on this Mac" : "Private Cloud Compute needs macOS 27 and Apple Intelligence") }

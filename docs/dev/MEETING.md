@@ -44,6 +44,21 @@ The key is saved in the Keychain from Settings → Meetings; without one, `auto`
 the request fails (no internet, no credit), the transcript is saved and the meeting shows "Write the summary now".
 The Windows app uses the same request and schema, so both write the same notes.
 
+**Added (Nov 16, Colin): Claude Code first, on the person's own Claude plan.** A Claude subscription can't be used by
+an app through the API, but Claude Code, signed in to the plan, can be run headless. When it is installed, Larynx runs
+`claude -p` with the same instructions and schema (`ClaudeCode` in `ClaudeNotes.swift`, `claude_code_notes` in
+`windows/src/meeting.rs`): `--json-schema` for the shape, `--model opus`, `--tools ""` (no tools at all),
+`--strict-mcp-config` and `--setting-sources ""` (none of the person's MCP servers, settings or hooks),
+`--no-session-persistence`, the transcript on stdin and an empty temporary folder as its working directory.
+`ANTHROPIC_API_KEY` is removed from its environment, or Claude Code would bill that key instead of the plan. If Claude
+Code isn't installed, or fails (not signed in, offline) and a key is saved, the API key is used; with neither, the
+Mac's own model. Not `--bare`: it skips reading the keychain, where the plan's sign-in is kept. On Windows only the
+native install (`claude.exe`) is found, not the npm one.
+First real run (Nov 16, `tests/meeting.py --summary claude`, on Colin's plan): notes in 9 to 11 seconds. The weekly sync
+passes; the client call names "Kriya" throughout, because the speech model heard "Priya" that way and Claude used the
+name as heard (a speech error, not a notes error). The test now accepts any task that fits when one sentence holds
+two ("tell the printer today, a new proof by Thursday").
+
 The comparison that led there:
 
 | | On the Mac (Apple on-device model) | Apple Private Cloud Compute |
@@ -111,7 +126,8 @@ and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
   type. **Your meetings** (same menu) lists them all.
 - The notes are the Mac's: the same Claude request, schema and `verify()`, through Windows' own `curl.exe` (the tool
   `larynx setup` already uses), with the key going in on standard input. The key lives in Windows Credential Manager:
-  right-click → **Set Claude key…**. If the notes fail, the transcript is saved and the menu offers **Write the summary
+  right-click → **Set Claude key…**. Claude Code (`claude.exe`, signed in to a Claude plan) is used first when it is
+  installed, the same as on the Mac. If the notes fail, the transcript is saved and the menu offers **Write the summary
   again**.
 - "Email this to me" fills in the address in `%LOCALAPPDATA%\Larynx\meetings\email.txt` (or `LARYNX_MEETING_EMAIL`).
 - CI speaks the scripted client call with Windows' voices into two tracks, runs `larynx-cli meeting you.wav call.wav

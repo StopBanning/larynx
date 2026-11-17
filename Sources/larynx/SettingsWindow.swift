@@ -288,6 +288,7 @@ private struct WordsPane: View {
 /// have no SwiftUI macro plugin.
 @MainActor private final class ClaudeKeyModel: ObservableObject {
     @Published var hasKey = ClaudeKey.isSet
+    let hasClaudeCode = ClaudeCode.isInstalled
     @Published var draft = ""
     @Published var note = ""
     func save() {
@@ -301,16 +302,28 @@ private struct MeetingsSection: View {
     @StateObject private var model = ClaudeKeyModel()
     var body: some View {
         Section("Meetings") {
-            if model.hasKey {
+            if model.hasClaudeCode {
                 LabeledContent("Notes") { Text("Written by Claude after every meeting").foregroundStyle(.secondary) }
+                Text("Through Claude Code, on your Claude plan: no key and nothing extra to pay.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            if model.hasKey {
+                if !model.hasClaudeCode {
+                    LabeledContent("Notes") { Text("Written by Claude after every meeting").foregroundStyle(.secondary) }
+                } else {
+                    Text("Your Claude key is the backup if Claude Code can't write them.").font(.caption).foregroundStyle(.secondary)
+                }
                 Button("Remove the Claude key", action: model.remove)
             } else {
                 HStack {
-                    SecureField("Claude key", text: $model.draft)
+                    SecureField(model.hasClaudeCode ? "Claude key (optional backup)" : "Claude key", text: $model.draft)
                     Button("Save", action: model.save).disabled(model.draft.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                Text("Without a key, notes are written by this Mac's own model. A key comes from console.anthropic.com → API keys.")
-                    .font(.caption).foregroundStyle(.secondary)
+                if !model.hasClaudeCode {
+                    Text("Without Claude Code or a key, notes are written by this Mac's own model. Install Claude Code and sign in "
+                         + "to use your Claude plan, or get a key from console.anthropic.com → API keys.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             if !model.note.isEmpty { Text(model.note).font(.caption) }
             Text("With Claude, the meeting's transcript (never the audio) is sent to Anthropic to write the notes.")

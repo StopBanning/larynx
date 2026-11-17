@@ -49,8 +49,8 @@ public enum ClaudeNotes {
         ]
     }()
 
-    /// The request body for one meeting (kept separate so tests can check it without a network).
-    static func body(for meeting: Meeting) throws -> Data {
+    /// The instructions and the transcript for one meeting, the same for the API and for Claude Code.
+    static func prompt(for meeting: Meeting) -> (system: String, user: String) {
         let names = meeting.addressedNames
         let system = MeetingSummarizer.instructions + "\n" + MeetingSummarizer.legend
             + (names.isEmpty ? "" : "\nNames said in this meeting: \(names.joined(separator: ", ")).")
@@ -59,6 +59,12 @@ public enum ClaudeNotes {
         let minutes = max(1, Int((meeting.duration / 60).rounded()))
         let transcript = meeting.segments.map { "[\(Meeting.clock($0.start))] \($0.speaker): \($0.text)" }.joined(separator: "\n")
         let user = "A meeting on \(formatter.string(from: meeting.started)), about \(minutes) minute\(minutes == 1 ? "" : "s") long.\n\n<transcript>\n\(transcript)\n</transcript>"
+        return (system, user)
+    }
+
+    /// The request body for one meeting (kept separate so tests can check it without a network).
+    static func body(for meeting: Meeting) throws -> Data {
+        let (system, user) = prompt(for: meeting)
         let json: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,
@@ -120,6 +126,10 @@ public enum ClaudeNotes {
         let blocks = reply["content"] as? [[String: Any]] ?? []
         guard let text = blocks.last(where: { $0["type"] as? String == "text" })?["text"] as? String,
               let notes = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any] else { throw Failure.malformed("no notes in the reply") }
+        return self.notes(from: notes)
+    }
+
+    static func notes(from notes: [String: Any]) -> GeneratedNotes {
         func strings(_ key: String) -> [String] {
             (notes[key] as? [String] ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         }
@@ -129,6 +139,110 @@ public enum ClaudeNotes {
         }
         return GeneratedNotes(title: (notes["title"] as? String).flatMap(\.nilIfBlank) ?? "Meeting", summary: strings("summary"),
                               decisions: strings("decisions"), actionItems: items, openQuestions: strings("openQuestions"))
+    }
+}
+
+/// Meeting notes through Claude Code, signed in to the person's own Claude plan: no API key and no extra bill. Runs
+/// `claude -p` with no tools, no MCP servers and none of the person's settings or hooks, the transcript on stdin and the
+/// notes' shape as a JSON schema. `ANTHROPIC_API_KEY` is taken out of its environment, or Claude Code would bill that
+/// key instead of the plan.
+public enum ClaudeCode {
+    public enum Failure: Error, CustomStringConvertible, Equatable {
+        case notInstalled, notSignedIn, failed(String)
+        public var description: String {
+            switch self {
+            case .notInstalled: return "Claude Code isn't installed on this Mac."
+            case .notSignedIn: return "Claude Code isn't signed in. Open Terminal, type claude, and sign in with your Claude account."
+            case .failed(let why): return "Claude Code couldn't write the notes (\(why))."
+            }
+        }
+    }
+
+    /// Where Claude Code is. A Mac app doesn't get the shell's PATH, so the usual install places are checked by name.
+    /// `LARYNX_CLAUDE_CODE` names it for tests; tests never find the real one.
+    public static func find() -> URL? {
+        let env = ProcessInfo.processInfo.environment
+        if let path = env["LARYNX_CLAUDE_CODE"] { return path.isEmpty ? nil : URL(fileURLWithPath: path) }
+        if env["LARYNX_DATA_DIR"] != nil { return nil }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let places = ["\(home)/.local/bin", "\(home)/.claude/local", "/opt/homebrew/bin", "/usr/local/bin", "\(home)/.npm-global/bin",
+                      "\(home)/.bun/bin"] + (env["PATH"] ?? "").split(separator: ":").map(String.init)
+        return places.lazy.map { URL(fileURLWithPath: $0).appendingPathComponent("claude") }
+            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+    }
+
+    public static var isInstalled: Bool { find() != nil }
+
+    static func arguments(system: String) throws -> [String] {
+        let schema = String(decoding: try JSONSerialization.data(withJSONObject: ClaudeNotes.schema, options: [.sortedKeys]), as: UTF8.self)
+        return ["-p", "--output-format", "json", "--json-schema", schema, "--model", "opus", "--tools", "",
+                "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system]
+    }
+
+    static func write(_ meeting: Meeting, binary: URL? = find(), timeout: TimeInterval = 600) async throws -> GeneratedNotes {
+        guard let binary else { throw Failure.notInstalled }
+        let (system, user) = ClaudeNotes.prompt(for: meeting)
+        let args = try arguments(system: system)
+        let output: Data = try await withCheckedThrowingContinuation { done in
+            DispatchQueue.global().async {
+                do { done.resume(returning: try run(binary, args, input: Data(user.utf8), timeout: timeout)) }
+                catch { done.resume(throwing: error) }
+            }
+        }
+        return try parse(output)
+    }
+
+    static func run(_ binary: URL, _ args: [String], input: Data, timeout: TimeInterval) throws -> Data {
+        let process = Process()
+        process.executableURL = binary
+        process.arguments = args
+        var env = ProcessInfo.processInfo.environment
+        for key in ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"] { env[key] = nil }
+        env["PATH"] = binary.deletingLastPathComponent().path + ":/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin"
+        process.environment = env
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("larynx-notes-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        process.currentDirectoryURL = dir  // an empty folder: no project files, no CLAUDE.md
+        let stdin = Pipe(), stdout = Pipe(), stderr = Pipe()
+        process.standardInput = stdin; process.standardOutput = stdout; process.standardError = stderr
+        do { try process.run() } catch { throw Failure.failed(error.localizedDescription) }
+        var out = Data(), err = Data()
+        let group = DispatchGroup()
+        group.enter(); DispatchQueue.global().async { out = stdout.fileHandleForReading.readDataToEndOfFile(); group.leave() }
+        group.enter(); DispatchQueue.global().async { err = stderr.fileHandleForReading.readDataToEndOfFile(); group.leave() }
+        stdin.fileHandleForWriting.write(input)
+        try? stdin.fileHandleForWriting.close()
+        if group.wait(timeout: .now() + timeout) == .timedOut {
+            process.terminate()
+            throw Failure.failed("it took longer than \(Int(timeout / 60)) minutes")
+        }
+        process.waitUntilExit()
+        if out.isEmpty {
+            let why = String(decoding: err.prefix(400), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            if why.lowercased().contains("log in") || why.lowercased().contains("login") || why.lowercased().contains("not logged") { throw Failure.notSignedIn }
+            throw Failure.failed(why.isEmpty ? "exit \(process.terminationStatus)" : why)
+        }
+        return out
+    }
+
+    static func parse(_ data: Data) throws -> GeneratedNotes {
+        guard let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            let text = String(decoding: data.prefix(400), as: UTF8.self)
+            if text.lowercased().contains("log in") || text.lowercased().contains("not logged") { throw Failure.notSignedIn }
+            throw Failure.failed("its reply wasn't JSON")
+        }
+        if reply["is_error"] as? Bool == true {
+            let why = (reply["result"] as? String ?? reply["subtype"] as? String ?? "error")
+            let lower = why.lowercased()
+            if lower.contains("log in") || lower.contains("login") || lower.contains("not logged") || lower.contains("authenticat") { throw Failure.notSignedIn }
+            throw Failure.failed(String(why.prefix(300)))
+        }
+        if let notes = reply["structured_output"] as? [String: Any] { return ClaudeNotes.notes(from: notes) }
+        if let text = reply["result"] as? String, let notes = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any] {
+            return ClaudeNotes.notes(from: notes)
+        }
+        throw Failure.failed("no notes in its reply")
     }
 }
 

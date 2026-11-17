@@ -68,7 +68,10 @@ def check(notes, script, transcript):
     for a in script["expect"].get("actions", []):
         match = [it for it in notes["actionItems"] if all(w.lower() in low(it["task"]) for w in a["words"])]
         if not match: problems.append(f"action missing: {a['words']}"); continue
-        it = match[0]
+        # One sentence can hold two tasks ("tell the printer today, a new proof by Thursday"): any task that fits counts.
+        fits = lambda it: (not a.get("owner") or a["owner"].lower() in low(it.get("owner"))) and \
+            (not a.get("due") or a["due"].lower() in low(it.get("due")) + low(it["task"]))
+        it = next((m for m in match if fits(m)), match[0])
         if a.get("owner") and a["owner"].lower() not in low(it.get("owner")): problems.append(f"action {a['words']}: owner {it.get('owner')!r}, expected {a['owner']}")
         if a.get("due") and a["due"].lower() not in low(it.get("due")) + low(it["task"]): problems.append(f"action {a['words']}: due {it.get('due')!r}, expected {a['due']}")
     for words in script["expect"].get("open", []):

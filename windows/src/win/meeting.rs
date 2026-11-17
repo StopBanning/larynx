@@ -266,8 +266,9 @@ pub fn finish(info: &Started, engine: &Arc<Mutex<Engine>>, email: &str) -> Outco
     if m.segments.is_empty() {
         problem = Some("I didn't hear anyone speak in this recording. If people were talking, check that the microphone isn't muted.".into());
     } else {
-        match meeting::write_notes(
+        match meeting::notes_by_claude(
             &m,
+            meeting::claude_code_path().as_deref(),
             crate::credential::claude_key().as_deref(),
             &meeting::curl_post,
             &meeting::sleep_seconds,

@@ -103,3 +103,63 @@ private let good = #"{"title":"Renovation schedule","summary":["Priya's tile is 
         #expect(MeetingSummarizer.Model.chosen("claude") == .claude)
     }
 }
+
+/// A stand-in for Claude Code: a shell script that saves its arguments, environment and stdin, then prints `reply`.
+private func fakeClaudeCode(_ reply: String) throws -> (binary: URL, dir: URL) {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("larynx-fake-claude-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try Data(reply.utf8).write(to: dir.appendingPathComponent("reply.json"))
+    let script = """
+        #!/bin/sh
+        d="\(dir.path)"
+        for a in "$@"; do printf '%s\\n' "$a"; done > "$d/args.txt"
+        env > "$d/env.txt"
+        pwd > "$d/pwd.txt"
+        cat > "$d/stdin.txt"
+        cat "$d/reply.json"
+        """
+    let binary = dir.appendingPathComponent("claude")
+    try Data(script.utf8).write(to: binary)
+    try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+    return (binary, dir)
+}
+
+@Suite(.serialized) struct ClaudeCodeNotesTests {
+    @Test func notesComeBackFromClaudeCodeWithNoToolsAndNoKey() async throws {
+        let notes = try JSONSerialization.jsonObject(with: Data(good.utf8))
+        let reply = String(decoding: try JSONSerialization.data(withJSONObject: ["type": "result", "subtype": "success", "is_error": false,
+                                                                                 "result": good, "structured_output": notes]), as: UTF8.self)
+        let (binary, dir) = try fakeClaudeCode(reply)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        setenv("ANTHROPIC_API_KEY", "should-not-reach-claude-code", 1)
+        defer { unsetenv("ANTHROPIC_API_KEY") }
+        let out = try await ClaudeCode.write(meeting, binary: binary)
+        #expect(out.title == "Renovation schedule")
+        #expect(out.actionItems.first?.owner == "Priya")
+        let args = try String(contentsOf: dir.appendingPathComponent("args.txt"), encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        #expect(args.first == "-p")
+        #expect(args.contains("--json-schema") && args.contains("--strict-mcp-config") && args.contains("--no-session-persistence"))
+        let tools = try #require(args.firstIndex(of: "--tools"))
+        #expect(args[tools + 1] == "")  // no tools at all
+        let sources = try #require(args.firstIndex(of: "--setting-sources"))
+        #expect(args[sources + 1] == "")  // none of the person's settings or hooks
+        #expect(args[try #require(args.firstIndex(of: "--model")) + 1] == "opus")
+        let env = try String(contentsOf: dir.appendingPathComponent("env.txt"), encoding: .utf8)
+        #expect(!env.contains("ANTHROPIC_API_KEY"))  // or Claude Code would bill the key instead of the plan
+        let stdin = try String(contentsOf: dir.appendingPathComponent("stdin.txt"), encoding: .utf8)
+        #expect(stdin.contains("back-ordered for six weeks") && stdin.contains("<transcript>"))
+        let pwd = try String(contentsOf: dir.appendingPathComponent("pwd.txt"), encoding: .utf8)
+        #expect(pwd.contains("larynx-notes-"))  // an empty folder, no project files
+    }
+
+    @Test func notSignedInSaysHowToSignIn() async throws {
+        let (binary, dir) = try fakeClaudeCode(#"{"type":"result","subtype":"success","is_error":true,"result":"Not logged in · Please run /login"}"#)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        await #expect(throws: ClaudeCode.Failure.notSignedIn) { try await ClaudeCode.write(meeting, binary: binary) }
+        #expect(ClaudeCode.Failure.notSignedIn.description.contains("sign in"))
+    }
+
+    @Test func missingClaudeCodeIsSaidPlainly() async throws {
+        await #expect(throws: ClaudeCode.Failure.notInstalled) { try await ClaudeCode.write(meeting, binary: nil) }
+    }
+}
