@@ -15,7 +15,7 @@ public final class Settings: @unchecked Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
         case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded, micDevice
         case style, professionalKey, professionalSwearing
-        case meetingSummary, meetingEmail, meetingMode, pillFont, alphabet
+        case meetingSummary, meetingClaude, meetingEmail, meetingMode, pillFont, alphabet
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
         case vocabularyCaseStage = "stages.vocabularyCase"
@@ -41,6 +41,7 @@ public final class Settings: @unchecked Sendable {
             case .professionalKey: return "none"
             case .professionalSwearing: return "remove"
             case .meetingSummary: return "auto"
+            case .meetingClaude: return "opus"
             case .meetingEmail: return ""
             case .meetingMode: return "off"
             case .pillFont: return "system"
@@ -65,6 +66,7 @@ public final class Settings: @unchecked Sendable {
             case .professionalKey: return value == "none" || Hotkey.Key(rawValue: value) != nil
             case .professionalSwearing: return ["remove", "keep"].contains(value)
             case .meetingSummary: return ["auto", "claude", "on-device", "private-cloud"].contains(value)
+            case .meetingClaude: return ["sonnet", "opus"].contains(value)
             case .meetingEmail: return value.isEmpty || (value.contains("@") && !value.contains(" "))
             case .meetingMode: return ["on", "off"].contains(value)
             case .pillFont: return ["system", "paper-mono"].contains(value)

@@ -7,6 +7,7 @@ import LarynxText
 /// Meeting mode from files (docs/dev/MEETING.md): the same transcript and notes the app makes from a live meeting, so
 /// tests and benchmarks need no microphone, no call and no permission prompt. Prints Markdown, or JSON with --json.
 func runMeeting() async {
+    if let c = option("--claude") { ClaudeNotes.choiceOverride = c }
     // --from meeting.json: notes for a transcript already made (no audio, no speech model): for tuning the notes.
     if let from = option("--from") {
         do {

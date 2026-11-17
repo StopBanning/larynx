@@ -152,6 +152,17 @@ private func fakeClaudeCode(_ reply: String) throws -> (binary: URL, dir: URL) {
         #expect(pwd.contains("larynx-notes-"))  // an empty folder, no project files
     }
 
+    @Test func theChosenModelReachesClaudeCodeAndTheAPI() throws {
+        defer { ClaudeNotes.choiceOverride = nil }
+        for (choice, alias, id) in [("opus", "opus", "claude-opus-5-5"), ("sonnet", "sonnet", "claude-sonnet-5-5")] {
+            ClaudeNotes.choiceOverride = choice
+            let args = try ClaudeCode.arguments(system: "x")
+            let i = try #require(args.firstIndex(of: "--model"))
+            #expect(args[i + 1] == alias)
+            #expect(ClaudeNotes.model == id)
+        }
+    }
+
     @Test func notSignedInSaysHowToSignIn() async throws {
         let (binary, dir) = try fakeClaudeCode(#"{"type":"result","subtype":"success","is_error":true,"result":"Not logged in · Please run /login"}"#)
         defer { try? FileManager.default.removeItem(at: dir) }

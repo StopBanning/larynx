@@ -325,6 +325,14 @@ private struct MeetingsSection: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            if model.hasClaudeCode || model.hasKey {
+                Picker("Claude model", selection: setting(.meetingClaude)) {
+                    Text("Opus: the most careful (recommended)").tag("opus")
+                    Text("Sonnet: lighter on your plan").tag("sonnet")
+                }
+                Text("In our tests Sonnet sometimes left out when things are due (\"by Thursday\"). Opus kept them.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if !model.note.isEmpty { Text(model.note).font(.caption) }
             Text("With Claude, the meeting's transcript (never the audio) is sent to Anthropic to write the notes.")
                 .font(.caption).foregroundStyle(.secondary)

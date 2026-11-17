@@ -6,7 +6,10 @@ import Security
 /// request reads the whole meeting (Claude's context is far larger than any meeting), and structured output returns
 /// the notes in a fixed shape, so the layout never breaks. Swift has no official SDK, so this is the plain HTTP API.
 public enum ClaudeNotes {
-    public static let model = "claude-opus-5-5"
+    /// Which Claude writes the notes (`meetingClaude`): "sonnet" or "opus". `larynx meeting --claude` overrides it.
+    nonisolated(unsafe) public static var choiceOverride: String?
+    public static var choice: String { choiceOverride ?? Settings.shared.string(.meetingClaude) }
+    public static var model: String { choice == "sonnet" ? "claude-sonnet-5-5" : "claude-opus-5-5" }
     static let version = "2026-10-21"
     static let fallbackBeta = "server-side-fallback-2026-07-01"
 
@@ -175,7 +178,7 @@ public enum ClaudeCode {
 
     static func arguments(system: String) throws -> [String] {
         let schema = String(decoding: try JSONSerialization.data(withJSONObject: ClaudeNotes.schema, options: [.sortedKeys]), as: UTF8.self)
-        return ["-p", "--output-format", "json", "--json-schema", schema, "--model", "opus", "--tools", "",
+        return ["-p", "--output-format", "json", "--json-schema", schema, "--model", ClaudeNotes.choice == "sonnet" ? "sonnet" : "opus", "--tools", "",
                 "--strict-mcp-config", "--setting-sources", "", "--no-session-persistence", "--system-prompt", system]
     }
 
