@@ -7,8 +7,8 @@
 <meta name="description" content="Think out loud. Larynx writes it down. Free, open-source, offline dictation for the Mac: text you don't have to fix, in 0.15 s.">
 <meta property="og:title" content="Larynx: think out loud, Larynx writes it down">
 <meta property="og:description" content="Free, open-source, offline dictation for the Mac. Nothing you say leaves your Mac.">
-<meta property="og:image" content="https://larynx.locust.lol/social-preview.png">
-<meta property="og:url" content="https://larynx.locust.lol/">
+<meta property="og:image" content="https://larynx.cc/social-preview.png">
+<meta property="og:url" content="https://larynx.cc/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#5c6585">
 <link rel="icon" href="icon.png">
@@ -187,7 +187,7 @@ footer { padding-block: var(--space-xl) var(--space-2xl); color: var(--color-mut
         <button class="btn btn--wide" id="send" data-send>Send this to my Mac</button>
         <div class="links">
           <button class="link-btn" id="copy-link">Copy link</button>
-          <a id="mail-link" href="mailto:?subject=Larynx%20for%20my%20Mac&amp;body=https%3A%2F%2Flarynx.locust.lol%2F">Email it to me</a>
+          <a id="mail-link" href="mailto:?subject=Larynx%20for%20my%20Mac&amp;body=https%3A%2F%2Flarynx.cc%2F">Email it to me</a>
         </div>
         <p class="needs">Larynx is a Mac app. Open this page on your Mac to install it.</p>
       </div>
@@ -283,7 +283,7 @@ footer { padding-block: var(--space-xl) var(--space-2xl); color: var(--color-mut
   var mac = /Macintosh/.test(ua) && !touch;  // an iPad says Macintosh too, but has touch
   root.classList.add(mac ? "on-mac" : "on-phone");
 
-  var url = "https://larynx.locust.lol/";
+  var url = "https://larynx.cc/";
   var toast = document.getElementById("toast"), timer;
   function say(text) {
     toast.textContent = text; toast.classList.add("show");
