@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Windows: today's meeting fixes.** The echo filter (the call picked up from the speakers no longer shows as yours), notes for calls you listened to, and a **Mute me** button beside Stop. "Write the summary again" now tries Claude Code on your plan first, like the notes after Stop. Cut-off recordings were already finished when Larynx starts.
 - **Two more stutter shapes are cleaned.** A phrase restarted around a "yeah" ("we need to finish, yeah, we need to finish the deck" becomes "we need to finish the deck"), and a word sounded out in tries that the speech model wrote as real words ("the hem the ham the hammer" becomes "the hammer"). Checked against 2,038 real dictations: 2 changes, both real restarts. Emphasis ("That's fine, yeah, that's fine.") and lists with commas are kept. Mac and Windows.
 - **Meeting polish from a real 25-minute test.** Holding the dictation key during a meeting no longer puts that dictation in the meeting's transcript. Meetings has a **Write the notes again** button (it also clears echoes from meetings recorded before the echo filter). Meeting mode now writes its steps to the Larynx log (started, stopped, transcript and notes timings, failures).
 - **A meeting cut off by a crash or restart is finished the next time Larynx starts.** The audio was always kept as it was recorded, but the meeting never showed up. Now Larynx writes its transcript and notes and opens it in Meetings. Also: if the summary can't be written, the panel now says so instead of closing silently.

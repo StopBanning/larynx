@@ -182,6 +182,7 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 }
             }),
             tray::ID_MEETING | meet::ID_PANEL_STOP => with_app(|a| a.meeting_button()),
+            meet::ID_PANEL_MUTE => with_app(|a| a.toggle_mute()),
             tray::ID_MEETING_RETRY => with_app(|a| a.retry_notes()),
             tray::ID_CLAUDE_KEY => meet::ask_for_key(),
             tray::ID_MEETINGS => {
@@ -252,7 +253,7 @@ impl App {
         match Recording::start(you) {
             Ok(rec) => {
                 self.log.write(serde_json::json!({"event": "meeting_start", "id": rec.info.id}));
-                self.show(Show::Recording { since: rec.began, note: None });
+                self.show(Show::Recording { since: rec.began, note: None, muted: false });
                 self.meeting = Some(rec);
                 self.tray.set("Larynx: recording a meeting", true);
                 unsafe {
@@ -280,8 +281,17 @@ impl App {
         } else {
             None
         };
-        let since = rec.began;
-        self.show(Show::Recording { since, note });
+        let (since, muted) = (rec.began, rec.muted.load(std::sync::atomic::Ordering::SeqCst));
+        self.show(Show::Recording { since, note, muted });
+    }
+
+    /// "Mute me" / "Unmute" on the recording panel.
+    fn toggle_mute(&mut self) {
+        let Some(rec) = &self.meeting else { return };
+        let now = !rec.muted.load(std::sync::atomic::Ordering::SeqCst);
+        rec.muted.store(now, std::sync::atomic::Ordering::SeqCst);
+        self.log.write(serde_json::json!({"event": "meeting_mute", "muted": now}));
+        self.on_meeting_tick();
     }
 
     fn stop_meeting(&mut self) {
@@ -322,7 +332,8 @@ impl App {
         self.show(Show::Working("Trying the summary again.".into()));
         let (tx, hwnd_raw) = (self.meeting_tx.clone(), self.hwnd.0 as isize);
         std::thread::spawn(move || {
-            let outcome = match crate::meeting::write_notes(&m, crate::credential::claude_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
+            // Claude Code on the person's plan first, the key as the backup: the same order as after Stop.
+            let outcome = match crate::meeting::notes_by_claude(&m, crate::meeting::claude_code_path().as_deref(), crate::credential::claude_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
                 Ok(n) => {
                     m.notes = Some(n);
                     meet::Outcome { page: crate::meeting::save(&m, &crate::meeting_email()).ok(), problem: None }

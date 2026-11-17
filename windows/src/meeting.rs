@@ -188,7 +188,11 @@ Rules:
 - The summary is three to five short sentences: what the meeting was about and what came of it.
 - A decision is something the people agreed on. Leave the list empty if nothing was decided.
 - An action item is a task someone said they or someone else would do. Give the owner and the due date only
-  when they were said; otherwise leave them empty. Never guess.
+  when they were said; otherwise leave them empty. Never guess. A company's or presenter's own plans, told to
+  an audience (\"we will ship the new pods early next year\"), are not action items: they go in the summary.
+- If \"You\" mostly listened (a talk, a webcast, an earnings call, a lecture) and did not speak with the people on
+  the call, write the notes about what was said on the call. Leave out your side remarks unless they are about
+  what was said.
 - Open questions are things raised and left unanswered.
 - Short, clear sentences. No filler, no \"the speaker said\", no timestamps.";
 
@@ -282,12 +286,103 @@ fn civil(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + if m <= 2 { 1 } else { 0 }, m, d)
 }
 
+/// A line for the notes model when "You" said little (under a quarter of the words in a meeting of 150 words or more):
+/// the share, so it can tell a talk you listened to from a meeting you took part in (the Mac's `listeningNote`).
+pub fn listening_note(meeting: &Meeting) -> Option<String> {
+    let count = |t: &str| t.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).count();
+    let total: usize = meeting.segments.iter().map(|s| count(&s.text)).sum();
+    let mine: usize = meeting.segments.iter().filter(|s| s.speaker == "You").map(|s| count(&s.text)).sum();
+    if total < 150 || mine as f64 >= 0.25 * total as f64 {
+        return None;
+    }
+    Some(format!("You said {}% of the words in this meeting.", (100.0 * mine as f64 / total as f64).round() as i64))
+}
+
+/// The call heard twice: with no headphones, the microphone picks up the call from the speakers, and those lines land
+/// in the transcript as "You" (the Mac's `MeetingEcho`). A "You" line is an echo when it overlaps call lines for at
+/// least half its length and 60% of its words match them, or, starting within 1.5 s of a call line, when it has three
+/// or more words and 85% match. A real reply comes after the call has spoken and is rarely a copy, so it stays.
+pub fn remove_echo(segments: Vec<Segment>) -> Vec<Segment> {
+    let call: Vec<Segment> = segments.iter().filter(|s| s.speaker != "You").cloned().collect();
+    if call.is_empty() {
+        return segments;
+    }
+    segments.into_iter().filter(|s| s.speaker != "You" || !is_echo(s, &call)).collect()
+}
+
+fn echo_words(text: &str) -> Vec<String> {
+    text.to_lowercase()
+        .replace(['\'', '\u{2019}'], "")
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+/// Twice the longest common subsequence over the total length.
+fn letter_similarity(a: &str, b: &str) -> f64 {
+    let (x, y): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    if x.is_empty() || y.is_empty() {
+        return 0.0;
+    }
+    let mut prev = vec![0usize; y.len() + 1];
+    for i in 1..=x.len() {
+        let mut cur = vec![0usize; y.len() + 1];
+        for j in 1..=y.len() {
+            cur[j] = if x[i - 1] == y[j - 1] { prev[j - 1] + 1 } else { prev[j].max(cur[j - 1]) };
+        }
+        prev = cur;
+    }
+    2.0 * prev[y.len()] as f64 / (x.len() + y.len()) as f64
+}
+
+fn word_matches(w: &str, pool: &std::collections::HashSet<String>) -> bool {
+    if pool.contains(w) {
+        return true;
+    }
+    let n = w.chars().count();
+    n >= 4
+        && pool.iter().any(|p| {
+            p.chars().count() >= 4
+                && (p.chars().take(4).eq(w.chars().take(4)) || letter_similarity(w, p) >= 0.75)
+        })
+}
+
+fn is_echo(s: &Segment, call: &[Segment]) -> bool {
+    let ws = echo_words(&s.text);
+    if ws.is_empty() {
+        return false;
+    }
+    let (mut during, mut near) = (std::collections::HashSet::new(), std::collections::HashSet::new());
+    let mut overlap = 0.0;
+    for c in call {
+        let o = s.end.min(c.end) - s.start.max(c.start);
+        if o > 0.0 {
+            overlap += o;
+            during.extend(echo_words(&c.text));
+        }
+        if c.start - 1.5 <= s.start && s.start <= c.end + 1.5 {
+            near.extend(echo_words(&c.text));
+        }
+    }
+    let share = |pool: &std::collections::HashSet<String>| {
+        ws.iter().filter(|w| word_matches(w, pool)).count() as f64 / ws.len() as f64
+    };
+    if overlap >= 0.5 * (s.end - s.start) && share(&during) >= 0.6 {
+        return true;
+    }
+    ws.len() >= 3 && share(&near) >= 0.85
+}
+
 /// The instructions and the transcript for one meeting, the same for the API and for Claude Code.
 pub fn prompt(meeting: &Meeting) -> (String, String) {
     let names = meeting.addressed_names();
     let mut system = format!("{INSTRUCTIONS}\n{LEGEND}");
     if !names.is_empty() {
         system += &format!("\nNames said in this meeting: {}.", names.join(", "));
+    }
+    if let Some(note) = listening_note(meeting) {
+        system += &format!("\n{note}");
     }
     system += "\nWrite in plain words a 75-year-old would read without effort. Keep every number with its unit, exactly as said.";
     let minutes = ((meeting.duration / 60.0).round() as i64).max(1);
@@ -1019,6 +1114,50 @@ pub fn utterances(samples: &[f32], max_seconds: f64) -> Vec<(usize, usize)> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod echo_tests {
+    use super::*;
+    fn seg(speaker: &str, start: f64, end: f64, text: &str) -> Segment {
+        Segment { speaker: speaker.into(), start, end, text: text.into() }
+    }
+    fn call(a: f64, b: f64, t: &str) -> Segment { seg("On the call", a, b, t) }
+    fn you(a: f64, b: f64, t: &str) -> Segment { seg("You", a, b, t) }
+
+    #[test]
+    fn echoes_go_and_replies_stay() {
+        // The same made-up cases as the Mac's MeetingEchoTests.
+        let s = vec![call(0.0, 8.0, "The new warehouse lease starts on March first and the movers come on Friday."), you(3.0, 5.0, "Lease starts on March first.")];
+        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
+        let s = vec![call(0.0, 9.0, "Coreweave and Nimbus have both signed on for the larger racks this quarter."), you(2.0, 4.0, "Carweave and Nimbus have signed.")];
+        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
+        let s = vec![call(0.0, 5.0, "Subscriptions grew forty percent this year."), you(5.6, 7.5, "grew forty percent this year")];
+        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
+        let s = vec![call(0.0, 4.0, "The standard paper saves us about two thousand dollars."), you(4.6, 7.0, "Let's stay with the standard paper then.")];
+        assert_eq!(remove_echo(s.clone()), s);
+        let s = vec![call(0.0, 3.0, "The kitchen tiles go in next week."), you(3.5, 4.4, "And the bathroom?")];
+        assert_eq!(remove_echo(s.clone()), s);
+        let s = vec![call(0.0, 3.0, "Sales are up forty percent."), you(3.4, 4.2, "Forty percent?")];
+        assert_eq!(remove_echo(s.clone()), s);
+        let s = vec![call(0.0, 10.0, "Next we'll go through the budget for each team, starting with design and then support."), you(4.0, 5.5, "Sorry, can you say that again?")];
+        assert_eq!(remove_echo(s.clone()), s);
+        let s = vec![you(0.0, 2.0, "Remind me to call the plumber."), you(3.0, 5.0, "Remind me to call the plumber.")];
+        assert_eq!(remove_echo(s.clone()), s);
+    }
+
+    #[test]
+    fn listening_gets_the_hint() {
+        let long = vec!["Our numbers for the quarter came in ahead of plan in every region we serve."; 12].join(" ");
+        let m = |segments| Meeting { id: "t".into(), started: 0.0, duration: 600.0, utc_offset: 0, segments, notes: None };
+        let talk = m(vec![call(0.0, 300.0, &long), you(100.0, 102.0, "Wow, that's big.")]);
+        assert_eq!(listening_note(&talk).as_deref(), Some("You said 2% of the words in this meeting."));
+        assert!(prompt(&talk).0.contains("mostly listened"));
+        assert!(prompt(&talk).0.contains("You said 2% of the words"));
+        let both = m(vec![call(0.0, 300.0, &long), you(300.0, 400.0, &long)]);
+        assert_eq!(listening_note(&both), None);
+        assert!(!prompt(&both).0.contains("of the words in this meeting"));
+    }
 }
 
 #[cfg(test)]

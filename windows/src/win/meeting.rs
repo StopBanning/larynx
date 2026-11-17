@@ -25,6 +25,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 
 const RATE: u32 = 16_000;
 pub const ID_PANEL_STOP: usize = 300;
+pub const ID_PANEL_MUTE: usize = 301;
 const ID_KEY_EDIT: usize = 310;
 const ID_KEY_SAVE: usize = 311;
 
@@ -61,6 +62,8 @@ pub struct Recording {
     stop: Arc<AtomicBool>,
     spooler: Option<std::thread::JoinHandle<()>>,
     pub call_problem: Arc<Mutex<Option<String>>>,
+    /// "Mute me": the microphone side is written as silence (not skipped), so both tracks keep the same length.
+    pub muted: Arc<AtomicBool>,
 }
 
 impl Recording {
@@ -96,9 +99,10 @@ impl Recording {
                 })
                 .map_err(|e| e.to_string())?;
         }
+        let muted = Arc::new(AtomicBool::new(false));
         // Once a second, whatever arrived goes to the end of each track's file.
         let spooler = {
-            let (stop, id) = (stop.clone(), info.id.clone());
+            let (stop, id, muted) = (stop.clone(), info.id.clone(), muted.clone());
             std::thread::Builder::new()
                 .name("larynx-meeting-spool".into())
                 .spawn(move || {
@@ -112,8 +116,11 @@ impl Recording {
                     let (mut you_file, mut call_file) = (open("you"), open("call"));
                     loop {
                         let done = stop.load(Ordering::SeqCst);
-                        for (buf, file) in [(&you, &mut you_file), (&call, &mut call_file)] {
-                            let chunk = std::mem::take(&mut *buf.lock().unwrap());
+                        for (side, buf, file) in [("you", &you, &mut you_file), ("call", &call, &mut call_file)] {
+                            let mut chunk = std::mem::take(&mut *buf.lock().unwrap());
+                            if side == "you" && muted.load(Ordering::SeqCst) {
+                                chunk.iter_mut().for_each(|x| *x = 0.0);
+                            }
                             if let Some(f) = file.as_mut() {
                                 let bytes: Vec<u8> =
                                     chunk.iter().flat_map(|x| x.to_le_bytes()).collect();
@@ -134,6 +141,7 @@ impl Recording {
             stop,
             spooler: Some(spooler),
             call_problem,
+            muted,
         })
     }
 
@@ -245,7 +253,7 @@ pub fn finish(info: &Started, engine: &Arc<Mutex<Engine>>, email: &str) -> Outco
         crate::bench::meeting_transcript(&mut engine, &you, has_call.then_some(call.as_slice()))
     };
     let segments = match segments {
-        Ok(s) => s,
+        Ok(s) => meeting::remove_echo(s),
         Err(e) => return Outcome {
             page: None,
             problem: Some(format!(
@@ -384,6 +392,7 @@ pub enum Show {
     Recording {
         since: Instant,
         note: Option<String>,
+        muted: bool,
     },
     Working(String),
     Problem(String),
@@ -393,6 +402,7 @@ pub enum Show {
 pub struct Panel {
     pub hwnd: HWND,
     button: HWND,
+    mute: HWND,
     pub show: Show,
 }
 
@@ -464,14 +474,14 @@ unsafe extern "system" fn panel_proc(
             }
             LRESULT(0)
         }
-        WM_COMMAND if wparam.0 & 0xFFFF == ID_PANEL_STOP => {
-            // The app window decides what the button means (Stop, or OK on a problem).
+        WM_COMMAND if matches!(wparam.0 & 0xFFFF, ID_PANEL_STOP | ID_PANEL_MUTE) => {
+            // The app window decides what the buttons mean (Stop, or OK on a problem; Mute me / Unmute).
             let owner = unsafe { GetWindowLongPtrW(hwnd, GWLP_USERDATA) };
             unsafe {
                 let _ = PostMessageW(
                     Some(HWND(owner as *mut _)),
                     WM_COMMAND,
-                    WPARAM(ID_PANEL_STOP),
+                    WPARAM(wparam.0 & 0xFFFF),
                     LPARAM(0),
                 );
             }
@@ -526,16 +536,31 @@ impl Panel {
                 None,
             )
             .map_err(|e| e.to_string())?;
+            // "Mute me", left of Stop: keeps recording the call but not the microphone (a noisy room, or the call
+            // playing through the speakers).
+            let mute = CreateWindowExW(
+                WINDOW_EX_STYLE(0),
+                w!("BUTTON"),
+                w!("Mute me"),
+                WS_CHILD | WINDOW_STYLE(BS_PUSHBUTTON as u32),
+                scale(420) - scale(20) - scale(140) - scale(12) - scale(130),
+                scale(170) - scale(20) - scale(48),
+                scale(130),
+                scale(48),
+                Some(hwnd),
+                Some(HMENU(ID_PANEL_MUTE as *mut _)),
+                Some(instance.into()),
+                None,
+            )
+            .map_err(|e| e.to_string())?;
             let f = font(18, FW_SEMIBOLD);
-            SendMessageW(
-                button,
-                WM_SETFONT,
-                Some(WPARAM(f.0 as usize)),
-                Some(LPARAM(1)),
-            );
+            for b in [button, mute] {
+                SendMessageW(b, WM_SETFONT, Some(WPARAM(f.0 as usize)), Some(LPARAM(1)));
+            }
             Ok(Panel {
                 hwnd,
                 button,
+                mute,
                 show: Show::Hidden,
             })
         }
@@ -543,6 +568,10 @@ impl Panel {
 
     /// Redraws for the current state; the app calls it once a second while recording.
     pub fn render(&mut self) {
+        let mute_label = match &self.show {
+            Show::Recording { muted, .. } => Some(if *muted { "Unmute" } else { "Mute me" }),
+            _ => None,
+        };
         let (line, red, small, button) = match &self.show {
             Show::Hidden => {
                 unsafe {
@@ -550,14 +579,13 @@ impl Panel {
                 }
                 return;
             }
-            Show::Recording { since, note } => {
+            Show::Recording { since, note, muted } => {
                 let s = since.elapsed().as_secs_f64();
-                (
-                    format!("Recording · {}", meeting::clock(s)),
-                    true,
-                    note.clone().unwrap_or_default(),
-                    Some("Stop"),
-                )
+                let mut small = note.clone().unwrap_or_default();
+                if *muted && small.is_empty() {
+                    small = "Your microphone is muted. The call is still being recorded.".into();
+                }
+                (format!("Recording · {}", meeting::clock(s)), true, small, Some("Stop"))
             }
             Show::Working(what) => (
                 "Writing your summary…".to_string(),
@@ -574,13 +602,15 @@ impl Panel {
         };
         PANEL_TEXT.with(|t| *t.borrow_mut() = (line, red, small));
         unsafe {
-            match button {
-                Some(label) => {
-                    let _ = SetWindowTextW(self.button, PCWSTR(wide(label).as_ptr()));
-                    let _ = ShowWindow(self.button, SW_SHOW);
-                }
-                None => {
-                    let _ = ShowWindow(self.button, SW_HIDE);
+            for (b, label) in [(self.button, button), (self.mute, mute_label)] {
+                match label {
+                    Some(label) => {
+                        let _ = SetWindowTextW(b, PCWSTR(wide(label).as_ptr()));
+                        let _ = ShowWindow(b, SW_SHOW);
+                    }
+                    None => {
+                        let _ = ShowWindow(b, SW_HIDE);
+                    }
                 }
             }
             // Bottom-right, above the taskbar.
