@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A meeting cut off by a crash or restart is finished the next time Larynx starts.** The audio was always kept as it was recorded, but the meeting never showed up. Now Larynx writes its transcript and notes and opens it in Meetings. Also: if the summary can't be written, the panel now says so instead of closing silently.
 - **Meetings without headphones.** When the call plays through the speakers, the microphone hears it again and those lines used to land in the transcript as yours. Larynx now drops a line of yours when it repeats what the call was saying at that moment. A reply that reuses the call's words ("Let's stay with the standard paper then") stays. On a real 6-minute call played through speakers: 36 echoes out, nothing you said lost.
 - **Notes for calls you listened to.** For a talk, webcast or earnings call, the notes now cover what was said, not your side remarks. A presenter's own plans ("we'll ship early next year") go in the summary instead of your to-dos.
 - **Choose which Claude writes meeting notes** (Settings → Meetings → Claude model, `meetingClaude`): Opus (the default) or Sonnet, which is lighter on a Claude plan. Tested on four meetings, twice each: Sonnet was twice as fast but left out due dates that Opus kept. Also: the recording panel is now Liquid Glass, with a red Stop button.

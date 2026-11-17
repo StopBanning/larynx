@@ -77,31 +77,81 @@ final class MeetingController: ObservableObject {
         let duration = Date().timeIntervalSince(started)
         phase = .finishing("Finishing the transcript…")
         let id = self.id, started = self.started
-        Task {
-            do {
-                try await Loader.shared.task.value
-                let segments = try await session.finish()
-                var meeting = Meeting(id: id, started: started, duration: duration, segments: segments)
-                if segments.isEmpty {
-                    try? MeetingStore.save(meeting)
-                    self.phase = .failed("I didn't hear anyone speak in this recording. If people were talking, check that the microphone isn't muted.")
-                    return
-                }
-                self.phase = .finishing("Writing your summary… \(Self.estimate(duration))")
-                let model = MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary))
-                do {
-                    meeting.notes = try await MeetingSummarizer.summarize(meeting, model: model)
-                } catch {
-                    // The transcript is still worth having: save it and say so plainly.
-                    self.callNote = "The summary couldn't be written (\(error)). The full transcript is saved."
-                }
-                try MeetingStore.save(meeting)
+        Task { await self.finish(id: id, started: started, duration: duration, session: session, first: "Finishing the transcript…") }
+    }
+
+    /// Turns a recorded meeting into its transcript and notes, saves it, clears its spool and opens it. Used by Stop and
+    /// by `recoverCutOff`. The spool is kept only when the transcript itself fails, so it can be tried again.
+    private func finish(id: String, started: Date, duration: Double, session: MeetingSession, first: String) async {
+        phase = .finishing(first)
+        RecordingPanel.shared.show()
+        do {
+            try await Loader.shared.task.value
+            let segments = try await session.finish()
+            var meeting = Meeting(id: id, started: started, duration: duration, segments: segments)
+            if segments.isEmpty {
+                try? MeetingStore.save(meeting)
                 MeetingStore.removeSpool(id)
-                self.phase = .idle
-                RecordingPanel.shared.hide()
-                MeetingsWindow.shared.show(selecting: meeting.id)
+                phase = .failed("I didn't hear anyone speak in this recording. If people were talking, check that the microphone isn't muted.")
+                return
+            }
+            phase = .finishing("Writing your summary… \(Self.estimate(duration))")
+            let model = MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary))
+            var summaryFailure: String?
+            do {
+                meeting.notes = try await MeetingSummarizer.summarize(meeting, model: model)
             } catch {
-                self.phase = .failed("Something went wrong finishing the meeting: \(error). The recording is kept and can be finished later.")
+                // The transcript is still worth having: save it and say so plainly.
+                summaryFailure = "\(error)"
+            }
+            try MeetingStore.save(meeting)
+            MeetingStore.removeSpool(id)
+            if let summaryFailure {
+                phase = .failed("The summary couldn't be written (\(summaryFailure)). The full transcript is saved in Meetings.")
+            } else {
+                phase = .idle
+                RecordingPanel.shared.hide()
+            }
+            MeetingsWindow.shared.show(selecting: meeting.id)
+        } catch {
+            phase = .failed("Something went wrong finishing the meeting: \(error). The recording is kept and will be tried again the next time Larynx starts.")
+        }
+    }
+
+    /// Recordings cut off by a crash, a restart or a Mac that shut down: their audio is still in the spool (it is
+    /// written as it arrives). When Larynx starts, each one is finished the way Stop would, oldest first, so the
+    /// meeting shows up in Meetings with its notes. A spool written in the last 30 seconds is left alone.
+    func recoverCutOff() {
+        guard !isRecording, case .idle = phase else { return }
+        let folder = MeetingStore.folder.appendingPathComponent("spool", isDirectory: true)
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        let fresh = Date().addingTimeInterval(-30)
+        var ids: [String] = []
+        for f in files where f.pathExtension == "f32" {
+            let modified = (try? f.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let name = f.deletingPathExtension().lastPathComponent
+            guard modified < fresh, let cut = name.range(of: "-", options: .backwards) else { continue }
+            let id = String(name[..<cut.lowerBound])
+            if !ids.contains(id) { ids.append(id) }
+        }
+        guard !ids.isEmpty else { return }
+        log("finishing \(ids.count) cut-off meeting recording(s): \(ids.joined(separator: ", "))")
+        Task {
+            for id in ids.sorted() {
+                guard !self.isRecording else { return }
+                let session = MeetingSession { samples in try await transcriber.transcribe(samples) }
+                var longest = 0
+                for (side, file) in [("You", "\(id)-you.f32"), ("On the call", "\(id)-call.f32")] {
+                    guard let data = try? Data(contentsOf: folder.appendingPathComponent(file)) else { continue }
+                    let samples = data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+                    longest = max(longest, samples.count)
+                    await session.append(samples, side: side)
+                }
+                let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"; f.locale = Locale(identifier: "en_US_POSIX")
+                let started = f.date(from: id) ?? Date()
+                await self.finish(id: id, started: started, duration: Double(longest) / 16_000, session: session,
+                                  first: "Finishing a meeting that was cut off…")
+                if case .failed = self.phase { return }  // leave the message up; the rest wait for the next start
             }
         }
     }

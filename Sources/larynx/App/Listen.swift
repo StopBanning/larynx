@@ -73,6 +73,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
     setStatus("Loading speech model...")
     do { try await Loader.shared.task.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
     _ = Loader.shared.vocabulary  // starts loading in the background
+    if inApp { Task { @MainActor in MeetingController.shared.recoverCutOff() } }
 
     // Each press is one utterance with its own target app, captured at key-down, so switching apps mid-sentence
     // (or a slow result) never sends text to the wrong place.
