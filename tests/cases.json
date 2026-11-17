@@ -902,6 +902,36 @@
       "expect": "Please book it for the conference room."
     },
     {
+      "id": "t-restart-around-yeah",
+      "mode": "standard",
+      "in": "We need to finish uh yeah we need to finish the deck by noon.",
+      "expect": "We need to finish the deck by noon."
+    },
+    {
+      "id": "t-sounded-out-start",
+      "mode": "standard",
+      "in": "Pass me the hem the the ham the hammer please.",
+      "expect": "Pass me the hammer please."
+    },
+    {
+      "id": "keep-restart-emphasis",
+      "mode": "standard",
+      "in": "That's fine, yeah, that's fine.",
+      "expect": "That's fine, yeah, that's fine."
+    },
+    {
+      "id": "keep-two-word-repeat-aside",
+      "mode": "standard",
+      "in": "It works, yeah, it works now.",
+      "expect": "It works, yeah, it works now."
+    },
+    {
+      "id": "keep-list-not-sounded-out",
+      "mode": "standard",
+      "in": "We sold the house, the horse and the tractor.",
+      "expect": "We sold the house, the horse and the tractor."
+    },
+    {
       "id": "t-correction-sorry-short-swap",
       "mode": "standard",
       "in": "Mail the forms to Austin, sorry, to Dallas.",

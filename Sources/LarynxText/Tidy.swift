@@ -261,6 +261,7 @@ public enum Tidy {
             s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
         }
         s = repeatedPhrases(s)
+        s = restartedAroundAside(s)
         var previous = ""
         while previous != s {  // "I, I, I think" needs two passes
             previous = s
@@ -269,6 +270,8 @@ public enum Tidy {
         // 2a. Any word said twice in a row is a stutter ("please add add oat milk"), except the doubles that are meant:
         // "that that", "had had", emphasis ("really really"), set phrases ("bye bye") and numbers ("two two" in a code).
         s = doubledWords(s)
+        // 2a2. False starts the speech model wrote as real words: "the memo the mum the momentum" -> "the momentum".
+        s = soundedOutStarts(s)
         // 2b. A correction said out loud: "send it to Maria, no, send it to Priya", "starts at six, sorry, at seven",
         // "for four, I mean five people". The words after the cue restart something said earlier in the sentence (keep
         // the restart), or replace a word of the same kind just before the cue (a day, a month, a number).
@@ -620,6 +623,48 @@ public enum Tidy {
         return s
     }
 
+    /// A phrase of three to five words started, interrupted by "yeah", "okay", "well"... and started again, with the
+    /// sentence going on after it: "so we can keep, yeah, so we can keep the lights on" -> "so we can keep the lights
+    /// on". Two words ("it works, yeah, it works") or a repeat that ends the sentence ("That's fine, yeah, that's
+    /// fine.") is emphasis and stays.
+    static func restartedAroundAside(_ text: String) -> String {
+        let asides = "yeah|yes|okay|ok|well|oh|like|i mean|sorry|you know"
+        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){2,4}),?\\s+(?:\(asides)),?\\s+(\\1)(?=\\s+[\\w'])") else { return text }
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(m.range, in: s), let second = Range(m.range(at: 2), in: s), let first = Range(m.range(at: 1), in: s) else { continue }
+            let kept = s[first].first?.isUppercase == true ? s[second].prefix(1).uppercased() + s[second].dropFirst() : String(s[second])
+            s.replaceSubrange(whole, with: kept)
+        }
+        return s
+    }
+
+    /// "the memo the mum the momentum": the speaker sounded out the start of a word ("mo-", "mo-") and the speech
+    /// model wrote each try as a real word. A short word after "the/a/my..." is dropped, with its "the", when the same
+    /// small word comes next with a longer word that sounds like it starts the same way: same first letter, at least
+    /// two letters longer, and half its letters in common with that word's start. With commas between it is a list
+    /// ("the house, the horse") and stays; short words ("a bit a big") are left alone.
+    static func soundedOutStarts(_ text: String) -> String {
+        let lead = "the|a|an|my|your|our|their|his|her|this|that"
+        guard let re = try? NSRegularExpression(pattern: "\\b(\(lead))\\s+([a-z]{2,6})\\s+(?=(?i:\\1)\\s+([a-z]+)\\b)", options: [.caseInsensitive]) else { return text }
+        var s = text
+        var changed = true
+        while changed {
+            changed = false
+            let ns = s as NSString
+            for m in re.matches(in: s, range: NSRange(location: 0, length: ns.length)).reversed() {
+                let tryWord = ns.substring(with: m.range(at: 2)), target = ns.substring(with: m.range(at: 3))
+                guard tryWord == tryWord.lowercased(), target.count >= 5, tryWord.count <= target.count - 2,
+                      tryWord.first == target.first else { continue }
+                if LetterSimilarity.ratio(tryWord, String(target.prefix(tryWord.count))) < 0.5 { continue }
+                s = ns.replacingCharacters(in: m.range, with: "")
+                changed = true
+                break
+            }
+        }
+        return s
+    }
+
     static let questionOpeners = "can|could|will|would|should|do|did|shall"
     /// Asides that keep their commas after "if": "if, say, it rains", "if, you know, you want".
     static let ifAsides = "say|you know|honestly|though|i mean|of course|for example|for instance|like|basically|frankly|"
@@ -775,3 +820,17 @@ public enum Tidy {
     }
 }
 
+/// Twice the longest common subsequence over the total length: 1 for the same letters in order, 0 for none in common.
+enum LetterSimilarity {
+    static func ratio(_ a: String, _ b: String) -> Double {
+        let x = Array(a), y = Array(b)
+        guard !x.isEmpty, !y.isEmpty else { return 0 }
+        var prev = [Int](repeating: 0, count: y.count + 1)
+        for i in 1...x.count {
+            var cur = [Int](repeating: 0, count: y.count + 1)
+            for j in 1...y.count { cur[j] = x[i - 1] == y[j - 1] ? prev[j - 1] + 1 : max(prev[j], cur[j - 1]) }
+            prev = cur
+        }
+        return 2 * Double(prev[y.count]) / Double(x.count + y.count)
+    }
+}
