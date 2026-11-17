@@ -23,7 +23,10 @@ ioidle() {
   done
   echo 0
 }
-recording() { tail -1 ~/Library/Logs/Larynx.log 2>/dev/null | grep -qE 'recording\.\.\.|hands-free'; }
+# Dictating, or a meeting recording: its spool files are written every moment, so one touched in the last 30 s means
+# a meeting is on (a restart then would cut it off, as it once did).
+meeting() { [[ -n "$(find "${LARYNX_DATA_DIR:-$HOME/Library/Application Support/Larynx}/meetings/spool" -name '*.f32' -mtime -30s 2>/dev/null | head -1)" ]]; }
+recording() { tail -1 ~/Library/Logs/Larynx.log 2>/dev/null | grep -qE 'recording\.\.\.|hands-free' || meeting; }
 # A locked screen won't bring windows to the front, so wait for an unlocked, idle session.
 locked() { ioreg -n Root -d1 -a | plutil -extract IOConsoleUsers.0.CGSSessionScreenIsLocked raw -o - - 2>/dev/null | grep -q true; }
 until (( $(idle) >= IDLE )) && ! recording && ! locked; do sleep 5; done
