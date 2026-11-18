@@ -200,7 +200,8 @@ final class MenuController: NSObject, NSMenuDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
-        for (title, action) in [("Send Feedback…", #selector(sendFeedback)), ("Check for Updates…", #selector(checkForUpdates)),
+        for (title, action) in [("Send Feedback…", #selector(sendFeedback)), ("Send a Report…", #selector(sendReport)),
+                                ("Check for Updates…", #selector(checkForUpdates)),
                                 ("About Larynx", #selector(showAbout))] {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
             item.target = self
@@ -211,6 +212,9 @@ final class MenuController: NSObject, NSMenuDelegate {
 
     /// Opens a new GitHub issue with the version, macOS and speech model filled in. Nothing dictated is attached.
     @objc func sendFeedback() { NSWorkspace.shared.open(Links.feedback(engine: Settings.shared.string(.engine))) }
+
+    /// A text file for whoever helps you, with no words you said in it (Report.swift, BugReport).
+    @objc func sendReport() { MainActor.assumeIsolated { ReportSender.send() } }
 
     /// Opens the releases page. A signed download with automatic updates is PLAN-launch L2.2.
     @objc func checkForUpdates() { NSWorkspace.shared.open(Links.releases) }

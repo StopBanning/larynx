@@ -378,6 +378,12 @@ case "review":
         for r in undone { print("\n[undone] \(r.id)  \(r.text)") }
     }
     exit(0)
+case "report":
+    // What "Send a Report…" would write, printed instead of saved or mailed: larynx report
+    let logText = (try? String(contentsOfFile: NSHomeDirectory() + "/Library/Logs/Larynx.log", encoding: .utf8)) ?? ""
+    print(BugReport.build(app: ReportSender.appLines(), computer: ReportSender.computerLines(), log: logText,
+                          meetings: Array(MeetingStore.all().prefix(10))), terminator: "")
+    exit(0)
 case "context":
     // What Larynx would read around the cursor: sizes, timing and the names found, never the raw text.
     // larynx context [--app <bundle id>] (default: the front app)
