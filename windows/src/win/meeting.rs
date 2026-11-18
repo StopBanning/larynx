@@ -26,6 +26,9 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 const RATE: u32 = 16_000;
 pub const ID_PANEL_STOP: usize = 300;
 pub const ID_PANEL_MUTE: usize = 301;
+/// The panel's height: room for the time, two lines of note (e.g. "Only the microphone is being recorded…") and the
+/// buttons. At 170 a two-line note was cut off.
+const PANEL_H: i32 = 200;
 const ID_KEY_EDIT: usize = 310;
 const ID_KEY_SAVE: usize = 311;
 
@@ -538,7 +541,7 @@ impl Panel {
                 0,
                 0,
                 scale(420),
-                scale(170),
+                scale(PANEL_H),
                 None,
                 None,
                 Some(instance.into()),
@@ -552,7 +555,7 @@ impl Panel {
                 w!("Stop"),
                 WS_CHILD | WS_VISIBLE | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
                 scale(420) - scale(20) - scale(140),
-                scale(170) - scale(20) - scale(48),
+                scale(PANEL_H) - scale(20) - scale(48),
                 scale(140),
                 scale(48),
                 Some(hwnd),
@@ -569,7 +572,7 @@ impl Panel {
                 w!("Mute me"),
                 WS_CHILD | WINDOW_STYLE(BS_PUSHBUTTON as u32),
                 scale(420) - scale(20) - scale(140) - scale(12) - scale(130),
-                scale(170) - scale(20) - scale(48),
+                scale(PANEL_H) - scale(20) - scale(48),
                 scale(130),
                 scale(48),
                 Some(hwnd),
@@ -608,7 +611,7 @@ impl Panel {
                 let s = since.elapsed().as_secs_f64();
                 let mut small = note.clone().unwrap_or_default();
                 if *muted && small.is_empty() {
-                    small = "Your microphone is muted. The call is still being recorded.".into();
+                    small = "Your microphone is muted. The call is still recorded.".into();
                 }
                 (format!("Recording · {}", meeting::clock(s)), true, small, Some("Stop"))
             }
@@ -646,7 +649,7 @@ impl Panel {
                 Some(&mut work as *mut RECT as *mut _),
                 SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
             );
-            let (w, h) = (scale(420), scale(170));
+            let (w, h) = (scale(420), scale(PANEL_H));
             let _ = SetWindowPos(
                 self.hwnd,
                 Some(HWND_TOPMOST),
