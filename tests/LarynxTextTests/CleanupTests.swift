@@ -220,4 +220,9 @@ private struct Cases: Decodable {
     #expect(ai("We walked in into the hall.") == "We walked in into the hall.")           // "in" is a word: kept
     #expect(ai("Bam bam bam, here we go.") == "Bam bam bam, here we go.")                 // a chant is not a stutter
     #expect(ai("Go with plan b because it's cheaper.") == "Go with plan b because it's cheaper.")
+    #expect(ai("Bring snacks that k kids like.") == "Bring snacks that kids like.")      // a lone letter, then its word
+    #expect(ai("It took nearly t ten minutes.") == "It took nearly ten minutes.")
+    #expect(ai("Write the c code first.") == "Write the c code first.")                   // after "the": a label
+    #expect(ai("Take vitamin d daily.") == "Take vitamin d daily.")
+    #expect(ai("I ate a apple.") == "I ate a apple.")                                     // "a" is a word
 }

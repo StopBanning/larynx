@@ -163,15 +163,32 @@ public enum Tidy {
     /// ("the b branch").
     static func loneLetterRestarts(_ text: String) -> String {
         guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+((?:[\\w']+\\s+){1,2})(?=\\1[a-z])") else { return text }
-        let labels: Set<String> = ["plan", "vitamin", "letter", "option", "grade", "type", "class", "section", "part", "step",
-                                   "row", "column", "size", "model", "version", "level", "tier", "group", "team", "line", "the", "a",
-                                   "press", "hit", "tap", "key", "type", "and", "or"]
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let letter = Range(m.range(at: 1), in: s) else { continue }
             let before = s[..<letter.lowerBound].split(whereSeparator: \.isWhitespace).last.map { $0.lowercased() } ?? ""
-            if labels.contains(before) { continue }
+            if letterLabels.contains(before) { continue }
             guard let whole = Range(NSRange(location: m.range.location, length: m.range(at: 1).length + 1), in: s) else { continue }
+            s.removeSubrange(whole)
+        }
+        return s
+    }
+
+    /// Words before a lone letter that make it a label, not a stumble: "plan b", "vitamin d", "press k".
+    static let letterLabels: Set<String> = ["plan", "vitamin", "letter", "option", "grade", "type", "class", "section", "part",
+        "step", "row", "column", "size", "model", "version", "level", "tier", "group", "team", "line", "the", "a", "press", "hit",
+        "tap", "key", "and", "or"]
+
+    /// A lone lowercase letter right before a word it starts: "that k kids" -> "that kids", "nearly t ten" -> "nearly
+    /// ten". Not "a" or "I", not a capital, and not a label ("plan b because", "the c code").
+    static func letterRestarts(_ text: String) -> String {
+        guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+(?=\\1[a-z]{2,})") else { return text }
+        var s = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(m.range, in: s) else { continue }
+            let before = s[..<whole.lowerBound].split(whereSeparator: \.isWhitespace).last
+                .map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) } ?? ""
+            if letterLabels.contains(before) { continue }
             s.removeSubrange(whole)
         }
         return s
@@ -248,6 +265,8 @@ public enum Tidy {
         // 1e1. Stutter restarts: "Would sh would you" -> "Would you", "for the dict for the dictation" -> "for the
         // dictation", "sh should" -> "should".
         s = stutterRestarts(s)
+        // 1e1b. A lone letter right before the word it starts: "that k kids" -> "that kids".
+        s = letterRestarts(s)
         // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
         // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
         s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)
