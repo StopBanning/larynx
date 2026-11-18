@@ -359,13 +359,16 @@ pub fn latest_without_notes() -> Option<Meeting> {
         })
 }
 
+/// Opens the meeting's page in the browser, on its own thread: starting a browser can take seconds, and the app's
+/// window (the panel, the tray, the next Start) must not wait for it.
 pub fn open(path: &std::path::Path) {
     let p: Vec<u16> = path
         .to_string_lossy()
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
-    unsafe {
+    std::thread::spawn(move || unsafe {
+        let _ = windows::Win32::System::Com::CoInitializeEx(None, windows::Win32::System::Com::COINIT_APARTMENTTHREADED);
         windows::Win32::UI::Shell::ShellExecuteW(
             None,
             w!("open"),
@@ -374,7 +377,7 @@ pub fn open(path: &std::path::Path) {
             None,
             SW_SHOWNORMAL,
         );
-    }
+    });
 }
 
 fn wide(s: &str) -> Vec<u16> {

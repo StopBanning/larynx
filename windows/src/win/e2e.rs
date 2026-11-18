@@ -343,8 +343,11 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
     report.insert("first_id".into(), first_id.clone().into());
 
     // 2. A meeting cut off: start, kill the app partway, start it again; it must finish the meeting by itself.
+    std::thread::sleep(Duration::from_secs(2));
     post_to_app(super::tray::ID_MEETING)?;
-    wait_for(10.0, || count(&log, "meeting_start") >= 2).ok_or("the second meeting never started")?;
+    if wait_for(60.0, || count(&log, "meeting_start") >= 2).is_none() {
+        failures.push("the second meeting never started".into());
+    }
     std::thread::sleep(Duration::from_secs(20));
     let second_id = log_events(&log).iter().filter(|e| e["event"] == "meeting_start").nth(1).and_then(|e| e["id"].as_str().map(String::from));
     report.insert("cut_off_id".into(), second_id.clone().into());
@@ -356,8 +359,10 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
     let log2 = out_abs.join("app-after-restart.jsonl");
     let _ = std::fs::remove_file(&log2);
     children.0.push(start_app(&log2)?);
-    wait_ready(&log2)?;
-    let recovered = wait_for(900.0, || count(&log2, "meeting_done") >= 1);
+    if let Err(e) = wait_ready(&log2) {
+        failures.push(format!("after the restart: {e}"));
+    }
+    let recovered = if second_id.is_some() { wait_for(900.0, || count(&log2, "meeting_done") >= 1) } else { None };
     report.insert("recovered_after_restart_s".into(), recovered.map(|d| d.as_secs_f64()).into());
     if recovered.is_none() {
         failures.push("the cut-off meeting was never finished after the restart".into());

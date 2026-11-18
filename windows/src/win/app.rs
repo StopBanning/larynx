@@ -237,13 +237,16 @@ impl App {
         match showing {
             Show::Problem(_) if self.meeting.is_none() => self.show(Show::Hidden),
             _ if self.meeting.is_some() => self.stop_meeting(),
-            _ if self.meeting_busy => {}
+            _ if self.meeting_busy => {
+                self.log.write(serde_json::json!({"event": "meeting_start_ignored", "why": "the last meeting is still being finished"}));
+            }
             _ => self.start_meeting(),
         }
     }
 
     fn start_meeting(&mut self) {
         if !matches!(self.phase, Phase::Idle) {
+            self.log.write(serde_json::json!({"event": "meeting_start_ignored", "why": "a dictation is in progress"}));
             return;
         }
         if self.engine.is_none() {
@@ -263,6 +266,7 @@ impl App {
             }
             Err(e) => {
                 self.recorder.end();
+                self.log.write(serde_json::json!({"event": "meeting_start_failed", "error": e}));
                 self.show(Show::Problem(format!("The meeting couldn't start recording ({e}).")));
             }
         }
