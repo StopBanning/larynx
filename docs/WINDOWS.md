@@ -125,7 +125,7 @@ and start `larynx.exe`; the first start downloads the model (about 670 MB) into 
 | # | Step | Done when |
 | --- | --- | --- |
 | W7 | Real-hardware numbers: p50 key-up-to-text on a laptop CPU, an NVIDIA/AMD/Intel GPU, a Snapdragon | numbers in BENCHMARKS.md from `larynx-cli bench` + the app log |
-| W4b | Real Acrylic behind the pill (Windows 11 `DWMSBT_TRANSIENTWINDOW`, or the accent-policy blur on Windows 10), checked on a real GPU; target app icon in the pill | a screenshot on real hardware |
+| W4b | The meeting panel is on Acrylic (`glass.rs`, done; the blur itself is unchecked until a real GPU). Still to do: Acrylic behind the pill, which needs it off the colour key (per-pixel alpha, a capsule shape and click-through kept), and the target app's icon in the pill | a screenshot on real hardware |
 | W8 | NPU: Windows ML (Windows App SDK) or `ort`'s QNN/OpenVINO builds, an fp16 encoder for GPUs | faster than DirectML on a Copilot+ PC |
 | W2b | Microphone choice, hands-free (double tap), Esc to cancel, the "no sound" warning | parity with the Mac's Talking section |
 | W5 | History (same SQLite schema as `History.swift`), dictionary and snippets from `%APPDATA%\Larynx`, learning from fixes via UI Automation | port of `tests/history.py` |

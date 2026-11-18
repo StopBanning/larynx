@@ -716,6 +716,10 @@ impl Panel {
                 None,
             )
             .map_err(|e| e.to_string())?;
+            // No focus ring after a mouse click; Windows shows it again once the keyboard is used (Tab).
+            const UIS_SET: usize = 1;
+            const UISF_HIDEFOCUS: usize = 1;
+            SendMessageW(hwnd, WM_UPDATEUISTATE, Some(WPARAM((UISF_HIDEFOCUS << 16) | UIS_SET)), Some(LPARAM(0)));
             let mut panel = Panel { hwnd, button, mute, show: Show::Hidden, dpi: 0, font: HFONT::default(), look };
             panel.layout();
             Ok(panel)

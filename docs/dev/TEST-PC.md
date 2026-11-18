@@ -64,5 +64,8 @@ What to run there that CI can't:
 - First run from the beta zip: the unknown-publisher warning, the model download, the tray icon.
 - Notes through the real, signed-in Claude Code.
 - A real headset: plugged in, unplugged and Bluetooth, mid-meeting.
+- The meeting panel's glass: on a real graphics card the desktop should show blurred through it while another app
+  (the call) is the active window. CI has no graphics card, so it only ever sees Acrylic's flat stand-in colour.
+  The panel's log line `panel_look` says whether Windows gave it glass.
 
 Nothing from a real person's dictation or meetings goes back into the repository: test sentences are made up, as in CI.

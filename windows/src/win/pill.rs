@@ -232,15 +232,19 @@ fn render() {
                 let key = color(1.0, 0.0, 1.0, 1.0);
                 t.Clear(Some(&key as *const D2D1_COLOR_F)); // the color key: transparent
                 t.SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED); // a crisp edge, so no pink fringe against the key
-                let rim = t.CreateSolidColorBrush(&color(0.36, 0.38, 0.42, 1.0), None);
-                let fill = t.CreateSolidColorBrush(&color(0.11, 0.12, 0.14, 1.0), None);
-                if let (Ok(rim), Ok(fill)) = (rim, fill) {
+                // The meeting panel's colours (glass.rs) without its Acrylic: a colour-keyed window can't have a
+                // backdrop. Its grey rim, its dark fill, and light catching the top edge.
+                let rim = t.CreateSolidColorBrush(&color(0.42, 0.44, 0.45, 1.0), None);
+                let fill = t.CreateSolidColorBrush(&color(0.13, 0.14, 0.16, 1.0), None);
+                let shine = t.CreateSolidColorBrush(&color(0.36, 0.37, 0.40, 1.0), None);
+                if let (Ok(rim), Ok(fill), Ok(shine)) = (rim, fill, shine) {
                     let r = h / 2.0;
                     t.FillRoundedRectangle(&D2D1_ROUNDED_RECT { rect: D2D_RECT_F { left: 0.0, top: 0.0, right: w, bottom: h }, radiusX: r, radiusY: r }, &rim);
                     t.FillRoundedRectangle(
                         &D2D1_ROUNDED_RECT { rect: D2D_RECT_F { left: s, top: s, right: w - s, bottom: h - s }, radiusX: r - s, radiusY: r - s },
                         &fill,
                     );
+                    t.FillRectangle(&D2D_RECT_F { left: r, top: s, right: w - r, bottom: 2.0 * s }, &shine);
                 }
                 t.SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
                 let white = t.CreateSolidColorBrush(&color(0.96, 0.97, 0.98, 1.0), None).ok();
