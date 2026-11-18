@@ -140,7 +140,7 @@ fn play_once(id: &[u16], samples: &[f32], pos: &mut usize, stop: &AtomicBool) ->
 }
 
 /// Runs a command, returning what it printed (for the report).
-fn run(program: &str, args: &[&str]) -> String {
+fn shell(program: &str, args: &[&str]) -> String {
     match Command::new(program).args(args).output() {
         Ok(o) => format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr)).trim().replace("\r\n", " "),
         Err(e) => e.to_string(),
@@ -152,7 +152,7 @@ fn allow_microphone() -> String {
     let key = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone";
     [format!(r"HKLM\SOFTWARE\{}", &key[9..]), format!(r"HKCU\{key}"), format!(r"HKCU\{key}\NonPackaged")]
         .iter()
-        .map(|k| run("reg", &["add", k, "/v", "Value", "/t", "REG_SZ", "/d", "Allow", "/f"]))
+        .map(|k| shell("reg", &["add", k, "/v", "Value", "/t", "REG_SZ", "/d", "Allow", "/f"]))
         .collect::<Vec<_>>()
         .join(" | ")
 }
@@ -252,7 +252,7 @@ pub fn run(args: &Args) -> Result<(), String> {
     };
     until(unplug_at);
     let before = count("meeting_audio");
-    report.insert("audio_service_restart".into(), run("powershell", &["-NoProfile", "-Command", "Restart-Service Audiosrv -Force; (Get-Service Audiosrv).Status"]).into());
+    report.insert("audio_service_restart".into(), shell("powershell", &["-NoProfile", "-Command", "Restart-Service Audiosrv -Force; (Get-Service Audiosrv).Status"]).into());
     if wait_for(5.0, || count("meeting_audio") > before).is_some() {
         std::thread::sleep(Duration::from_millis(400));
         let _ = screenshot(&out_abs.join("panel-unplugged.bmp"));
