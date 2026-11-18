@@ -20,7 +20,7 @@ use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
 };
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows::Win32::UI::HiDpi::GetDpiForSystem;
+use windows::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows::Win32::UI::WindowsAndMessaging::*;
 
 const RATE: u32 = 16_000;
@@ -139,8 +139,8 @@ impl Recording {
                             // A side more than a second behind the clock lost its device for a while: silence for
                             // the gap, so what is said after it stays in step with the other side.
                             let due = (began.elapsed().as_secs_f64() * RATE as f64) as usize;
-                            if written[n] + chunk.len() + RATE as usize < due {
-                                let gap = due - RATE as usize / 4 - written[n] - chunk.len();
+                            if written[n] + chunk.len() + (RATE as usize) < due {
+                                let gap = due - (RATE as usize) / 4 - written[n] - chunk.len();
                                 let mut padded = vec![0.0f32; gap];
                                 padded.extend(chunk);
                                 chunk = padded;
@@ -419,15 +419,36 @@ fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
+/// Dots per inch for a window: the monitor it is on now, so a change of scaling shows without signing out (the
+/// system's figure is fixed at sign-in). Without a window, the system's. `LARYNX_TEST_DPI` overrides both, so CI can
+/// draw the panel at 150% and 200% on a runner fixed at 100%.
+fn dpi(hwnd: Option<HWND>) -> i32 {
+    if let Some(d) = std::env::var("LARYNX_TEST_DPI").ok().and_then(|v| v.parse::<i32>().ok()) {
+        return d.max(96);
+    }
+    let d = match hwnd {
+        Some(h) => unsafe { GetDpiForWindow(h) },
+        None => unsafe { GetDpiForSystem() },
+    };
+    d.max(96) as i32
+}
+
 fn scale(px: i32) -> i32 {
-    let dpi = unsafe { GetDpiForSystem() }.max(96) as i32;
+    px * dpi(None) / 96
+}
+
+fn scale_at(dpi: i32, px: i32) -> i32 {
     px * dpi / 96
 }
 
 fn font(px: i32, weight: FONT_WEIGHT) -> HFONT {
+    font_at(dpi(None), px, weight)
+}
+
+fn font_at(dpi: i32, px: i32, weight: FONT_WEIGHT) -> HFONT {
     unsafe {
         CreateFontW(
-            -scale(px),
+            -scale_at(dpi, px),
             0,
             0,
             0,
@@ -464,6 +485,9 @@ pub struct Panel {
     button: HWND,
     mute: HWND,
     pub show: Show,
+    /// The dots per inch the buttons were laid out for.
+    dpi: i32,
+    font: HFONT,
 }
 
 thread_local! {
@@ -483,6 +507,9 @@ unsafe extern "system" fn panel_proc(
             let mut rc = RECT::default();
             let _ = unsafe { GetClientRect(hwnd, &mut rc) };
             let (line, red, small) = PANEL_TEXT.with(|t| t.borrow().clone());
+            let d = dpi(Some(hwnd));
+            let scale = |px: i32| scale_at(d, px);
+            let font = |px: i32, weight: FONT_WEIGHT| font_at(d, px, weight);
             unsafe {
                 let bg = CreateSolidBrush(COLORREF(0x00FFFFFF));
                 FillRect(dc, &rc, bg);
@@ -548,6 +575,8 @@ unsafe extern "system" fn panel_proc(
             LRESULT(0)
         }
         WM_CLOSE => LRESULT(0), // only Stop ends a recording
+        // Moved to a monitor with other scaling, or the scaling changed: the app's next render lays it out again.
+        WM_DPICHANGED => LRESULT(0),
         _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
     }
 }
@@ -613,16 +642,32 @@ impl Panel {
                 None,
             )
             .map_err(|e| e.to_string())?;
-            let f = font(18, FW_SEMIBOLD);
-            for b in [button, mute] {
+            let mut panel = Panel { hwnd, button, mute, show: Show::Hidden, dpi: 0, font: HFONT::default() };
+            panel.layout();
+            Ok(panel)
+        }
+    }
+
+    /// Sizes the buttons and their font for the monitor the panel is on (again whenever its scaling changes).
+    fn layout(&mut self) {
+        let d = dpi(Some(self.hwnd));
+        if d == self.dpi {
+            return;
+        }
+        self.dpi = d;
+        let s = |px: i32| scale_at(d, px);
+        unsafe {
+            let (w, h) = (s(420), s(PANEL_H));
+            let _ = SetWindowPos(self.button, None, w - s(20) - s(140), h - s(20) - s(48), s(140), s(48), SWP_NOZORDER | SWP_NOACTIVATE);
+            let _ = SetWindowPos(self.mute, None, w - s(20) - s(140) - s(12) - s(130), h - s(20) - s(48), s(130), s(48), SWP_NOZORDER | SWP_NOACTIVATE);
+            let f = font_at(d, 18, FW_SEMIBOLD);
+            for b in [self.button, self.mute] {
                 SendMessageW(b, WM_SETFONT, Some(WPARAM(f.0 as usize)), Some(LPARAM(1)));
             }
-            Ok(Panel {
-                hwnd,
-                button,
-                mute,
-                show: Show::Hidden,
-            })
+            if !self.font.is_invalid() {
+                let _ = DeleteObject(self.font.into());
+            }
+            self.font = f;
         }
     }
 
@@ -681,12 +726,13 @@ impl Panel {
                 Some(&mut work as *mut RECT as *mut _),
                 SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
             );
-            let (w, h) = (scale(420), scale(PANEL_H));
+            self.layout();
+            let (w, h) = (scale_at(self.dpi, 420), scale_at(self.dpi, PANEL_H));
             let _ = SetWindowPos(
                 self.hwnd,
                 Some(HWND_TOPMOST),
-                work.right - w - scale(16),
-                work.bottom - h - scale(16),
+                work.right - w - scale_at(self.dpi, 16),
+                work.bottom - h - scale_at(self.dpi, 16),
                 w,
                 h,
                 SWP_NOACTIVATE | SWP_SHOWWINDOW,

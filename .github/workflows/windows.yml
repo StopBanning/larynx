@@ -112,12 +112,19 @@ jobs:
         timeout-minutes: 30
         run: |
           $failed = @()
-          foreach ($room in @("bad", "headset")) {
-            Write-Host "=== room: $room"
-            dist/larynx-cli.exe e2e-meeting --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --room $room --quick --out "e2e-room-$room"
+          Add-Type -AssemblyName System.Drawing
+          # Each room also draws the panel at another screen scaling (150%, 200%) for its screenshot.
+          foreach ($run in @(@{room = "bad"; dpi = 144}, @{room = "headset"; dpi = 192})) {
+            $room = $run.room
+            Write-Host "=== room: $room, screen at $($run.dpi) dpi"
+            dist/larynx-cli.exe e2e-meeting --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --room $room --dpi $run.dpi --quick --out "e2e-room-$room"
             $code = $LASTEXITCODE
             python windows/ci/check-meeting-app.py "e2e-room-$room" tests/meetings/client-call.json --quick
             if ($LASTEXITCODE -ne 0 -or $code -ne 0) { $failed += $room }
+            if (Test-Path "e2e-room-$room/panel-muted.bmp") {
+              $img = [System.Drawing.Image]::FromFile((Resolve-Path "e2e-room-$room/panel-muted.bmp"))
+              $img.Save("$PWD/e2e-room-$room/panel-muted-$($run.dpi)dpi.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+            }
             Remove-Item "e2e-room-$room/panel-muted.bmp", "e2e-room-$room/mic.wav" -ErrorAction SilentlyContinue
           }
           if ($failed) { throw "meeting mode failed in: $($failed -join ', ')" }

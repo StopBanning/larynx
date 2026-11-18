@@ -13,6 +13,7 @@ pub const ID_MEETING: usize = 103;
 pub const ID_MEETINGS: usize = 104;
 pub const ID_CLAUDE_KEY: usize = 105;
 pub const ID_MEETING_RETRY: usize = 106;
+pub const ID_REPORT: usize = 107;
 
 /// What the meeting part of the menu offers.
 pub struct MeetingMenu {
@@ -121,6 +122,7 @@ impl Tray {
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let _ = AppendMenuW(menu, MF_STRING, ID_COPY_LAST, windows::core::w!("Copy last dictation"));
             let _ = AppendMenuW(menu, MF_STRING, ID_OPEN_LOGS, windows::core::w!("Open Larynx folder"));
+            let _ = AppendMenuW(menu, MF_STRING, ID_REPORT, windows::core::w!("Send a report…"));
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let _ = AppendMenuW(menu, MF_STRING, ID_QUIT, windows::core::w!("Quit Larynx"));
             let mut p = POINT::default();

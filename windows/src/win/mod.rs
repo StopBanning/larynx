@@ -8,4 +8,5 @@ pub mod hotkey;
 pub mod insert;
 pub mod meeting;
 pub mod pill;
+pub mod report;
 pub mod tray;

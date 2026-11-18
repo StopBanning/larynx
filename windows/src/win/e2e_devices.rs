@@ -173,7 +173,8 @@ pub fn run(args: &Args) -> Result<(), String> {
     }
     cmd.env("LARYNX_DATA_DIR", &data)
         .env("LARYNX_CLAUDE_CODE", claude)
-        .env("FAKE_CLAUDE_OUT", out_abs.join("claude-code-call.json"));
+        .env("FAKE_CLAUDE_OUT", out_abs.join("claude-code-call.json"))
+        .env("LARYNX_REPORT_DIR", &out_abs);
     let child: Child = cmd.spawn().map_err(|e| format!("{app}: {e}"))?;
     let children = Kill(vec![child]);
     wait_for(300.0, || log_events(&log).iter().any(|e| e["event"] == "ready" || e["event"] == "error"));
@@ -226,6 +227,11 @@ pub fn run(args: &Args) -> Result<(), String> {
     report.insert("stop_to_notes_s".into(), done.map(|d| d.as_secs_f64()).into());
     if done.is_none() {
         failures.push("the meeting was never finished after Stop".into());
+    }
+    // "Send a report…" after the meeting: the file must appear (check-meeting-devices.py reads it).
+    post_to_app(super::tray::ID_REPORT)?;
+    if wait_for(60.0, || count("report_saved") >= 1).is_none() {
+        failures.push("Send a report… never saved a report".into());
     }
     let id = log_events(&log).iter().find(|e| e["event"] == "meeting_start").and_then(|e| e["id"].as_str().map(String::from));
     report.insert("meeting_id".into(), id.into());

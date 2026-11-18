@@ -14,6 +14,7 @@
 
 pub mod credential;
 pub mod meeting;
+pub mod report;
 mod room;
 mod stream;
 mod text;
@@ -45,7 +46,7 @@ impl Args {
             if let Some(name) = a.strip_prefix("--") {
                 let takes_value = matches!(
                     name,
-                    "model" | "provider" | "threads" | "feed" | "feed-call" | "log" | "key" | "out" | "mode" | "app" | "expect" | "reject" | "dir" | "claude" | "unplug" | "room"
+                    "model" | "provider" | "threads" | "feed" | "feed-call" | "log" | "key" | "out" | "mode" | "app" | "expect" | "reject" | "dir" | "claude" | "unplug" | "room" | "dpi"
                 );
                 let value = if takes_value { it.next().unwrap_or_default() } else { "1".into() };
                 flags.insert(name.to_string(), value);

@@ -100,6 +100,26 @@ if not any(e.get("problem") for e in audio):
 if audio and audio[-1].get("problem"):
     problems.append(f"the panel still showed a problem after the cable came back: {audio[-1].get('problem')!r}")
 
+# "Send a report…": written, says what's in it, lists the audio devices, and holds nothing anyone said.
+rep = out / "Larynx report.txt"
+if not rep.exists():
+    problems.append("the report file was not written")
+else:
+    text = rep.read_text(encoding="utf-8", errors="replace")
+    print(f"report: {len(text)} characters, {text.count(chr(10))} lines")
+    for need in ["Larynx report", "== This computer", "Audio devices:", "CABLE", "== Recent meetings (1)", "== Log"]:
+        if need not in text:
+            problems.append(f"the report has no {need!r}")
+    said = [l["text"] for l in lines] + [s["text"] for s in segs]
+    for t in said:
+        ws = words(t)
+        for i in range(len(ws) - 3):
+            if " ".join(ws[i:i + 4]) in " ".join(words(text)):
+                problems.append(f"the report holds words from the meeting: {' '.join(ws[i:i + 4])!r}")
+                break
+    if re.search(r"C:\\?Users\\?runneradmin", text, re.I):
+        problems.append("the report holds the user's folder name")
+
 for f in report.get("failures", []):
     problems.append(f"driver: {f}")
 for p in problems:

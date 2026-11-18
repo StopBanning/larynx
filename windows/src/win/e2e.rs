@@ -283,6 +283,10 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
                 cmd.args([format!("--{flag}").as_str(), v]);
             }
         }
+        // `--dpi 144`: the app draws as if the screen were scaled to 150% (LARYNX_TEST_DPI), for the screenshots.
+        if let Some(d) = args.flag("dpi") {
+            cmd.env("LARYNX_TEST_DPI", d);
+        }
         cmd.env("LARYNX_DATA_DIR", &data)
             .env("LARYNX_CLAUDE_CODE", claude)
             .env("FAKE_CLAUDE_OUT", out_abs.join("claude-code-call.json"))

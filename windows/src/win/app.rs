@@ -37,6 +37,7 @@ const WAKE: u32 = WM_APP + 1;
 const FINISHED: u32 = WM_APP + 2;
 const READY: u32 = WM_APP + 4;
 const MEETING_DONE: u32 = WM_APP + 10;
+const WM_APP_REPORTED: u32 = WM_APP + 11;
 const TICK: usize = 1;
 const HIDE: usize = 2;
 const MEETING_TICK: usize = 3;
@@ -116,6 +117,7 @@ struct App {
     finished_tx: Sender<Finished>,
     phase: Phase,
     log: Log,
+    log_path: PathBuf,
     key_name: &'static str,
     provider: String,
     last_text: String,
@@ -161,6 +163,7 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         WAKE => with_app(|a| a.on_keys()),
         FINISHED => with_app(|a| a.on_finished()),
         MEETING_DONE => with_app(|a| a.on_meeting_done()),
+        WM_APP_REPORTED => with_app(|a| a.log.write(serde_json::json!({"event": "report_saved", "ok": wparam.0 == 1}))),
         WM_TIMER if wparam.0 == MEETING_TICK => with_app(|a| a.on_meeting_tick()),
         WM_TIMER if wparam.0 == TICK => with_app(|a| a.on_tick()),
         WM_TIMER if wparam.0 == HIDE => with_app(|a| {
@@ -194,6 +197,7 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
                 let _ = crate::meeting::write_index(&dir);
                 meet::open(&dir.join("index.html"));
             }
+            tray::ID_REPORT => with_app(|a| a.send_report()),
             tray::ID_OPEN_LOGS => {
                 let dir: Vec<u16> = data_dir().to_string_lossy().encode_utf16().chain(std::iter::once(0)).collect();
                 unsafe {
@@ -295,6 +299,27 @@ impl App {
         }
         let (since, muted) = (rec.began, rec.muted.load(std::sync::atomic::Ordering::SeqCst));
         self.show(Show::Recording { since, note, muted });
+    }
+
+    /// "Send a report…": a text file for whoever helps with Larynx (win/report.rs).
+    fn send_report(&mut self) {
+        let app = format!(
+            "Larynx {} for Windows\nStatus: {}\nTalk key: {}\nSpeech on: {}\nClaude Code: {}\nClaude key saved: {}",
+            env!("CARGO_PKG_VERSION"),
+            self.status,
+            self.key_name,
+            self.provider,
+            if crate::meeting::claude_code_path().is_some() { "installed" } else { "not found" },
+            if crate::credential::claude_key().is_some() { "yes" } else { "no" },
+        );
+        self.log.write(serde_json::json!({"event": "report_requested"}));
+        let hwnd = self.hwnd.0 as isize;
+        super::report::send(app, self.log_path.clone(), move |r| {
+            let ok = r.is_ok();
+            unsafe {
+                let _ = PostMessageW(Some(HWND(hwnd as *mut _)), WM_APP_REPORTED, WPARAM(ok as usize), LPARAM(0));
+            }
+        });
     }
 
     /// "Mute me" / "Unmute" on the recording panel.
@@ -652,6 +677,10 @@ pub fn run(args: &Args) -> Result<(), String> {
     }
     let _ = std::fs::create_dir_all(data_dir());
     let log_path: PathBuf = args.flag("log").map(PathBuf::from).unwrap_or_else(|| data_dir().join("larynx.log"));
+    // A log past 5 MB keeps its newer half, so it never fills a disk.
+    if let Some(t) = std::fs::read_to_string(&log_path).ok().and_then(|l| crate::report::trimmed(&l, 5_000_000)) {
+        let _ = std::fs::write(&log_path, t);
+    }
     let log = Log { file: std::fs::OpenOptions::new().create(true).append(true).open(&log_path).ok(), words: args.has("log") };
     let vk = args.flag("key").and_then(hotkey::parse_key).unwrap_or(0xA3);
     let feed = match args.flag("feed") {
@@ -707,6 +736,7 @@ pub fn run(args: &Args) -> Result<(), String> {
         finished_tx,
         phase: Phase::Idle,
         log,
+        log_path: log_path.clone(),
         key_name: hotkey::key_name(vk),
         provider: String::new(),
         last_text: String::new(),
