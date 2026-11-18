@@ -7,6 +7,11 @@ on:
   pull_request:
     paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/meeting-cases.json', 'tests/meetings/**', 'tests/fixtures/**', '.github/workflows/windows.yml']
   workflow_dispatch:
+    inputs:
+      publish_beta:
+        description: "Publish this build as the Windows beta (a pre-release with a fixed download link), if every test passes. main only."
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -155,21 +160,23 @@ jobs:
           $cable = (Get-PnpDevice -Class MEDIA | Where-Object FriendlyName -like '*VB-Audio*' | Select-Object -First 1).InstanceId
           if (-not $cable) { throw "the cable did not appear" }
           "CABLE_DEVICE=$cable" >> $env:GITHUB_ENV
-      - name: Meeting mode through real audio devices (call from the speakers, your voice and the echo in the microphone, a headset unplugged mid-meeting)
+      - name: Meeting mode through real audio devices (call from the speakers, your voice and the echo in the microphone, microphone blocked then allowed, audio dropping out mid-meeting)
         timeout-minutes: 30
         run: |
-          dist/larynx-cli.exe e2e-meeting-devices --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --unplug "$env:CABLE_DEVICE" --out e2e-devices
+          dist/larynx-cli.exe e2e-meeting-devices --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --out e2e-devices
           $code = $LASTEXITCODE
           python windows/ci/check-meeting-devices.py e2e-devices
           if ($LASTEXITCODE -ne 0 -or $code -ne 0) { throw "meeting mode through real devices failed (driver $code)" }
-      - name: Screenshot of the meeting panel, unplugged, as PNG
+      - name: Screenshots of the meeting panel (microphone blocked, audio dropped), as PNG
         if: always()
         run: |
-          if (Test-Path e2e-devices/panel-unplugged.bmp) {
-            Add-Type -AssemblyName System.Drawing
-            $img = [System.Drawing.Image]::FromFile((Resolve-Path e2e-devices/panel-unplugged.bmp))
-            $img.Save("$PWD/e2e-devices/panel-unplugged.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
-            Remove-Item e2e-devices/panel-unplugged.bmp
+          Add-Type -AssemblyName System.Drawing
+          foreach ($name in @("panel-unplugged", "panel-mic-blocked")) {
+            if (Test-Path "e2e-devices/$name.bmp") {
+              $img = [System.Drawing.Image]::FromFile((Resolve-Path "e2e-devices/$name.bmp"))
+              $img.Save("$PWD/e2e-devices/$name.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+              Remove-Item "e2e-devices/$name.bmp"
+            }
           }
       - name: Benchmark on CPU
         timeout-minutes: 10
@@ -219,3 +226,30 @@ jobs:
         with:
           name: larynx-windows-x64
           path: dist
+  # The Windows beta: only when someone presses "Run workflow" with publish_beta on, on main, after every test above
+  # passed. Replaces the one pre-release tagged windows-beta, so testers keep one link:
+  # https://github.com/StopBanning/larynx/releases/download/windows-beta/larynx-windows-x64.zip
+  beta:
+    needs: app
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_beta && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: larynx-windows-x64
+          path: dist
+      - name: Publish the Windows beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd dist && zip -qr ../larynx-windows-x64.zip .)
+          notes="Larynx for Windows, beta: built from ${GITHUB_SHA::7} on $(date -u +%F), after every Windows test passed (run ${GITHUB_RUN_ID}).
+
+          For testers. It isn't signed yet, so Windows will say the publisher is unknown: choose More info, then Run anyway. Unzip it anywhere and run larynx.exe; the first start downloads the speech model (about 670 MB). If something goes wrong, right-click the tray icon, choose Send a report…, and send the file it saves.
+
+          What CI checks before a beta goes out, and what it can't: docs/WINDOWS.md."
+          gh release delete windows-beta -R "$GITHUB_REPOSITORY" --cleanup-tag -y || true
+          gh release create windows-beta larynx-windows-x64.zip -R "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" \
+            --title "Larynx for Windows (beta)" --notes "$notes"

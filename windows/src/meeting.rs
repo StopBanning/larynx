@@ -286,6 +286,19 @@ fn civil(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + if m <= 2 { 1 } else { 0 }, m, d)
 }
 
+/// What to tell the person when the microphone can't be opened, from the error Windows gave. "Access is denied" is
+/// Windows' privacy switch for microphones (Settings → Privacy & security → Microphone), not a muted microphone.
+pub fn mic_note(error: &str) -> String {
+    let e = error.to_lowercase();
+    if e.contains("0x80070005") || e.contains("access is denied") {
+        "Windows is blocking the microphone. Turn on Settings → Privacy & security → Microphone → \"Let desktop apps access your microphone\".".into()
+    } else if e.contains("no microphone") {
+        "No microphone found. Plug one in, or check Windows' sound settings.".into()
+    } else {
+        "I can't hear the microphone. Check it's plugged in and not muted.".into()
+    }
+}
+
 /// A line for the notes model when "You" said little (under a quarter of the words in a meeting of 150 words or more):
 /// the share, so it can tell a talk you listened to from a meeting you took part in (the Mac's `listeningNote`).
 pub fn listening_note(meeting: &Meeting) -> Option<String> {
@@ -1424,6 +1437,13 @@ mod tests {
         assert!(Failure::NoCredit
             .to_string()
             .contains("console.anthropic.com"));
+    }
+
+    #[test]
+    fn a_blocked_microphone_says_where_to_turn_it_on() {
+        assert!(mic_note("Access is denied. (0x80070005)").contains("Privacy & security → Microphone"));
+        assert!(mic_note("no microphone").starts_with("No microphone found"));
+        assert!(mic_note("The device was invalidated (0x88890004)").contains("plugged in"));
     }
 
     #[test]

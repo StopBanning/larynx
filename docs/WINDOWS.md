@@ -86,6 +86,12 @@ What this says:
 | DirectML is built in and selectable; `auto` falls back to the CPU when there is no GPU | the DirectML step: on CI it reports "No devices detected that match the filter criteria", because the VM has no GPU. **DirectML has not run the model yet.** |
 | Hold Right Ctrl in Notepad, speak, let go: the cleaned words appear (fillers gone), Notepad keeps the focus, the pill is on screen while talking, the clipboard is restored | `larynx-cli e2e`, twice in a row (cold and warm) |
 | Right Ctrl+C while talking cancels the dictation and types nothing | same test |
+| Meeting mode: the call echoing into the microphone stays out of your side, Mute me and Unmute (real mouse clicks), Stop, notes through Claude Code (a stand-in) with no API key reaching it, a meeting cut off by killing the app finished after the restart | `larynx-cli e2e-meeting`, checked by `windows/ci/check-meeting-app.py` |
+| The same meeting in a hard room with a cheap microphone (echo off the walls, fan noise, hum, clipping) and on a Bluetooth headset's 8 kHz microphone | `e2e-meeting --room bad` and `--room headset` (`room.rs`) |
+| Meeting mode through real Windows audio devices: a virtual cable (VB-Cable) plays the call on the speakers, which the app records and the microphone also hears, and your voice on a second input only the microphone hears. It starts with Windows blocking microphones (the panel must say where to turn them on) and turns access on mid-meeting (the microphone must be picked up). Partway, Windows' audio service is restarted, dropping every app's audio: the panel says so, recording goes on, both sides reconnect, and the lines after the gap are on time | `larynx-cli e2e-meeting-devices`, checked by `windows/ci/check-meeting-devices.py` |
+| The meeting panel at 100%, 150% and 200% screen scaling | screenshots from the room runs (`--dpi`, which sets `LARYNX_TEST_DPI`) |
+| "Send a report…" writes a report with the computer's details and audio devices, and nothing that was said | the devices test, then the checker reads the file |
+| The meeting rules (echo filter, listening hint, names, numbers, the notes check, the exact notes prompt) match the Mac's | `tests/meeting-cases.json`, read by the Rust and the Swift tests |
 
 The `e2e` test feeds the recording through `--feed` at real-time speed, because CI machines have no microphone.
 Everything after the microphone is the real code path: hook, focus, speech, cleanup, clipboard, `SendInput`,
@@ -97,14 +103,21 @@ read-back.
 | --- | --- |
 | **GPU and NPU speed** (DirectML on a real graphics card; QNN on Snapdragon; OpenVINO on Intel NPUs) | CI has no GPU; DirectML falls back to a software adapter there |
 | Latency on a normal laptop CPU | CI's 4 vCPUs are slow and shared |
-| A real microphone (WASAPI capture, the 30 s warm mic, Bluetooth headsets) | no audio device on CI |
-| The pill's look and placement over real apps, at 125–200% scaling, on several monitors | CI has one screen at 100% and no GPU compositor effects |
+| A real microphone and speakers in a real room, a real sound chip, Bluetooth itself | CI's audio devices are a virtual cable: the capture and loopback code is real, the sound is clean |
+| The pill's look and placement over real apps, on several monitors; Windows' own scaling (CI draws the meeting panel scaled, but Windows stays at 100%) | CI has one screen at 100% and no GPU compositor effects |
+| Claude Code installed and signed in for real | CI uses a stand-in that checks what it is given |
 | Insertion into apps beyond Notepad: browsers, Word, Slack/Teams (Electron), Windows Terminal, elevated windows | only Notepad is installed and scripted |
 | Antivirus and SmartScreen reactions to an unsigned app with a keyboard hook | CI has no third-party antivirus |
 
-To try it on a PC: download the `larynx-windows-x64` artifact from a green `windows` run, unzip it, run
-`larynx-cli.exe setup` once (downloads the model, about 670 MB, into `%LOCALAPPDATA%\Larynx`), then start
-`larynx.exe`. Hold Right Ctrl and talk. `%LOCALAPPDATA%\Larynx\larynx.log` has the timings of every dictation
+The plan for these is a cheap laptop left on as a test PC: [dev/TEST-PC.md](dev/TEST-PC.md).
+
+**The Windows beta**, for testers: the Actions tab → `windows` → Run workflow on main with "Publish this build as the
+Windows beta" ticked. If every test passes, the build replaces the one pre-release tagged `windows-beta`, so a
+tester keeps one link: `https://github.com/StopBanning/larynx/releases/download/windows-beta/larynx-windows-x64.zip`.
+Nothing is published unless someone presses that button.
+
+To try it on a PC: download the beta (or the `larynx-windows-x64` artifact from a green `windows` run), unzip it
+and start `larynx.exe`; the first start downloads the model (about 670 MB) into `%LOCALAPPDATA%\Larynx`. Hold Right Ctrl and talk. `%LOCALAPPDATA%\Larynx\larynx.log` has the timings of every dictation
 (not the words), including which provider `auto` chose and how long each took on the probe.
 
 ## What's left
@@ -125,7 +138,7 @@ To try it on a PC: download the `larynx-windows-x64` artifact from a green `wind
 | # | Decision | Default until answered |
 | --- | --- | --- |
 | W-a | The stack above (native Rust + ONNX Runtime + Swift cleanup process), instead of the Nov 11 plan's Electron shell | Go with it |
-| W-b | A real Windows machine for W7 and the pill (not the old PC's failing D: drive) | CI only; real-hardware numbers wait |
+| W-b | A real Windows machine for W7 and the pill (not the old PC's failing D: drive) | Colin, Nov 18: a cheap used laptop as the test PC ([dev/TEST-PC.md](dev/TEST-PC.md)) |
 | W-c | Code signing: unsigned shows a SmartScreen warning, and antivirus is wary of keyboard hooks in unsigned apps; Azure Trusted Signing is about $10/month | Unsigned, with instructions |
 | W-d | ARM64 (Snapdragon) in the first release | x64 first, ARM64 right after |
 

@@ -4,8 +4,9 @@ standing in for speakers and a microphone in a room with no headphones):
 - the call was recorded from the speakers and your voice from the microphone, each on its own side;
 - the call the microphone heard from the speakers did not end up as "You" (the echo filter, on real device timing);
 - your voice did not leak into the call side;
-- unplugging the cable for a few seconds was shown on the panel and logged, recording went on, and the lines after
-  it line up in time with the lines before it (the gap was filled with silence, not dropped).
+- with Windows blocking microphones, the panel said so; once access was turned on, the microphone was picked up;
+- restarting Windows' audio service partway (every app's audio drops) was shown, recording went on, and the lines
+  after it are in time with the lines before it (the gap was filled with silence, not dropped).
 
     python windows/ci/check-meeting-devices.py e2e-devices
 """
@@ -35,29 +36,24 @@ segs = m["segments"]
 offset = report.get("playing_from_s_after_start", 0.0)
 lines = report["lines"]
 gap_from, gap_to = report["unplugged"]
-print(f"{len(segs)} lines in the transcript; unplugged {gap_from:.1f}-{gap_to:.1f} s; players lost the device {report.get('players_lost_device')}")
+print(f"{len(segs)} lines in the transcript; audio service restarted {gap_from:.1f} s; players {report.get('players')}")
 for s in segs:
     print(f"  {s['start'] - offset:6.1f} {s['speaker'][:11]:11} {s['text']}")
 
-# Each scripted line well clear of the unplugged stretch should be in the transcript, on its own side, near its time.
+# Each scripted line well clear of the restart should be in the transcript, on its own side, near its time. The speech
+# model may split a line into several, so the line's start is the earliest piece of it.
 found, missed, shifts = 0, [], {"before": [], "after": []}
 for l in lines:
     if l["end"] > gap_from - 1 and l["start"] < gap_to + 2:
         continue
-    side = "You" if l["who"] == "You" else None
-    best = None
-    for s in segs:
-        if (s["speaker"] == "You") != (side == "You"):
-            continue
-        t = s["start"] - offset
-        if abs(t - l["start"]) > 4:
-            continue
-        score = overlap(l["text"], s["text"]) + overlap(s["text"], l["text"])
-        if score >= 0.8 and (best is None or score > best[0]):
-            best = (score, t - l["start"])
-    if best:
+    you_side = l["who"] == "You"
+    pieces = [s for s in segs if (s["speaker"] == "You") == you_side
+              and l["start"] - 3 <= s["start"] - offset <= l["end"] + 3 and overlap(s["text"], l["text"]) >= 0.7]
+    heard = set(w for s in pieces for w in words(s["text"]))
+    covered = sum(w in heard for w in words(l["text"])) / max(1, len(words(l["text"])))
+    if pieces and covered >= 0.6:
         found += 1
-        shifts["before" if l["end"] < gap_from else "after"].append(best[1])
+        shifts["before" if l["end"] < gap_from else "after"].append(min(s["start"] for s in pieces) - offset - l["start"])
     else:
         missed.append(f"{l['who']}: {l['text']}")
 total = found + len(missed)
@@ -69,16 +65,16 @@ if total == 0 or found < 0.75 * total:
 for k, v in shifts.items():
     if v:
         med = statistics.median(v)
-        print(f"time shift {k} the unplug: median {med:+.2f} s over {len(v)} lines")
+        print(f"time shift {k} the restart: median {med:+.2f} s over {len(v)} lines")
         if abs(med) > 1.5:
-            problems.append(f"lines {k} the unplug are {med:+.2f} s off their time (the tracks are out of step)")
+            problems.append(f"lines {k} the restart are {med:+.2f} s off their time (the tracks are out of step)")
     else:
-        problems.append(f"no lines found {k} the unplug")
+        problems.append(f"no lines found {k} the restart")
 if shifts["before"] and shifts["after"]:
     drift = statistics.median(shifts["after"]) - statistics.median(shifts["before"])
-    print(f"after the unplug, lines moved {drift:+.2f} s against before")
+    print(f"after the restart, lines moved {drift:+.2f} s against before")
     if abs(drift) > 1.0:
-        problems.append(f"the unplug moved the later lines {drift:+.2f} s (the gap was not filled)")
+        problems.append(f"the restart moved the later lines {drift:+.2f} s (the gap was not filled)")
 
 # Echo: "You" lines made of the call's words. Leak: "On the call" lines made of your words.
 call_text = " ".join(l["text"] for l in lines if l["who"] != "You")
@@ -95,10 +91,20 @@ if len(leak) > 1:
 # The unplug: shown and logged, and cleared once the cable came back.
 audio = [e for e in report.get("app_log", []) if e.get("event") == "meeting_audio"]
 print(f"audio events: {audio}")
-if not any(e.get("problem") for e in audio):
-    problems.append("losing the devices was not shown on the panel")
+if not report.get("blocked_microphone_shown"):
+    problems.append("with microphones blocked by Windows, the panel didn't say where to turn them on")
+if report.get("microphone_picked_up_s") is None:
+    problems.append("after microphone access was turned on, the microphone was never picked up")
+# After the microphone was picked up (the first event with no problem), the restart must show as a problem again.
+first_ok = next((i for i, e in enumerate(audio) if not e.get("problem")), None)
+dropped = [e for e in audio[first_ok + 1:] if e.get("problem")] if first_ok is not None else []
+if not dropped:
+    problems.append("the audio dropping out (service restarted) was not shown on the panel")
 if audio and audio[-1].get("problem"):
-    problems.append(f"the panel still showed a problem after the cable came back: {audio[-1].get('problem')!r}")
+    problems.append(f"the panel still showed a problem after the audio came back: {audio[-1].get('problem')!r}")
+for side, p in (report.get("players") or {}).items():
+    if p.get("error") and p.get("lost", 0) > 20:
+        problems.append(f"the test couldn't play {side} for most of the meeting: {p['error']}")
 
 # "Send a report…": written, says what's in it, lists the audio devices, and holds nothing anyone said.
 rep = out / "Larynx report.txt"

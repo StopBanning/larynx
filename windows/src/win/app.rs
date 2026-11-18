@@ -285,8 +285,9 @@ impl App {
             }
             return;
         };
-        let note = if self.recorder.last_error.lock().unwrap().is_some() {
-            Some("I can't hear the microphone. Check it isn't muted.".to_string())
+        let mic_error = self.recorder.last_error.lock().unwrap().clone();
+        let note = if let Some(e) = mic_error {
+            Some(crate::meeting::mic_note(&e))
         } else if rec.call_problem.lock().unwrap().is_some() {
             Some("Only the microphone is being recorded: the computer's sound couldn't be captured.".to_string())
         } else {
@@ -516,7 +517,11 @@ impl App {
             }
             let (mode, hold) = match (&f.error, &f.delivery) {
                 (Some(e), _) => (Mode::Problem(e.clone()), 2500),
-                (None, _) if f.text.is_empty() => (Mode::Problem("Didn't hear anything".into()), 1500),
+                // Nothing heard because the microphone couldn't be opened: say why, and for longer.
+                (None, _) if f.text.is_empty() => match self.recorder.last_error.lock().unwrap().clone() {
+                    Some(e) => (Mode::Problem(crate::meeting::mic_note(&e)), 6000),
+                    None => (Mode::Problem("Didn't hear anything".into()), 1500),
+                },
                 (None, Delivery::Inserted | Delivery::InsertedBy(_)) => (Mode::Done(f.text.clone()), 700),
                 (None, Delivery::PastedAndCopied(_)) => (Mode::Done(format!("{}  (also on the clipboard)", f.text)), 1500),
                 (None, Delivery::Copied(why)) => (Mode::Problem(format!("Copied, press Ctrl+V ({why})")), 3000),

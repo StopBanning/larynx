@@ -27,7 +27,8 @@ pub fn build(app: &str, computer: &str, log: &str, meetings: &[Meeting], lines: 
     for m in meetings {
         let yours = m.segments.iter().filter(|s| s.speaker == "You").count();
         let notes = match &m.notes {
-            Some(n) => format!("notes by {} in {:.0} s", if n.model.is_empty() { "?" } else { &n.model }, n.seconds),
+            Some(n) if n.seconds > 0.0 => format!("notes by {} in {:.0} s", if n.model.is_empty() { "?" } else { &n.model }, n.seconds),
+            Some(n) => format!("notes by {}", if n.model.is_empty() { "?" } else { &n.model }),
             None => "no notes".into(),
         };
         out.push(format!(
