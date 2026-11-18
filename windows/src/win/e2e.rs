@@ -14,7 +14,7 @@ use std::io::{BufRead, Write};
 use std::path::Path;
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
-use windows::core::{w, BOOL};
+use windows::core::{w, BOOL, PCWSTR};
 use windows::Win32::Foundation::{HWND, LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard};
@@ -197,6 +197,184 @@ impl Check<'_> {
             "pill_rect": [pill_rect.left, pill_rect.top, pill_rect.right, pill_rect.bottom],
             "notepad_kept_focus": focus_mid && focus_end, "clipboard_restored": restored,
         })
+    }
+}
+
+/// Clicks the panel's button with this label with the real mouse (SendInput), as a person would.
+fn click_panel_button(label: &str) -> Result<(), String> {
+    unsafe {
+        let panel = FindWindowW(w!("LarynxMeetingPanel"), None).map_err(|_| "the meeting panel is not there".to_string())?;
+        let title: Vec<u16> = label.encode_utf16().chain(std::iter::once(0)).collect();
+        let button = FindWindowExW(Some(panel), None, w!("BUTTON"), PCWSTR(title.as_ptr()))
+            .map_err(|_| format!("no {label:?} button on the meeting panel"))?;
+        if !IsWindowVisible(button).as_bool() {
+            return Err(format!("the {label:?} button is hidden"));
+        }
+        let mut r = RECT::default();
+        GetWindowRect(button, &mut r).map_err(|e| e.to_string())?;
+        SetCursorPos((r.left + r.right) / 2, (r.top + r.bottom) / 2).map_err(|e| e.to_string())?;
+        std::thread::sleep(Duration::from_millis(150));
+        let press = |flags| INPUT {
+            r#type: INPUT_MOUSE,
+            Anonymous: INPUT_0 { mi: MOUSEINPUT { dx: 0, dy: 0, mouseData: 0, dwFlags: flags, time: 0, dwExtraInfo: 0 } },
+        };
+        SendInput(&[press(MOUSEEVENTF_LEFTDOWN), press(MOUSEEVENTF_LEFTUP)], std::mem::size_of::<INPUT>() as i32);
+    }
+    Ok(())
+}
+
+fn post_to_app(command: usize) -> Result<(), String> {
+    unsafe {
+        let app = FindWindowW(w!("LarynxApp"), None).map_err(|_| "the app's window is not there".to_string())?;
+        PostMessageW(Some(app), WM_COMMAND, windows::Win32::Foundation::WPARAM(command), LPARAM(0)).map_err(|e| e.to_string())
+    }
+}
+
+/// `larynx e2e-meeting`: meeting mode as a person uses it, on the real desktop. The microphone track has the call
+/// mixed in (a call on speakers, no headphones) and the call's audio comes from a file (`--feed-call`). It starts a
+/// meeting from the app, clicks Mute me during one of "You"'s lines and Unmute after it, clicks Stop, and waits for
+/// the notes, written through a stand-in for Claude Code (`fake-claude.exe`). Then it starts another meeting, kills
+/// the app partway, starts it again, and waits for the cut-off meeting to be finished. Results go to --out for
+/// ci/check-meeting-app.py. For CI only: it drives the real desktop.
+pub fn run_meeting(args: &Args) -> Result<(), String> {
+    let app = args.flag("app").map(str::to_string).unwrap_or_else(|| std::env::current_exe().unwrap().to_string_lossy().into_owned());
+    let dir = Path::new(args.flag("dir").unwrap_or("meeting"));
+    let out_dir = Path::new(args.flag("out").unwrap_or("e2e-meeting"));
+    let claude = args.flag("claude").ok_or("--claude <fake-claude.exe> is required")?;
+    let script_path = args.flag("mode").unwrap_or("tests/meetings/client-call.json");
+    std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
+    let out_abs = std::fs::canonicalize(out_dir).map_err(|e| e.to_string())?;
+    let data = out_abs.join("data");
+    let _ = std::fs::remove_dir_all(&data);
+
+    // The microphone hears "You" and, a little quieter, the call from the speakers.
+    let you = wav::read(&dir.join("you.wav"))?;
+    let call = wav::read(&dir.join("call.wav"))?;
+    let mic: Vec<f32> = (0..you.len().max(call.len()))
+        .map(|i| you.get(i).copied().unwrap_or(0.0) + 0.3 * call.get(i).copied().unwrap_or(0.0))
+        .collect();
+    let mic_path = out_abs.join("mic.wav");
+    wav::write(&mic_path, &mic).map_err(|e| e.to_string())?;
+    let seconds = mic.len() as f64 / wav::RATE as f64;
+
+    // When each line is spoken (the layout make-meeting.py uses: each line, then 0.5 s), and the line to mute: the
+    // first of "You"'s lines with "permit" in it.
+    let script: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(script_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let lines = script["lines"].as_array().ok_or("no lines in the script")?;
+    let mut t = 0.0;
+    let mut times = Vec::new();
+    for i in 0..lines.len() {
+        let n = wav::read(&dir.join("lines").join(format!("{i:03}.wav")))?.len() as f64 / wav::RATE as f64;
+        times.push((t, t + n));
+        t += n + 0.5;
+    }
+    let muted_line = lines
+        .iter()
+        .position(|l| l[0] == "You" && l[1].as_str().unwrap_or("").contains("permit"))
+        .ok_or("no line of You's with 'permit' to mute")?;
+    let (mute_at, unmute_at) = (times[muted_line].0 - 0.35, times[muted_line].1 + 0.35);
+
+    let start_app = |log: &Path| -> Result<Child, String> {
+        let mut cmd = Command::new(&app);
+        cmd.args(["run", "--feed"]).arg(&mic_path).arg("--feed-call").arg(dir.join("call.wav")).arg("--log").arg(log);
+        for flag in ["model", "provider", "threads"] {
+            if let Some(v) = args.flag(flag) {
+                cmd.args([format!("--{flag}").as_str(), v]);
+            }
+        }
+        cmd.env("LARYNX_DATA_DIR", &data)
+            .env("LARYNX_CLAUDE_CODE", claude)
+            .env("FAKE_CLAUDE_OUT", out_abs.join("claude-code-call.json"))
+            // Must not reach Claude Code: with a key there, Claude Code bills the key instead of the plan.
+            .env("ANTHROPIC_API_KEY", "ci-key-that-must-not-reach-claude-code");
+        cmd.spawn().map_err(|e| format!("{app}: {e}"))
+    };
+    let wait_ready = |log: &Path| -> Result<(), String> {
+        wait_for(300.0, || log_events(log).iter().any(|e| e["event"] == "ready" || e["event"] == "error"));
+        match log_events(log).into_iter().find(|e| e["event"] == "ready" || e["event"] == "error") {
+            Some(e) if e["event"] == "ready" => Ok(()),
+            Some(e) => Err(format!("the app could not start: {e}")),
+            None => Err("the app never became ready".into()),
+        }
+    };
+    let count = |log: &Path, event: &str| log_events(log).iter().filter(|e| e["event"] == event).count();
+
+    let mut failures: Vec<String> = Vec::new();
+    let mut report = serde_json::Map::new();
+    report.insert("audio_seconds".into(), seconds.into());
+    report.insert("muted_line".into(), muted_line.into());
+    report.insert("mute_window".into(), serde_json::json!([mute_at, unmute_at]));
+    let mut children = Kill(Vec::new());
+
+    // 1. A whole meeting: start, Mute me, Unmute, Stop, notes.
+    let log = out_abs.join("app.jsonl");
+    let _ = std::fs::remove_file(&log);
+    children.0.push(start_app(&log)?);
+    wait_ready(&log)?;
+    post_to_app(super::tray::ID_MEETING)?;
+    wait_for(10.0, || count(&log, "meeting_start") >= 1).ok_or("the meeting never started")?;
+    let t0 = Instant::now();
+    let until = |s: f64| {
+        if let Some(w) = Duration::from_secs_f64(s.max(0.0)).checked_sub(t0.elapsed()) {
+            std::thread::sleep(w);
+        }
+    };
+    until(mute_at);
+    if let Err(e) = click_panel_button("Mute me") {
+        failures.push(format!("mute: {e}"));
+    }
+    std::thread::sleep(Duration::from_millis(600));
+    let _ = screenshot(&out_abs.join("panel-muted.bmp"));
+    report.insert("mute_logged".into(), (count(&log, "meeting_mute") >= 1).into());
+    until(unmute_at);
+    if let Err(e) = click_panel_button("Unmute") {
+        failures.push(format!("unmute: {e}"));
+    }
+    until(seconds + 1.5);
+    if let Err(e) = click_panel_button("Stop") {
+        failures.push(format!("stop: {e}"));
+    }
+    let done = wait_for(900.0, || count(&log, "meeting_done") >= 1);
+    report.insert("stop_to_notes_s".into(), done.map(|d| d.as_secs_f64()).into());
+    if done.is_none() {
+        failures.push("the meeting was never finished after Stop".into());
+    }
+    let first_id = log_events(&log).iter().find(|e| e["event"] == "meeting_start").and_then(|e| e["id"].as_str().map(String::from));
+    report.insert("first_id".into(), first_id.clone().into());
+
+    // 2. A meeting cut off: start, kill the app partway, start it again; it must finish the meeting by itself.
+    post_to_app(super::tray::ID_MEETING)?;
+    wait_for(10.0, || count(&log, "meeting_start") >= 2).ok_or("the second meeting never started")?;
+    std::thread::sleep(Duration::from_secs(20));
+    let second_id = log_events(&log).iter().filter(|e| e["event"] == "meeting_start").nth(1).and_then(|e| e["id"].as_str().map(String::from));
+    report.insert("cut_off_id".into(), second_id.clone().into());
+    for c in &mut children.0 {
+        let _ = c.kill();
+        let _ = c.wait();
+    }
+    children.0.clear();
+    let log2 = out_abs.join("app-after-restart.jsonl");
+    let _ = std::fs::remove_file(&log2);
+    children.0.push(start_app(&log2)?);
+    wait_ready(&log2)?;
+    let recovered = wait_for(900.0, || count(&log2, "meeting_done") >= 1);
+    report.insert("recovered_after_restart_s".into(), recovered.map(|d| d.as_secs_f64()).into());
+    if recovered.is_none() {
+        failures.push("the cut-off meeting was never finished after the restart".into());
+    }
+    drop(children);
+
+    for (key, path) in [("app_log", &log), ("app_log_after_restart", &log2)] {
+        report.insert(key.into(), log_events(path).into_iter().filter(|e| e["event"] != "key_down").collect::<Vec<_>>().into());
+    }
+    report.insert("failures".into(), failures.clone().into());
+    let json = serde_json::to_string_pretty(&serde_json::Value::Object(report)).unwrap();
+    println!("{json}");
+    std::fs::write(out_abs.join("e2e-meeting.json"), json).map_err(|e| e.to_string())?;
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures.join("; "))
     }
 }
 

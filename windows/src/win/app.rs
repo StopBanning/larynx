@@ -125,6 +125,7 @@ struct App {
     panel: Option<Panel>,
     meeting: Option<Recording>,
     meeting_busy: bool,
+    call_feed: Option<Arc<Vec<f32>>>,
     meeting_done: Receiver<meet::Outcome>,
     meeting_tx: Sender<meet::Outcome>,
 }
@@ -250,7 +251,7 @@ impl App {
             return;
         }
         let you = self.recorder.begin();
-        match Recording::start(you) {
+        match Recording::start(you, self.call_feed.clone()) {
             Ok(rec) => {
                 self.log.write(serde_json::json!({"event": "meeting_start", "id": rec.info.id}));
                 self.show(Show::Recording { since: rec.began, note: None, muted: false });
@@ -646,6 +647,11 @@ pub fn run(args: &Args) -> Result<(), String> {
         Some(p) => Some(wav::read(std::path::Path::new(p))?),
         None => None,
     };
+    // Tests: the call's audio from a file, played in real time, instead of the speakers (CI machines have none).
+    let call_feed = match args.flag("feed-call") {
+        Some(p) => Some(Arc::new(wav::read(std::path::Path::new(p))?)),
+        None => None,
+    };
 
     let hwnd = unsafe {
         let instance = GetModuleHandleW(None).map_err(|e| e.to_string())?;
@@ -683,6 +689,7 @@ pub fn run(args: &Args) -> Result<(), String> {
         tray,
         keys,
         recorder: Recorder::new(feed),
+        call_feed,
         engine: None,
         finisher: None,
         finished,

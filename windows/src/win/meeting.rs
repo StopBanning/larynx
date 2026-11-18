@@ -67,8 +67,9 @@ pub struct Recording {
 }
 
 impl Recording {
-    /// Starts recording: `you` is the microphone buffer the dictation recorder fills.
-    pub fn start(you: Arc<Mutex<Vec<f32>>>) -> Result<Recording, String> {
+    /// Starts recording: `you` is the microphone buffer the dictation recorder fills. `call_feed` (tests only) plays
+    /// a file as the call's audio, in real time, instead of capturing the speakers.
+    pub fn start(you: Arc<Mutex<Vec<f32>>>, call_feed: Option<Arc<Vec<f32>>>) -> Result<Recording, String> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs_f64())
@@ -93,7 +94,9 @@ impl Recording {
             std::thread::Builder::new()
                 .name("larynx-call-audio".into())
                 .spawn(move || {
-                    if let Err(e) = loopback(&call, &stop) {
+                    if let Some(feed) = call_feed {
+                        play_into(&feed, &call, &stop);
+                    } else if let Err(e) = loopback(&call, &stop) {
                         *problem.lock().unwrap() = Some(e);
                     }
                 })
@@ -152,6 +155,25 @@ impl Recording {
             let _ = h.join();
         }
         self.info.clone()
+    }
+}
+
+/// Tests: a file as the call's audio, played in real time in 20 ms pieces, then silence until Stop (as a quiet call gives).
+fn play_into(feed: &[f32], out: &Arc<Mutex<Vec<f32>>>, stop: &AtomicBool) {
+    let start = Instant::now();
+    let mut i = 0usize;
+    while !stop.load(Ordering::SeqCst) {
+        if let Some(w) = Duration::from_millis(i as u64 * 20).checked_sub(start.elapsed()) {
+            std::thread::sleep(w);
+        }
+        let piece = feed.get(i * 320..((i + 1) * 320).min(feed.len())).unwrap_or(&[]);
+        let mut buf = out.lock().unwrap();
+        if piece.is_empty() {
+            buf.extend_from_slice(&[0.0; 320]);
+        } else {
+            buf.extend_from_slice(piece);
+        }
+        i += 1;
     }
 }
 

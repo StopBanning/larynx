@@ -100,6 +100,23 @@ jobs:
             $img.Save("$PWD/e2e/pill.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
             Remove-Item e2e/pill.bmp
           }
+      - name: Meeting mode in the real app (echo from speakers, Mute me, Stop, notes via a Claude Code stand-in, cut-off recovery)
+        timeout-minutes: 30
+        run: |
+          if (-not (Test-Path meeting/you.wav)) { ./windows/ci/make-meeting.ps1 -Out meeting }
+          dist/larynx-cli.exe e2e-meeting --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --out e2e-meeting
+          $code = $LASTEXITCODE
+          python windows/ci/check-meeting-app.py e2e-meeting tests/meetings/client-call.json
+          if ($LASTEXITCODE -ne 0 -or $code -ne 0) { throw "meeting mode in the app failed (driver $code)" }
+      - name: Screenshot of the meeting panel, muted, as PNG
+        if: always()
+        run: |
+          if (Test-Path e2e-meeting/panel-muted.bmp) {
+            Add-Type -AssemblyName System.Drawing
+            $img = [System.Drawing.Image]::FromFile((Resolve-Path e2e-meeting/panel-muted.bmp))
+            $img.Save("$PWD/e2e-meeting/panel-muted.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+            Remove-Item e2e-meeting/panel-muted.bmp, e2e-meeting/mic.wav -ErrorAction SilentlyContinue
+          }
       - name: Benchmark on CPU
         timeout-minutes: 10
         run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
@@ -141,6 +158,7 @@ jobs:
             e2e/
             meeting/out.json
             meeting/data/
+            e2e-meeting/
       - uses: actions/upload-artifact@v4
         with:
           name: larynx-windows-x64
