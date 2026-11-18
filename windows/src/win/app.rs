@@ -686,7 +686,7 @@ pub fn run(args: &Args) -> Result<(), String> {
     if let Some(t) = std::fs::read_to_string(&log_path).ok().and_then(|l| crate::report::trimmed(&l, 5_000_000)) {
         let _ = std::fs::write(&log_path, t);
     }
-    let log = Log { file: std::fs::OpenOptions::new().create(true).append(true).open(&log_path).ok(), words: args.has("log") };
+    let mut log = Log { file: std::fs::OpenOptions::new().create(true).append(true).open(&log_path).ok(), words: args.has("log") };
     let vk = args.flag("key").and_then(hotkey::parse_key).unwrap_or(0xA3);
     let feed = match args.flag("feed") {
         Some(p) => Some(wav::read(std::path::Path::new(p))?),
@@ -728,6 +728,9 @@ pub fn run(args: &Args) -> Result<(), String> {
     let (finished_tx, finished) = channel();
     let (meeting_tx, meeting_done) = channel();
     let panel = Panel::create(hwnd).ok();
+    if let Some(p) = &panel {
+        log.write(serde_json::json!({"event": "panel_look", "glass": p.look.glass, "rounded": p.look.rounded, "build": super::glass::build()}));
+    }
     let app = App {
         hwnd,
         pill,

@@ -6,6 +6,7 @@
 //! with a red dot and a Stop button, then "Writing your summary…", then the notes open by themselves.
 
 use crate::engine::Engine;
+use super::glass;
 use crate::meeting::{self, Meeting};
 use std::io::Write;
 use std::path::PathBuf;
@@ -14,7 +15,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use windows::core::{w, PCWSTR};
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
+use windows::Win32::Graphics::Direct2D::{ID2D1RenderTarget, ID2D1StrokeStyle, D2D1_DRAW_TEXT_OPTIONS_CLIP};
+use windows::Win32::Graphics::DirectWrite::{DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_MEASURING_MODE_NATURAL};
 use windows::Win32::Graphics::Gdi::*;
+use windows::Win32::UI::Controls::{DRAWITEMSTRUCT, ODS_FLAGS, ODS_FOCUS, ODS_NOFOCUSRECT, ODS_SELECTED};
 use windows::Win32::Media::Audio::*;
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
@@ -488,9 +492,13 @@ pub struct Panel {
     /// The dots per inch the buttons were laid out for.
     dpi: i32,
     font: HFONT,
+    /// What Windows gave it: glass or opaque, rounded or square.
+    pub look: glass::Look,
 }
 
 thread_local! {
+    /// What Windows gave the panel (glass or not, rounded or not), for painting.
+    static PANEL_LOOK: std::cell::Cell<glass::Look> = const { std::cell::Cell::new(glass::Look { glass: false, rounded: false }) };
     static PANEL_TEXT: std::cell::RefCell<(String, bool, String)> = const { std::cell::RefCell::new((String::new(), false, String::new())) };
 }
 
@@ -508,59 +516,31 @@ unsafe extern "system" fn panel_proc(
             let _ = unsafe { GetClientRect(hwnd, &mut rc) };
             let (line, red, small) = PANEL_TEXT.with(|t| t.borrow().clone());
             let d = dpi(Some(hwnd));
-            let scale = |px: i32| scale_at(d, px);
-            let font = |px: i32, weight: FONT_WEIGHT| font_at(d, px, weight);
+            let look = PANEL_LOOK.with(|l| l.get());
+            glass::paint(dc, rc, |t, text| unsafe { paint_panel(t, text, rc, d, look, &line, red, &small) });
             unsafe {
-                let bg = CreateSolidBrush(COLORREF(0x00FFFFFF));
-                FillRect(dc, &rc, bg);
-                let _ = DeleteObject(bg.into());
-                SetBkMode(dc, TRANSPARENT);
-                let pad = scale(20);
-                let mut x = pad;
-                if red {
-                    let dot = CreateSolidBrush(COLORREF(0x002020D8)); // BGR: red
-                    let old = SelectObject(dc, dot.into());
-                    let d = scale(18);
-                    let y = pad + scale(6);
-                    let _ = Ellipse(dc, x, y, x + d, y + d);
-                    SelectObject(dc, old);
-                    let _ = DeleteObject(dot.into());
-                    x += d + scale(12);
-                }
-                let big = font(24, FW_SEMIBOLD);
-                let old = SelectObject(dc, big.into());
-                SetTextColor(dc, COLORREF(0x00111111));
-                let mut r = RECT {
-                    left: x,
-                    top: pad,
-                    right: rc.right - pad,
-                    bottom: pad + scale(36),
-                };
-                let mut text = wide(&line);
-                let n = text.len() - 1;
-                // DT_NOPREFIX: an "&" is drawn, not taken as a keyboard-shortcut marker ("Privacy & security").
-                DrawTextW(dc, &mut text[..n], &mut r, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
-                SelectObject(dc, old);
-                let _ = DeleteObject(big.into());
-                if !small.is_empty() {
-                    let f = font(16, FW_NORMAL);
-                    let old = SelectObject(dc, f.into());
-                    SetTextColor(dc, COLORREF(0x00444444));
-                    let mut r = RECT {
-                        left: pad,
-                        top: pad + scale(44),
-                        right: rc.right - pad,
-                        bottom: rc.bottom - scale(70),
-                    };
-                    let mut text = wide(&small);
-                    let n = text.len() - 1;
-                    DrawTextW(dc, &mut text[..n], &mut r, DT_WORDBREAK | DT_NOPREFIX);
-                    SelectObject(dc, old);
-                    let _ = DeleteObject(f.into());
-                }
                 let _ = EndPaint(hwnd, &ps);
             }
             LRESULT(0)
+        }
+        // Everything is painted over the glass in WM_PAINT; erasing with GDI would only flicker.
+        WM_ERASEBKGND => LRESULT(1),
+        // The panel is never the active window (it must not take the keyboard from the call), and Windows draws an
+        // inactive window's Acrylic as a flat colour: its frame is always told it is active.
+        WM_NCACTIVATE => unsafe { DefWindowProcW(hwnd, msg, WPARAM(1), lparam) },
+        WM_DRAWITEM => {
+            let item = unsafe { &*(lparam.0 as *const DRAWITEMSTRUCT) };
+            let mut buf = [0u16; 32];
+            let n = unsafe { GetWindowTextW(item.hwndItem, &mut buf) }.max(0) as usize;
+            let label = String::from_utf16_lossy(&buf[..n]);
+            let d = dpi(Some(hwnd));
+            let look = PANEL_LOOK.with(|l| l.get());
+            let primary = item.CtlID as usize == ID_PANEL_STOP;
+            let has = |f: ODS_FLAGS| item.itemState.0 & f.0 != 0;
+            let (pressed, focused) = (has(ODS_SELECTED), has(ODS_FOCUS) && !has(ODS_NOFOCUSRECT));
+            let rc = item.rcItem;
+            glass::paint(item.hDC, rc, |t, text| unsafe { paint_button(t, text, rc, d, look, &label, primary, pressed, focused) });
+            LRESULT(1)
         }
         WM_COMMAND if matches!(wparam.0 & 0xFFFF, ID_PANEL_STOP | ID_PANEL_MUTE) => {
             // The app window decides what the buttons mean (Stop, or OK on a problem; Mute me / Unmute).
@@ -582,6 +562,94 @@ unsafe extern "system" fn panel_proc(
     }
 }
 
+/// The panel over its glass: the tint, the lit top edge, the red dot, the time and the note.
+#[allow(clippy::too_many_arguments)]
+unsafe fn paint_panel(t: &ID2D1RenderTarget, text: &glass::Text, rc: RECT, d: i32, look: glass::Look, line: &str, red: bool, small: &str) {
+    use glass::{palette, rect, round};
+    let s = |px: f32| px * d as f32 / 96.0;
+    let (w, h) = (rc.right as f32, rc.bottom as f32);
+    let brush = |c| unsafe { t.CreateSolidColorBrush(&c, None).ok() };
+    let (Some(tint), Some(shine), Some(ink), Some(quiet)) =
+        (brush(palette::tint(look.glass)), brush(palette::shine()), brush(palette::text()), brush(palette::quiet()))
+    else {
+        return;
+    };
+    unsafe {
+        t.FillRectangle(&rect(0.0, 0.0, w, h), &tint);
+        let r = if look.rounded { s(8.0) } else { 0.0 };
+        if !look.rounded {
+            if let Some(rim) = brush(palette::rim()) {
+                t.DrawRectangle(&rect(0.5, 0.5, w - 0.5, h - 0.5), &rim, 1.0, None::<&ID2D1StrokeStyle>);
+            }
+        }
+        // Light catching the top edge.
+        t.FillRectangle(&rect(r, 1.0, w - r, 1.0 + s(1.0).max(1.0)), &shine);
+        let pad = s(20.0);
+        let mut x = pad;
+        if red {
+            let dot = s(18.0);
+            let y = pad + s(9.0);
+            if let (Some(glow), Some(red)) = (brush(glass::rgba(0.96, 0.29, 0.29, 0.25)), brush(palette::red())) {
+                let g = s(4.0);
+                t.FillRoundedRectangle(&round(rect(x - g, y - g, x + dot + g, y + dot + g), dot / 2.0 + g), &glow);
+                t.FillRoundedRectangle(&round(rect(x, y, x + dot, y + dot), dot / 2.0), &red);
+            }
+            x += dot + s(12.0);
+        }
+        if let Some(f) = text.format(s(24.0), DWRITE_FONT_WEIGHT_SEMI_BOLD, false, false) {
+            let words: Vec<u16> = line.encode_utf16().collect();
+            t.DrawText(&words, &f, &rect(x, pad, w - pad, pad + s(36.0)), &ink, D2D1_DRAW_TEXT_OPTIONS_CLIP, DWRITE_MEASURING_MODE_NATURAL);
+        }
+        if !small.is_empty() {
+            if let Some(f) = text.format(s(16.0), DWRITE_FONT_WEIGHT_NORMAL, true, false) {
+                let words: Vec<u16> = small.encode_utf16().collect();
+                t.DrawText(&words, &f, &rect(pad, pad + s(46.0), w - pad, h - s(70.0)), &quiet, D2D1_DRAW_TEXT_OPTIONS_CLIP, DWRITE_MEASURING_MODE_NATURAL);
+            }
+        }
+    }
+}
+
+/// One of the panel's buttons, drawn over the same tint: Stop (or OK) solid and light, Mute me glassy with a rim.
+#[allow(clippy::too_many_arguments)]
+unsafe fn paint_button(t: &ID2D1RenderTarget, text: &glass::Text, rc: RECT, d: i32, look: glass::Look, label: &str, primary: bool, pressed: bool, focused: bool) {
+    use glass::{palette, rect, rgba, round};
+    let s = |px: f32| px * d as f32 / 96.0;
+    let (w, h) = ((rc.right - rc.left) as f32, (rc.bottom - rc.top) as f32);
+    let brush = |c| unsafe { t.CreateSolidColorBrush(&c, None).ok() };
+    let (fill, ink) = match (primary, pressed) {
+        (true, false) => (rgba(0.96, 0.97, 0.98, 0.94), rgba(0.07, 0.08, 0.10, 1.0)),
+        (true, true) => (rgba(0.80, 0.82, 0.85, 0.94), rgba(0.07, 0.08, 0.10, 1.0)),
+        (false, false) => (rgba(1.0, 1.0, 1.0, 0.12), palette::text()),
+        (false, true) => (rgba(1.0, 1.0, 1.0, 0.22), palette::text()),
+    };
+    let (Some(tint), Some(fill), Some(ink)) = (brush(palette::tint(look.glass)), brush(fill), brush(ink)) else { return };
+    unsafe {
+        t.FillRectangle(&rect(0.0, 0.0, w, h), &tint);
+        let r = s(8.0);
+        let shape = round(rect(0.5, 0.5, w - 0.5, h - 0.5), r);
+        t.FillRoundedRectangle(&shape, &fill);
+        if !primary {
+            if let Some(rim) = brush(rgba(1.0, 1.0, 1.0, 0.26)) {
+                t.DrawRoundedRectangle(&shape, &rim, 1.0, None::<&ID2D1StrokeStyle>);
+            }
+        }
+        if !primary {
+            if let Some(shine) = brush(palette::shine()) {
+                t.FillRectangle(&rect(r, 1.0, w - r, 2.0), &shine);
+            }
+        }
+        if focused {
+            if let Some(ring) = brush(rgba(0.38, 0.62, 1.0, 1.0)) {
+                t.DrawRoundedRectangle(&round(rect(1.5, 1.5, w - 1.5, h - 1.5), r - 1.0), &ring, 2.0, None::<&ID2D1StrokeStyle>);
+            }
+        }
+        if let Some(f) = text.format(s(18.0), DWRITE_FONT_WEIGHT_SEMI_BOLD, false, true) {
+            let words: Vec<u16> = label.encode_utf16().collect();
+            t.DrawText(&words, &f, &rect(0.0, 0.0, w, h), &ink, D2D1_DRAW_TEXT_OPTIONS_CLIP, DWRITE_MEASURING_MODE_NATURAL);
+        }
+    }
+}
+
 impl Panel {
     pub fn create(owner: HWND) -> Result<Panel, String> {
         unsafe {
@@ -599,7 +667,8 @@ impl Panel {
                 WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
                 w!("LarynxMeetingPanel"),
                 w!("Larynx meeting"),
-                WS_POPUP | WS_BORDER,
+                // No WS_BORDER: Windows 11 draws the rim, and elsewhere the panel draws its own.
+                WS_POPUP | WS_CLIPCHILDREN,
                 0,
                 0,
                 scale(420),
@@ -611,11 +680,15 @@ impl Panel {
             )
             .map_err(|e| e.to_string())?;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, owner.0 as isize);
+            let look = glass::apply(hwnd);
+            PANEL_LOOK.with(|l| l.set(look));
+            // The buttons stay real buttons (screen readers, keyboard, the tests find them by name) but are drawn by
+            // the panel (owner-drawn), since a standard button's GDI drawing can't sit on glass.
             let button = CreateWindowExW(
                 WINDOW_EX_STYLE(0),
                 w!("BUTTON"),
                 w!("Stop"),
-                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(BS_DEFPUSHBUTTON as u32),
+                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(BS_OWNERDRAW as u32),
                 scale(420) - scale(20) - scale(140),
                 scale(PANEL_H) - scale(20) - scale(48),
                 scale(140),
@@ -632,7 +705,7 @@ impl Panel {
                 WINDOW_EX_STYLE(0),
                 w!("BUTTON"),
                 w!("Mute me"),
-                WS_CHILD | WINDOW_STYLE(BS_PUSHBUTTON as u32),
+                WS_CHILD | WINDOW_STYLE(BS_OWNERDRAW as u32),
                 scale(420) - scale(20) - scale(140) - scale(12) - scale(130),
                 scale(PANEL_H) - scale(20) - scale(48),
                 scale(130),
@@ -643,7 +716,7 @@ impl Panel {
                 None,
             )
             .map_err(|e| e.to_string())?;
-            let mut panel = Panel { hwnd, button, mute, show: Show::Hidden, dpi: 0, font: HFONT::default() };
+            let mut panel = Panel { hwnd, button, mute, show: Show::Hidden, dpi: 0, font: HFONT::default(), look };
             panel.layout();
             Ok(panel)
         }
@@ -713,6 +786,7 @@ impl Panel {
                     Some(label) => {
                         let _ = SetWindowTextW(b, PCWSTR(wide(label).as_ptr()));
                         let _ = ShowWindow(b, SW_SHOW);
+                        let _ = InvalidateRect(Some(b), None, false);
                     }
                     None => {
                         let _ = ShowWindow(b, SW_HIDE);
@@ -738,7 +812,9 @@ impl Panel {
                 h,
                 SWP_NOACTIVATE | SWP_SHOWWINDOW,
             );
-            let _ = InvalidateRect(Some(self.hwnd), None, true);
+            // Shown without activating; its frame (and so its Acrylic) still drawn as active.
+            SendMessageW(self.hwnd, WM_NCACTIVATE, Some(WPARAM(1)), Some(LPARAM(0)));
+            let _ = InvalidateRect(Some(self.hwnd), None, false);
         }
     }
 }

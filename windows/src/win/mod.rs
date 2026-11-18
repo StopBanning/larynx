@@ -4,6 +4,7 @@ pub mod audio;
 pub mod e2e;
 pub mod e2e_devices;
 pub mod focus;
+pub mod glass;
 pub mod hotkey;
 pub mod insert;
 pub mod meeting;
