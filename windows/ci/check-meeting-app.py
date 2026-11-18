@@ -5,12 +5,16 @@
 - the line spoken while Mute me was on is not in the transcript, and the lines before and after are;
 - the meeting cut off by killing the app was finished after the restart, and its audio cleared.
 
-    python windows/ci/check-meeting-app.py e2e-meeting tests/meetings/client-call.json
+    python windows/ci/check-meeting-app.py e2e-meeting tests/meetings/client-call.json [--quick]
+
+--quick: the run stopped after the first meeting (the runs in a bad room and on a headset), so the cut-off meeting
+is not checked.
 """
 import json, re, sys
 from pathlib import Path
 
 out, script = Path(sys.argv[1]), json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+quick = "--quick" in sys.argv[3:]
 report = json.loads((out / "e2e-meeting.json").read_text(encoding="utf-8-sig"))
 meetings = out / "data" / "meetings"
 problems = []
@@ -31,6 +35,7 @@ if not m:
 else:
     segs = m["segments"]
     you = [s for s in segs if s["speaker"] == "You"]
+    print(f"room: {report.get('room', 'clean')}")
     print(f"first meeting: {len(segs)} lines, {len(you)} yours, Stop to notes {report.get('stop_to_notes_s')} s")
     for s in segs:
         print(f"  {s['start']:6.1f} {s['speaker'][:11]:11} {s['text']}")
@@ -84,8 +89,10 @@ else:
     if "] You:" not in c["stdin"]:
         problems.append("the transcript did not reach Claude Code on stdin")
 
-cut = load(report.get("cut_off_id"))
-if not cut:
+cut = None if quick else load(report.get("cut_off_id"))
+if quick:
+    pass
+elif not cut:
     problems.append(f"the meeting cut off by the restart was not finished ({report.get('cut_off_id')})")
 else:
     print(f"cut-off meeting: {len(cut['segments'])} lines, finished {report.get('recovered_after_restart_s')} s after the restart")

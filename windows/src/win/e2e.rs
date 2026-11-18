@@ -247,12 +247,13 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
     let data = out_abs.join("data");
     let _ = std::fs::remove_dir_all(&data);
 
-    // The microphone hears "You" and, a little quieter, the call from the speakers.
+    // What the microphone hears of "You" and of the call from the speakers, in this room (room.rs): `clean` (the
+    // default), `bad` (a hard room and a cheap laptop microphone) or `headset` (a Bluetooth headset's microphone).
+    let room_name = args.flag("room").unwrap_or("clean");
+    let room = crate::room::Room::parse(room_name).ok_or(format!("--room {room_name}: use clean, bad or headset"))?;
     let you = wav::read(&dir.join("you.wav"))?;
     let call = wav::read(&dir.join("call.wav"))?;
-    let mic: Vec<f32> = (0..you.len().max(call.len()))
-        .map(|i| you.get(i).copied().unwrap_or(0.0) + 0.3 * call.get(i).copied().unwrap_or(0.0))
-        .collect();
+    let mic = crate::room::mic(&you, &call, room);
     let mic_path = out_abs.join("mic.wav");
     wav::write(&mic_path, &mic).map_err(|e| e.to_string())?;
     let seconds = mic.len() as f64 / wav::RATE as f64;
@@ -343,6 +344,14 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
     report.insert("first_id".into(), first_id.clone().into());
 
     // 2. A meeting cut off: start, kill the app partway, start it again; it must finish the meeting by itself.
+    // (`--quick` stops after the first meeting, for the runs in other rooms.)
+    let log2 = out_abs.join("app-after-restart.jsonl");
+    let _ = std::fs::remove_file(&log2);
+    report.insert("room".into(), room_name.into());
+    if args.flag("quick").is_some() {
+        drop(children);
+        return finish_report(report, failures, &[("app_log", &log)], &out_abs);
+    }
     std::thread::sleep(Duration::from_secs(2));
     post_to_app(super::tray::ID_MEETING)?;
     if wait_for(60.0, || count(&log, "meeting_start") >= 2).is_none() {
@@ -356,8 +365,6 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
         let _ = c.wait();
     }
     children.0.clear();
-    let log2 = out_abs.join("app-after-restart.jsonl");
-    let _ = std::fs::remove_file(&log2);
     children.0.push(start_app(&log2)?);
     if let Err(e) = wait_ready(&log2) {
         failures.push(format!("after the restart: {e}"));
@@ -368,9 +375,12 @@ pub fn run_meeting(args: &Args) -> Result<(), String> {
         failures.push("the cut-off meeting was never finished after the restart".into());
     }
     drop(children);
+    finish_report(report, failures, &[("app_log", &log), ("app_log_after_restart", &log2)], &out_abs)
+}
 
-    for (key, path) in [("app_log", &log), ("app_log_after_restart", &log2)] {
-        report.insert(key.into(), log_events(path).into_iter().filter(|e| e["event"] != "key_down").collect::<Vec<_>>().into());
+fn finish_report(mut report: serde_json::Map<String, serde_json::Value>, failures: Vec<String>, logs: &[(&str, &Path)], out_abs: &Path) -> Result<(), String> {
+    for (key, path) in logs {
+        report.insert(key.to_string(), log_events(path).into_iter().filter(|e| e["event"] != "key_down").collect::<Vec<_>>().into());
     }
     report.insert("failures".into(), failures.clone().into());
     let json = serde_json::to_string_pretty(&serde_json::Value::Object(report)).unwrap();

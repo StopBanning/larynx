@@ -108,6 +108,19 @@ jobs:
           $code = $LASTEXITCODE
           python windows/ci/check-meeting-app.py e2e-meeting tests/meetings/client-call.json
           if ($LASTEXITCODE -ne 0 -or $code -ne 0) { throw "meeting mode in the app failed (driver $code)" }
+      - name: Meeting mode in a bad room (echo off the walls, fan noise, hum, a cheap laptop microphone) and on a Bluetooth headset
+        timeout-minutes: 30
+        run: |
+          $failed = @()
+          foreach ($room in @("bad", "headset")) {
+            Write-Host "=== room: $room"
+            dist/larynx-cli.exe e2e-meeting --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --room $room --quick --out "e2e-room-$room"
+            $code = $LASTEXITCODE
+            python windows/ci/check-meeting-app.py "e2e-room-$room" tests/meetings/client-call.json --quick
+            if ($LASTEXITCODE -ne 0 -or $code -ne 0) { $failed += $room }
+            Remove-Item "e2e-room-$room/panel-muted.bmp", "e2e-room-$room/mic.wav" -ErrorAction SilentlyContinue
+          }
+          if ($failed) { throw "meeting mode failed in: $($failed -join ', ')" }
       - name: Screenshot of the meeting panel, muted, as PNG
         if: always()
         run: |
@@ -194,6 +207,7 @@ jobs:
             meeting/data/
             e2e-meeting/
             e2e-devices/
+            e2e-room-*/
       - uses: actions/upload-artifact@v4
         with:
           name: larynx-windows-x64
