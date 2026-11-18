@@ -291,7 +291,7 @@ fn civil(z: i64) -> (i64, i64, i64) {
 pub fn mic_note(error: &str) -> String {
     let e = error.to_lowercase();
     if e.contains("0x80070005") || e.contains("access is denied") {
-        "Windows is blocking the microphone. Turn on Settings → Privacy & security → Microphone → \"Let desktop apps access your microphone\".".into()
+        "Windows is blocking the microphone. Turn it on: Settings → Privacy & security → Microphone.".into()
     } else if e.contains("no microphone") {
         "No microphone found. Plug one in, or check Windows' sound settings.".into()
     } else {

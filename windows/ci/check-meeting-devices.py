@@ -1,9 +1,8 @@
 """Checks `larynx e2e-meeting-devices` (meeting mode through real audio devices on the CI desktop, a virtual cable
 standing in for speakers and a microphone in a room with no headphones):
 
-- the call was recorded from the speakers and your voice from the microphone, each on its own side;
-- the call the microphone heard from the speakers did not end up as "You" (the echo filter, on real device timing);
-- your voice did not leak into the call side;
+- the call was recorded from the speakers, and the microphone heard it too (no headphones, you staying quiet);
+- none of what the microphone heard ended up as "You" (the echo filter, on real device timing, at full echo);
 - with Windows blocking microphones, the panel said so; once access was turned on, the microphone was picked up;
 - restarting Windows' audio service partway (every app's audio drops) was shown, recording went on, and the lines
   after it are in time with the lines before it (the gap was filled with silence, not dropped).
@@ -11,6 +10,8 @@ standing in for speakers and a microphone in a room with no headphones):
     python windows/ci/check-meeting-devices.py e2e-devices
 """
 import json, re, statistics, sys
+
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # the panel's words have arrows in them
 from pathlib import Path
 
 out = Path(sys.argv[1])
@@ -46,7 +47,9 @@ found, missed, shifts = 0, [], {"before": [], "after": []}
 for l in lines:
     if l["end"] > gap_from - 1 and l["start"] < gap_to + 2:
         continue
-    you_side = l["who"] == "You"
+    if l["who"] == "You":
+        continue  # only the call plays in this test
+    you_side = False
     pieces = [s for s in segs if (s["speaker"] == "You") == you_side
               and l["start"] - 3 <= s["start"] - offset <= l["end"] + 3 and overlap(s["text"], l["text"]) >= 0.7]
     heard = set(w for s in pieces for w in words(s["text"]))
@@ -79,14 +82,15 @@ if shifts["before"] and shifts["after"]:
 # Echo: "You" lines made of the call's words. Leak: "On the call" lines made of your words.
 call_text = " ".join(l["text"] for l in lines if l["who"] != "You")
 you_text = " ".join(l["text"] for l in lines if l["who"] == "You")
-echo = [s["text"] for s in segs if s["speaker"] == "You" and overlap(s["text"], call_text) >= 0.6 and overlap(s["text"], you_text) < 0.5]
-leak = [s["text"] for s in segs if s["speaker"] != "You" and overlap(s["text"], you_text) >= 0.6 and overlap(s["text"], call_text) < 0.5]
-print(f"echo lines left as yours: {echo}")
-print(f"your lines on the call side: {leak}")
+# You said nothing here, so every line of yours is the call heard again through the microphone.
+echo = [s["text"] for s in segs if s["speaker"] == "You"]
+print(f"lines left as yours (all echo, since you said nothing): {echo}")
 if len(echo) > 1:
     problems.append(f"{len(echo)} lines of the call heard by the microphone ended up as yours")
-if len(leak) > 1:
-    problems.append(f"{len(leak)} of your lines ended up on the call side")
+rms = report.get("microphone_rms_while_playing")
+print(f"microphone level while the call played: {rms}; microphone track {report.get('microphone_seconds')} s")
+if not rms or rms < 0.005:
+    problems.append(f"the microphone didn't hear the call from the speakers (level {rms}), so the echo filter wasn't tested")
 
 # The unplug: shown and logged, and cleared once the cable came back.
 audio = [e for e in report.get("app_log", []) if e.get("event") == "meeting_audio"]

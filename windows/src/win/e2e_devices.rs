@@ -1,8 +1,8 @@
 //! `larynx e2e-meeting-devices`: meeting mode through real Windows audio devices, with no file feeds. CI installs a
-//! virtual audio cable (VB-Cable): two playback devices and one microphone, wired so the microphone hears everything
-//! played on either. The call plays on the default playback device, so the app records it as the call *and* the
-//! microphone hears it, as in a room with no headphones. "You" plays on the other playback device, which only the
-//! microphone hears.
+//! virtual audio cable (VB-Cable): speakers and a microphone wired so the microphone hears everything the speakers
+//! play. The call plays on the speakers, so the app records it as the call *and* the microphone hears all of it, as
+//! in a room with no headphones while you stay quiet: the hardest case for the echo filter. (The cable's second
+//! input is the same input underneath, so your voice can't have a path of its own here; the file-fed runs cover it.)
 //!
 //! It starts the way the runner is set up, with Windows' privacy switch blocking microphones: the panel must say so
 //! (screenshot), and once the test turns microphone access on, the recording must pick the microphone up by itself.
@@ -41,23 +41,12 @@ fn id_of(device: &IMMDevice) -> Option<String> {
     }
 }
 
-/// The default playback device and the other active one.
-fn playback_devices() -> Result<(String, String), String> {
+/// The default playback device: the speakers the call plays on.
+fn default_playback() -> Result<String, String> {
     let devices = enumerator()?;
     unsafe {
-        let default = devices.GetDefaultAudioEndpoint(eRender, eConsole).map_err(|_| "no playback device".to_string())?;
-        let default = id_of(&default).ok_or("no id")?;
-        let all = devices.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE).map_err(|e| e.to_string())?;
-        let mut others = Vec::new();
-        for i in 0..all.GetCount().map_err(|e| e.to_string())? {
-            if let Some(id) = all.Item(i).ok().as_ref().and_then(id_of) {
-                if id != default {
-                    others.push(id);
-                }
-            }
-        }
-        let other = others.into_iter().next().ok_or("only one playback device: the virtual cable is not installed")?;
-        Ok((default, other))
+        let default = devices.GetDefaultAudioEndpoint(eRender, eConsole).map_err(|_| "no playback device: the virtual cable is not installed".to_string())?;
+        id_of(&default).ok_or_else(|| "no id".to_string())
     }
 }
 
@@ -168,10 +157,9 @@ pub fn run(args: &Args) -> Result<(), String> {
     let data = out_abs.join("data");
     let _ = std::fs::remove_dir_all(&data);
 
-    let you = Arc::new(wav::read(&dir.join("you.wav"))?);
     let call = Arc::new(wav::read(&dir.join("call.wav"))?);
-    let seconds = you.len().max(call.len()) as f64 / RATE as f64;
-    let (call_device, you_device) = playback_devices()?;
+    let seconds = call.len() as f64 / RATE as f64;
+    let call_device = default_playback()?;
 
     // When each line is spoken (make-meeting.py's layout: each line, then 0.5 s).
     let script: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(script_path).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
@@ -227,9 +215,12 @@ pub fn run(args: &Args) -> Result<(), String> {
     } else {
         failures.push("with microphones blocked by Windows, the panel didn't say so".into());
     }
-    // Turn microphone access on: the recording must pick the microphone up without being restarted.
+    // Turn microphone access on: the recording must pick the microphone up without being restarted. (The Settings
+    // switch tells Windows at once; a registry change reaches it when the audio service restarts, so the test
+    // restarts it, which also drops and brings back every app's audio once.)
     report.insert("allow_microphone".into(), allow_microphone().into());
-    let picked_up = wait_for(15.0, || audio(&|e| e["problem"].is_null()));
+    report.insert("audio_service_restart_to_allow".into(), shell("powershell", &["-NoProfile", "-Command", "Restart-Service Audiosrv -Force; (Get-Service Audiosrv).Status"]).into());
+    let picked_up = wait_for(20.0, || audio(&|e| e["problem"].is_null()));
     report.insert("microphone_picked_up_s".into(), picked_up.map(|d| d.as_secs_f64()).into());
     if picked_up.is_none() {
         failures.push("after microphone access was turned on, the recording never picked the microphone up".into());
@@ -238,7 +229,10 @@ pub fn run(args: &Args) -> Result<(), String> {
     let t0 = Instant::now();
     report.insert("playing_from_s_after_start".into(), (t0 - started).as_secs_f64().into());
     let stop = Arc::new(AtomicBool::new(false));
-    let players: Vec<_> = [(call_device.clone(), call.clone()), (you_device.clone(), you.clone())]
+    // Only the call plays: the cable's two inputs are one input underneath, and Windows won't open the second while
+    // the first is in use, so "You" can't have a path of its own here (the file-fed runs cover your voice). This is
+    // the hardest echo case: you stay quiet and the microphone hears the whole call from the speakers.
+    let players: Vec<_> = [(call_device.clone(), call.clone())]
         .into_iter()
         .map(|(id, samples)| {
             let stop = stop.clone();
@@ -261,10 +255,18 @@ pub fn run(args: &Args) -> Result<(), String> {
     until(seconds + 2.0);
     stop.store(true, Ordering::SeqCst);
     let played: Vec<(usize, Option<String>)> = players.into_iter().map(|h| h.join().unwrap_or((99, Some("panicked".into())))).collect();
-    report.insert(
-        "players".into(),
-        serde_json::json!({"call": {"lost": played[0].0, "error": played[0].1}, "you": {"lost": played[1].0, "error": played[1].1}}),
-    );
+    report.insert("players".into(), serde_json::json!({"call": {"lost": played[0].0, "error": played[0].1}}));
+    // What the microphone track holds while the call played: it must have heard the call (from the speakers).
+    if let Some(id) = log_events(&log).iter().find(|e| e["event"] == "meeting_start").and_then(|e| e["id"].as_str().map(String::from)) {
+        let spool = data.join("meetings").join("spool").join(format!("{id}-you.f32"));
+        let bytes = std::fs::read(&spool).unwrap_or_default();
+        let you_track: Vec<f32> = bytes.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect();
+        let from = ((t0 - started).as_secs_f64() * RATE as f64) as usize;
+        let heard = &you_track[from.min(you_track.len())..];
+        let rms = if heard.is_empty() { 0.0 } else { (heard.iter().map(|v| v * v).sum::<f32>() / heard.len() as f32).sqrt() };
+        report.insert("microphone_rms_while_playing".into(), rms.into());
+        report.insert("microphone_seconds".into(), (you_track.len() as f64 / RATE as f64).into());
+    }
     if let Err(e) = click_panel_button("Stop") {
         failures.push(format!("stop: {e}"));
     }

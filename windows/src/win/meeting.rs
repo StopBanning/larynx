@@ -538,7 +538,8 @@ unsafe extern "system" fn panel_proc(
                 };
                 let mut text = wide(&line);
                 let n = text.len() - 1;
-                DrawTextW(dc, &mut text[..n], &mut r, DT_SINGLELINE | DT_VCENTER);
+                // DT_NOPREFIX: an "&" is drawn, not taken as a keyboard-shortcut marker ("Privacy & security").
+                DrawTextW(dc, &mut text[..n], &mut r, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
                 SelectObject(dc, old);
                 let _ = DeleteObject(big.into());
                 if !small.is_empty() {
@@ -553,7 +554,7 @@ unsafe extern "system" fn panel_proc(
                     };
                     let mut text = wide(&small);
                     let n = text.len() - 1;
-                    DrawTextW(dc, &mut text[..n], &mut r, DT_WORDBREAK);
+                    DrawTextW(dc, &mut text[..n], &mut r, DT_WORDBREAK | DT_NOPREFIX);
                     SelectObject(dc, old);
                     let _ = DeleteObject(f.into());
                 }
