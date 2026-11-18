@@ -1,0 +1,583 @@
+{
+ "about": "Meeting-mode cases both apps must agree on: the Mac's tests (tests/LarynxCoreTests/MeetingCasesTests.swift) and the Windows tests (windows/src/meeting.rs, mod shared_cases) read this one file. Change a rule here, and both apps must follow. Every sentence is made up.",
+ "echo": [
+  {
+   "name": "a piece of the call heard while it plays",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 8,
+     "text": "The new warehouse lease starts on March first and the movers come on Friday."
+    },
+    {
+     "speaker": "You",
+     "start": 3,
+     "end": 5,
+     "text": "Lease starts on March first."
+    }
+   ],
+   "keep": [
+    0
+   ]
+  },
+  {
+   "name": "a slightly misheard echo",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 9,
+     "text": "Coreweave and Nimbus have both signed on for the larger racks this quarter."
+    },
+    {
+     "speaker": "You",
+     "start": 2,
+     "end": 4,
+     "text": "Carweave and Nimbus have signed."
+    }
+   ],
+   "keep": [
+    0
+   ]
+  },
+  {
+   "name": "a near copy right after the call line",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 5,
+     "text": "Subscriptions grew forty percent this year."
+    },
+    {
+     "speaker": "You",
+     "start": 5.6,
+     "end": 7.5,
+     "text": "grew forty percent this year"
+    }
+   ],
+   "keep": [
+    0
+   ]
+  },
+  {
+   "name": "a reply that reuses the call's words",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 4,
+     "text": "The standard paper saves us about two thousand dollars."
+    },
+    {
+     "speaker": "You",
+     "start": 4.6,
+     "end": 7,
+     "text": "Let's stay with the standard paper then."
+    }
+   ],
+   "keep": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "a short question back",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 3,
+     "text": "The kitchen tiles go in next week."
+    },
+    {
+     "speaker": "You",
+     "start": 3.5,
+     "end": 4.4,
+     "text": "And the bathroom?"
+    }
+   ],
+   "keep": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "repeating a number back",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 3,
+     "text": "Sales are up forty percent."
+    },
+    {
+     "speaker": "You",
+     "start": 3.4,
+     "end": 4.2,
+     "text": "Forty percent?"
+    }
+   ],
+   "keep": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "talking over the call",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 10,
+     "text": "Next we'll go through the budget for each team, starting with design and then support."
+    },
+    {
+     "speaker": "You",
+     "start": 4,
+     "end": 5.5,
+     "text": "Sorry, can you say that again?"
+    }
+   ],
+   "keep": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "no call, nothing changes",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Remind me to call the plumber."
+    },
+    {
+     "speaker": "You",
+     "start": 3,
+     "end": 5,
+     "text": "Remind me to call the plumber."
+    }
+   ],
+   "keep": [
+    0,
+    1
+   ]
+  },
+  {
+   "name": "an echo among real lines",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Morning, everyone."
+    },
+    {
+     "speaker": "On the call",
+     "start": 2.5,
+     "end": 9,
+     "text": "The roof inspection is booked for the twelfth and the crew needs the gate code."
+    },
+    {
+     "speaker": "You",
+     "start": 4,
+     "end": 6.5,
+     "text": "Inspection is booked for the twelfth."
+    },
+    {
+     "speaker": "You",
+     "start": 9.6,
+     "end": 11,
+     "text": "I'll text you the gate code."
+    }
+   ],
+   "keep": [
+    0,
+    1,
+    3
+   ]
+  }
+ ],
+ "listening": [
+  {
+   "name": "listening to a talk",
+   "duration": 600,
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 300,
+     "text": "Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve."
+    },
+    {
+     "speaker": "You",
+     "start": 100,
+     "end": 102,
+     "text": "Wow, that's big."
+    }
+   ],
+   "note": "You said 2% of the words in this meeting."
+  },
+  {
+   "name": "taking part",
+   "duration": 600,
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 300,
+     "text": "Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve."
+    },
+    {
+     "speaker": "You",
+     "start": 300,
+     "end": 400,
+     "text": "Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve."
+    }
+   ],
+   "note": null
+  },
+  {
+   "name": "too short to judge",
+   "duration": 10,
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 5,
+     "text": "Hello there."
+    },
+    {
+     "speaker": "You",
+     "start": 6,
+     "end": 7,
+     "text": "Hi."
+    }
+   ],
+   "note": null
+  },
+  {
+   "name": "just under a quarter",
+   "duration": 600,
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 300,
+     "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word"
+    },
+    {
+     "speaker": "You",
+     "start": 300,
+     "end": 310,
+     "text": "mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine"
+    }
+   ],
+   "note": "You said 25% of the words in this meeting."
+  },
+  {
+   "name": "exactly a quarter",
+   "duration": 600,
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 300,
+     "text": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word"
+    },
+    {
+     "speaker": "You",
+     "start": 300,
+     "end": 310,
+     "text": "mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine mine"
+    }
+   ],
+   "note": null
+  }
+ ],
+ "names": [
+  {
+   "name": "names you addressed, in order",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Go ahead, Dana."
+    },
+    {
+     "speaker": "On the call",
+     "start": 2,
+     "end": 5,
+     "text": "Thanks."
+    },
+    {
+     "speaker": "You",
+     "start": 6,
+     "end": 9,
+     "text": "Thanks, Priya. Dana, any good candidates?"
+    }
+   ],
+   "names": [
+    "Dana",
+    "Priya"
+   ]
+  },
+  {
+   "name": "sentence openers are not names",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 4,
+     "text": "Great, let's start. Okay, so first item. Sorry, go on."
+    }
+   ],
+   "names": []
+  },
+  {
+   "name": "names said on the call don't count",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 2,
+     "text": "Thanks, Sam."
+    },
+    {
+     "speaker": "You",
+     "start": 2,
+     "end": 4,
+     "text": "Sure."
+    }
+   ],
+   "names": []
+  }
+ ],
+ "naming": [
+  {
+   "name": "one name labels the call",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Hi, Priya."
+    },
+    {
+     "speaker": "On the call",
+     "start": 2,
+     "end": 5,
+     "text": "Hi! The tile is late."
+    }
+   ],
+   "speakers": [
+    "You",
+    "Priya"
+   ]
+  },
+  {
+   "name": "two names leave the labels",
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Hi, Priya. Hi, Sam."
+    },
+    {
+     "speaker": "On the call",
+     "start": 2,
+     "end": 5,
+     "text": "Hello."
+    }
+   ],
+   "speakers": [
+    "You",
+    "On the call"
+   ]
+  }
+ ],
+ "numbers": [
+  {
+   "text": "62,500 dollars, 3 things, 1.5 hours and 12",
+   "numbers": [
+    "62500",
+    "1.5",
+    "12"
+   ]
+  },
+  {
+   "text": "on 3/14 at 10:30",
+   "numbers": [
+    "14",
+    "10",
+    "30"
+   ]
+  },
+  {
+   "text": "no numbers here",
+   "numbers": []
+  }
+ ],
+ "clock": [
+  [
+   0,
+   "00:00"
+  ],
+  [
+   65.9,
+   "01:05"
+  ],
+  [
+   3599,
+   "59:59"
+  ],
+  [
+   3725,
+   "1:02:05"
+  ]
+ ],
+ "verify": [
+  {
+   "name": "what nobody said is dropped",
+   "segments": [
+    {
+     "speaker": "On the call",
+     "start": 0,
+     "end": 4,
+     "text": "The tile is back-ordered for six weeks. I can send photos of two in stock tonight."
+    },
+    {
+     "speaker": "You",
+     "start": 6,
+     "end": 10,
+     "text": "Thanks, Priya. Send them tonight and we'll switch if one is close."
+    },
+    {
+     "speaker": "On the call",
+     "start": 10,
+     "end": 14,
+     "text": "The budget is 62,500 with the faucets."
+    }
+   ],
+   "notes": {
+    "title": "Renovation",
+    "summary": [
+     "The tile is back-ordered for six weeks.",
+     "The budget is 70,000."
+    ],
+    "decisions": [
+     "Switch tile if one in stock is close.",
+     "switch tile if one in stock is close."
+    ],
+    "actionItems": [
+     {
+      "task": "Send photos of two tiles in stock",
+      "owner": "Priya",
+      "due": "tonight"
+     },
+     {
+      "task": "Order the faucets",
+      "owner": "Bob",
+      "due": "Friday"
+     },
+     {
+      "task": "Call the electrician",
+      "owner": "On the call",
+      "due": ""
+     },
+     {
+      "task": "Pay the 9,000 deposit",
+      "owner": "You",
+      "due": ""
+     },
+     {
+      "task": "Send photos of two tiles in stock",
+      "owner": "",
+      "due": ""
+     }
+    ],
+    "openQuestions": []
+   },
+   "expect": {
+    "title": "Renovation",
+    "summary": [
+     "The tile is back-ordered for six weeks."
+    ],
+    "decisions": [
+     "Switch tile if one in stock is close."
+    ],
+    "actionItems": [
+     {
+      "task": "Send photos of two tiles in stock",
+      "owner": "Priya",
+      "due": "tonight"
+     },
+     {
+      "task": "Order the faucets",
+      "owner": "",
+      "due": ""
+     },
+     {
+      "task": "Call the electrician",
+      "owner": "",
+      "due": ""
+     }
+    ],
+    "openQuestions": []
+   }
+  }
+ ],
+ "prompt": [
+  {
+   "name": "names and the listening hint",
+   "duration": 610,
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Go ahead, Dana."
+    },
+    {
+     "speaker": "On the call",
+     "start": 2,
+     "end": 200,
+     "text": "Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve."
+    },
+    {
+     "speaker": "You",
+     "start": 200,
+     "end": 202,
+     "text": "Thanks, Marcus."
+    }
+   ],
+   "system": "You write meeting notes for a busy person who was in the meeting and wants the result in plain English.\nRules:\n- Use only what was said in the transcript. Never add facts, numbers, names or dates that were not said.\n- Use people's names when they were said. \"You\" is the person these notes are for; write \"you\" for them.\n- The summary is three to five short sentences: what the meeting was about and what came of it.\n- A decision is something the people agreed on. Leave the list empty if nothing was decided.\n- An action item is a task someone said they or someone else would do. Give the owner and the due date only\n  when they were said; otherwise leave them empty. Never guess. A company's or presenter's own plans, told to\n  an audience (\"we will ship the new pods early next year\"), are not action items: they go in the summary.\n- If \"You\" mostly listened (a talk, a webcast, an earnings call, a lecture) and did not speak with the people on\n  the call, write the notes about what was said on the call. Leave out your side remarks unless they are about\n  what was said.\n- Open questions are things raised and left unanswered.\n- Short, clear sentences. No filler, no \"the speaker said\", no timestamps.\nIn the transcript, \"You\" is the person these notes are for. \"On the call\" (or \"Person 1\", \"Person 2\"...) are the\nother people; work out their names from how they are addressed (\"Go ahead, Dana\" means the next person to speak\nis Dana) and use the names.\nYou said 3% of the words in this meeting.\nNames said in this meeting: Dana, Marcus.\nWrite in plain words a 75-year-old would read without effort. Keep every number with its unit, exactly as said.",
+   "transcript": "[00:00] You: Go ahead, Dana.\n[00:02] On the call: Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve. Our numbers for the quarter came in ahead of plan in every region we serve.\n[03:20] You: Thanks, Marcus."
+  },
+  {
+   "name": "a plain meeting",
+   "duration": 30,
+   "segments": [
+    {
+     "speaker": "You",
+     "start": 0,
+     "end": 2,
+     "text": "Can you send the invoice?"
+    },
+    {
+     "speaker": "On the call",
+     "start": 3,
+     "end": 5,
+     "text": "Yes, today."
+    }
+   ],
+   "system": "You write meeting notes for a busy person who was in the meeting and wants the result in plain English.\nRules:\n- Use only what was said in the transcript. Never add facts, numbers, names or dates that were not said.\n- Use people's names when they were said. \"You\" is the person these notes are for; write \"you\" for them.\n- The summary is three to five short sentences: what the meeting was about and what came of it.\n- A decision is something the people agreed on. Leave the list empty if nothing was decided.\n- An action item is a task someone said they or someone else would do. Give the owner and the due date only\n  when they were said; otherwise leave them empty. Never guess. A company's or presenter's own plans, told to\n  an audience (\"we will ship the new pods early next year\"), are not action items: they go in the summary.\n- If \"You\" mostly listened (a talk, a webcast, an earnings call, a lecture) and did not speak with the people on\n  the call, write the notes about what was said on the call. Leave out your side remarks unless they are about\n  what was said.\n- Open questions are things raised and left unanswered.\n- Short, clear sentences. No filler, no \"the speaker said\", no timestamps.\nIn the transcript, \"You\" is the person these notes are for. \"On the call\" (or \"Person 1\", \"Person 2\"...) are the\nother people; work out their names from how they are addressed (\"Go ahead, Dana\" means the next person to speak\nis Dana) and use the names.\nWrite in plain words a 75-year-old would read without effort. Keep every number with its unit, exactly as said.",
+   "transcript": "[00:00] You: Can you send the invoice?\n[00:03] On the call: Yes, today."
+  }
+ ]
+}

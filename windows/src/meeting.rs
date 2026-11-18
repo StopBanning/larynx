@@ -378,11 +378,11 @@ fn is_echo(s: &Segment, call: &[Segment]) -> bool {
 pub fn prompt(meeting: &Meeting) -> (String, String) {
     let names = meeting.addressed_names();
     let mut system = format!("{INSTRUCTIONS}\n{LEGEND}");
-    if !names.is_empty() {
-        system += &format!("\nNames said in this meeting: {}.", names.join(", "));
-    }
     if let Some(note) = listening_note(meeting) {
         system += &format!("\n{note}");
+    }
+    if !names.is_empty() {
+        system += &format!("\nNames said in this meeting: {}.", names.join(", "));
     }
     system += "\nWrite in plain words a 75-year-old would read without effort. Keep every number with its unit, exactly as said.";
     let minutes = ((meeting.duration / 60.0).round() as i64).max(1);
@@ -1116,47 +1116,116 @@ pub fn utterances(samples: &[f32], max_seconds: f64) -> Vec<(usize, usize)> {
     out
 }
 
+/// The meeting-mode cases the Mac and Windows apps share (tests/meeting-cases.json). The Mac's tests read the same file
+/// (tests/LarynxCoreTests/MeetingCasesTests.swift), so a rule changed on one side and not the other fails here or there.
 #[cfg(test)]
-mod echo_tests {
+mod shared_cases {
     use super::*;
-    fn seg(speaker: &str, start: f64, end: f64, text: &str) -> Segment {
-        Segment { speaker: speaker.into(), start, end, text: text.into() }
+
+    fn cases() -> Value {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests/meeting-cases.json");
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
     }
-    fn call(a: f64, b: f64, t: &str) -> Segment { seg("On the call", a, b, t) }
-    fn you(a: f64, b: f64, t: &str) -> Segment { seg("You", a, b, t) }
+    fn list<'a>(v: &'a Value, key: &str) -> &'a Vec<Value> {
+        v[key].as_array().unwrap()
+    }
+    fn segments(c: &Value) -> Vec<Segment> {
+        serde_json::from_value(c["segments"].clone()).unwrap()
+    }
+    fn meeting(c: &Value) -> Meeting {
+        Meeting {
+            id: "t".into(),
+            started: 0.0,
+            duration: c["duration"].as_f64().unwrap_or(60.0),
+            utc_offset: 0,
+            segments: segments(c),
+            notes: None,
+        }
+    }
+    fn strings(v: &Value) -> Vec<String> {
+        serde_json::from_value(v.clone()).unwrap()
+    }
+    fn name(c: &Value) -> &str {
+        c["name"].as_str().unwrap_or("")
+    }
+    /// The shared file writes "no owner" and "no date" as "", as the Mac does.
+    fn notes(v: &Value) -> Notes {
+        let blank = |x: &Value| x.as_str().filter(|s| !s.is_empty()).map(String::from);
+        Notes {
+            title: v["title"].as_str().unwrap().into(),
+            summary: strings(&v["summary"]),
+            decisions: strings(&v["decisions"]),
+            action_items: v["actionItems"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|i| ActionItem { task: i["task"].as_str().unwrap().into(), owner: blank(&i["owner"]), due: blank(&i["due"]) })
+                .collect(),
+            open_questions: strings(&v["openQuestions"]),
+            ..Default::default()
+        }
+    }
 
     #[test]
-    fn echoes_go_and_replies_stay() {
-        // The same made-up cases as the Mac's MeetingEchoTests.
-        let s = vec![call(0.0, 8.0, "The new warehouse lease starts on March first and the movers come on Friday."), you(3.0, 5.0, "Lease starts on March first.")];
-        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
-        let s = vec![call(0.0, 9.0, "Coreweave and Nimbus have both signed on for the larger racks this quarter."), you(2.0, 4.0, "Carweave and Nimbus have signed.")];
-        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
-        let s = vec![call(0.0, 5.0, "Subscriptions grew forty percent this year."), you(5.6, 7.5, "grew forty percent this year")];
-        assert_eq!(remove_echo(s.clone()), vec![s[0].clone()]);
-        let s = vec![call(0.0, 4.0, "The standard paper saves us about two thousand dollars."), you(4.6, 7.0, "Let's stay with the standard paper then.")];
-        assert_eq!(remove_echo(s.clone()), s);
-        let s = vec![call(0.0, 3.0, "The kitchen tiles go in next week."), you(3.5, 4.4, "And the bathroom?")];
-        assert_eq!(remove_echo(s.clone()), s);
-        let s = vec![call(0.0, 3.0, "Sales are up forty percent."), you(3.4, 4.2, "Forty percent?")];
-        assert_eq!(remove_echo(s.clone()), s);
-        let s = vec![call(0.0, 10.0, "Next we'll go through the budget for each team, starting with design and then support."), you(4.0, 5.5, "Sorry, can you say that again?")];
-        assert_eq!(remove_echo(s.clone()), s);
-        let s = vec![you(0.0, 2.0, "Remind me to call the plumber."), you(3.0, 5.0, "Remind me to call the plumber.")];
-        assert_eq!(remove_echo(s.clone()), s);
+    fn echo() {
+        for c in list(&cases(), "echo") {
+            let segs = segments(c);
+            let keep: Vec<Segment> = c["keep"].as_array().unwrap().iter().map(|i| segs[i.as_u64().unwrap() as usize].clone()).collect();
+            assert_eq!(remove_echo(segs), keep, "{}", name(c));
+        }
     }
 
     #[test]
-    fn listening_gets_the_hint() {
-        let long = vec!["Our numbers for the quarter came in ahead of plan in every region we serve."; 12].join(" ");
-        let m = |segments| Meeting { id: "t".into(), started: 0.0, duration: 600.0, utc_offset: 0, segments, notes: None };
-        let talk = m(vec![call(0.0, 300.0, &long), you(100.0, 102.0, "Wow, that's big.")]);
-        assert_eq!(listening_note(&talk).as_deref(), Some("You said 2% of the words in this meeting."));
-        assert!(prompt(&talk).0.contains("mostly listened"));
-        assert!(prompt(&talk).0.contains("You said 2% of the words"));
-        let both = m(vec![call(0.0, 300.0, &long), you(300.0, 400.0, &long)]);
-        assert_eq!(listening_note(&both), None);
-        assert!(!prompt(&both).0.contains("of the words in this meeting"));
+    fn listening() {
+        for c in list(&cases(), "listening") {
+            assert_eq!(listening_note(&meeting(c)).as_deref(), c["note"].as_str(), "{}", name(c));
+        }
+    }
+
+    #[test]
+    fn names() {
+        let all = cases();
+        for c in list(&all, "names") {
+            assert_eq!(meeting(c).addressed_names(), strings(&c["names"]), "{}", name(c));
+        }
+        for c in list(&all, "naming") {
+            let mut speakers: Vec<String> = Vec::new();
+            for s in meeting(c).naming_the_call().segments {
+                if !speakers.contains(&s.speaker) {
+                    speakers.push(s.speaker);
+                }
+            }
+            assert_eq!(speakers, strings(&c["speakers"]), "{}", name(c));
+        }
+    }
+
+    #[test]
+    fn numbers_and_clock() {
+        let all = cases();
+        for c in list(&all, "numbers") {
+            let want: std::collections::HashSet<String> = strings(&c["numbers"]).into_iter().collect();
+            assert_eq!(numbers(c["text"].as_str().unwrap()), want, "{}", c["text"]);
+        }
+        for pair in list(&all, "clock") {
+            assert_eq!(clock(pair[0].as_f64().unwrap()), pair[1].as_str().unwrap());
+        }
+    }
+
+    #[test]
+    fn verify_notes() {
+        for c in list(&cases(), "verify") {
+            assert_eq!(verify(notes(&c["notes"]), &meeting(c)), notes(&c["expect"]), "{}", name(c));
+        }
+    }
+
+    #[test]
+    fn prompt_text() {
+        for c in list(&cases(), "prompt") {
+            let (system, user) = prompt(&meeting(c));
+            assert_eq!(system, c["system"].as_str().unwrap(), "{}", name(c));
+            let transcript = format!("<transcript>\n{}\n</transcript>", c["transcript"].as_str().unwrap());
+            assert!(user.contains(&transcript), "{}\n{user}", name(c));
+        }
     }
 }
 
