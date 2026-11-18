@@ -2,6 +2,7 @@
 pub mod app;
 pub mod audio;
 pub mod e2e;
+pub mod e2e_devices;
 pub mod focus;
 pub mod hotkey;
 pub mod insert;

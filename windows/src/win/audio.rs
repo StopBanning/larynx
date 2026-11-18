@@ -88,7 +88,7 @@ impl Recorder {
             std::thread::Builder::new()
                 .name("larynx-mic".into())
                 .spawn(move || {
-                    if let Err(e) = capture(&shared, &running, &level) {
+                    if let Err(e) = capture(&shared, &running, &level, &error) {
                         *error.lock().unwrap() = Some(e);
                     }
                     running.store(false, Ordering::SeqCst);
@@ -114,7 +114,36 @@ fn rms(x: &[f32]) -> f32 {
     (x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32).sqrt()
 }
 
-fn capture(shared: &Arc<Mutex<Shared>>, running: &AtomicBool, level: &AtomicU32) -> Result<(), String> {
+/// The microphone for as long as it is needed. If it goes away while recording (a headset unplugged, Bluetooth
+/// dropping) or Windows switches to another microphone, it is opened again every second until one answers: a meeting
+/// keeps going, with silence for the gap (the meeting's spooler keeps the tracks in step).
+fn capture(shared: &Arc<Mutex<Shared>>, running: &AtomicBool, level: &AtomicU32, error: &Mutex<Option<String>>) -> Result<(), String> {
+    loop {
+        match capture_device(shared, running, level, error) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                if shared.lock().unwrap().recording.is_none() {
+                    return Err(e);
+                }
+                *error.lock().unwrap() = Some(e);
+                level.store(0f32.to_bits(), Ordering::Relaxed);
+                std::thread::sleep(Duration::from_secs(1));
+            }
+        }
+    }
+}
+
+/// The default device's id, to notice when Windows switches to another one.
+pub fn default_id(devices: &IMMDeviceEnumerator, flow: EDataFlow) -> Option<String> {
+    unsafe {
+        let id = devices.GetDefaultAudioEndpoint(flow, eConsole).ok()?.GetId().ok()?;
+        let s = id.to_string().ok();
+        windows::Win32::System::Com::CoTaskMemFree(Some(id.0 as *const _));
+        s
+    }
+}
+
+fn capture_device(shared: &Arc<Mutex<Shared>>, running: &AtomicBool, level: &AtomicU32, error: &Mutex<Option<String>>) -> Result<(), String> {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let e = |x: windows::core::Error| x.to_string();
@@ -142,8 +171,18 @@ fn capture(shared: &Arc<Mutex<Shared>>, running: &AtomicBool, level: &AtomicU32)
             .map_err(e)?;
         let cap: IAudioCaptureClient = client.GetService().map_err(e)?;
         client.Start().map_err(e)?;
+        *error.lock().unwrap() = None;
+        let opened = default_id(&devices, eCapture);
+        let mut checked = Instant::now();
         loop {
             std::thread::sleep(Duration::from_millis(10));
+            if checked.elapsed() > Duration::from_secs(1) {
+                checked = Instant::now();
+                if default_id(&devices, eCapture) != opened {
+                    let _ = client.Stop();
+                    return Err("the microphone changed".into());
+                }
+            }
             loop {
                 let n = cap.GetNextPacketSize().map_err(e)?;
                 if n == 0 {

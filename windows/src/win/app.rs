@@ -124,6 +124,8 @@ struct App {
     taskbar_created: u32,
     panel: Option<Panel>,
     meeting: Option<Recording>,
+    /// The recording panel's last note about the audio, so a change is logged once.
+    meeting_note: Option<String>,
     meeting_busy: bool,
     call_feed: Option<Arc<Vec<f32>>>,
     meeting_done: Receiver<meet::Outcome>,
@@ -286,6 +288,11 @@ impl App {
         } else {
             None
         };
+        if note != self.meeting_note {
+            self.log.write(serde_json::json!({"event": "meeting_audio", "problem": note,
+                "mic_error": *self.recorder.last_error.lock().unwrap(), "call_error": *rec.call_problem.lock().unwrap()}));
+            self.meeting_note = note.clone();
+        }
         let (since, muted) = (rec.began, rec.muted.load(std::sync::atomic::Ordering::SeqCst));
         self.show(Show::Recording { since, note, muted });
     }
@@ -708,6 +715,7 @@ pub fn run(args: &Args) -> Result<(), String> {
         taskbar_created,
         panel,
         meeting: None,
+        meeting_note: None,
         meeting_busy: false,
         meeting_done,
         meeting_tx,

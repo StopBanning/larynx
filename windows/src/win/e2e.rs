@@ -72,7 +72,7 @@ fn clipboard_text() -> Option<String> {
 }
 
 /// Saves the screen to a BMP (the pill, mid-dictation, for the record).
-fn screenshot(path: &Path) -> Result<(), String> {
+pub(super) fn screenshot(path: &Path) -> Result<(), String> {
     unsafe {
         let (w, h) = (GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
         let screen = GetDC(None);
@@ -107,7 +107,7 @@ fn screenshot(path: &Path) -> Result<(), String> {
     }
 }
 
-struct Kill(Vec<Child>);
+pub(super) struct Kill(pub(super) Vec<Child>);
 impl Drop for Kill {
     fn drop(&mut self) {
         for c in &mut self.0 {
@@ -116,7 +116,7 @@ impl Drop for Kill {
     }
 }
 
-fn wait_for(seconds: f64, mut f: impl FnMut() -> bool) -> Option<Duration> {
+pub(super) fn wait_for(seconds: f64, mut f: impl FnMut() -> bool) -> Option<Duration> {
     let start = Instant::now();
     while start.elapsed().as_secs_f64() < seconds {
         if f() {
@@ -127,7 +127,7 @@ fn wait_for(seconds: f64, mut f: impl FnMut() -> bool) -> Option<Duration> {
     None
 }
 
-fn log_events(path: &Path) -> Vec<serde_json::Value> {
+pub(super) fn log_events(path: &Path) -> Vec<serde_json::Value> {
     std::fs::File::open(path)
         .map(|f| std::io::BufReader::new(f).lines().map_while(Result::ok).filter_map(|l| serde_json::from_str(&l).ok()).collect())
         .unwrap_or_default()
@@ -201,7 +201,7 @@ impl Check<'_> {
 }
 
 /// Clicks the panel's button with this label with the real mouse (SendInput), as a person would.
-fn click_panel_button(label: &str) -> Result<(), String> {
+pub(super) fn click_panel_button(label: &str) -> Result<(), String> {
     unsafe {
         let panel = FindWindowW(w!("LarynxMeetingPanel"), None).map_err(|_| "the meeting panel is not there".to_string())?;
         let title: Vec<u16> = label.encode_utf16().chain(std::iter::once(0)).collect();
@@ -223,7 +223,7 @@ fn click_panel_button(label: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn post_to_app(command: usize) -> Result<(), String> {
+pub(super) fn post_to_app(command: usize) -> Result<(), String> {
     unsafe {
         let app = FindWindowW(w!("LarynxApp"), None).map_err(|_| "the app's window is not there".to_string())?;
         PostMessageW(Some(app), WM_COMMAND, windows::Win32::Foundation::WPARAM(command), LPARAM(0)).map_err(|e| e.to_string())

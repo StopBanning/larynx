@@ -3,9 +3,9 @@ name: windows
 # measures the speech model on CPU and DirectML, and dictates into Notepad end to end on the runner's desktop.
 on:
   push:
-    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/fixtures/**', '.github/workflows/windows.yml']
+    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/meeting-cases.json', 'tests/meetings/**', 'tests/fixtures/**', '.github/workflows/windows.yml']
   pull_request:
-    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/fixtures/**', '.github/workflows/windows.yml']
+    paths: ['windows/**', 'Sources/LarynxText/**', 'ci/**', 'tests/cases.json', 'tests/meeting-cases.json', 'tests/meetings/**', 'tests/fixtures/**', '.github/workflows/windows.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -117,6 +117,40 @@ jobs:
             $img.Save("$PWD/e2e-meeting/panel-muted.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
             Remove-Item e2e-meeting/panel-muted.bmp, e2e-meeting/mic.wav -ErrorAction SilentlyContinue
           }
+      - name: A virtual audio cable (VB-Cable), standing in for speakers and a microphone
+        timeout-minutes: 5
+        run: |
+          Set-Service Audiosrv -StartupType Automatic; Start-Service Audiosrv
+          Invoke-WebRequest https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip -OutFile vbcable.zip
+          Expand-Archive vbcable.zip vbcable
+          # Trust the driver's publisher (from its own signature) so the install doesn't stop to ask.
+          $sig = Get-AuthenticodeSignature (Get-ChildItem vbcable -Filter vbaudio_cable64_win10.cat).FullName
+          if ($sig.Status -ne 'Valid') { throw "the cable's driver signature is $($sig.Status)" }
+          [IO.File]::WriteAllBytes("$PWD/vbcable.cer", $sig.SignerCertificate.Export('Cert'))
+          certutil -addstore TrustedPublisher vbcable.cer | Out-Null
+          $p = Start-Process vbcable/VBCABLE_Setup_x64.exe -ArgumentList '-i','-h' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "the cable's setup exited with $($p.ExitCode)" }
+          Start-Sleep 5
+          Get-PnpDevice -Class AudioEndpoint | Format-Table Status, FriendlyName -AutoSize | Out-String | Write-Host
+          $cable = (Get-PnpDevice -Class MEDIA | Where-Object FriendlyName -like '*VB-Audio*' | Select-Object -First 1).InstanceId
+          if (-not $cable) { throw "the cable did not appear" }
+          "CABLE_DEVICE=$cable" >> $env:GITHUB_ENV
+      - name: Meeting mode through real audio devices (call from the speakers, your voice and the echo in the microphone, a headset unplugged mid-meeting)
+        timeout-minutes: 30
+        run: |
+          dist/larynx-cli.exe e2e-meeting-devices --app dist/larynx.exe --model models/parakeet-int8 --provider cpu --dir meeting --claude windows/target/release/fake-claude.exe --unplug "$env:CABLE_DEVICE" --out e2e-devices
+          $code = $LASTEXITCODE
+          python windows/ci/check-meeting-devices.py e2e-devices
+          if ($LASTEXITCODE -ne 0 -or $code -ne 0) { throw "meeting mode through real devices failed (driver $code)" }
+      - name: Screenshot of the meeting panel, unplugged, as PNG
+        if: always()
+        run: |
+          if (Test-Path e2e-devices/panel-unplugged.bmp) {
+            Add-Type -AssemblyName System.Drawing
+            $img = [System.Drawing.Image]::FromFile((Resolve-Path e2e-devices/panel-unplugged.bmp))
+            $img.Save("$PWD/e2e-devices/panel-unplugged.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+            Remove-Item e2e-devices/panel-unplugged.bmp
+          }
       - name: Benchmark on CPU
         timeout-minutes: 10
         run: dist/larynx-cli.exe bench --model models/parakeet-int8 --provider cpu --out bench-cpu.json speech/manifest.json
@@ -159,6 +193,7 @@ jobs:
             meeting/out.json
             meeting/data/
             e2e-meeting/
+            e2e-devices/
       - uses: actions/upload-artifact@v4
         with:
           name: larynx-windows-x64

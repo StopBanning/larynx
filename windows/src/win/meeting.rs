@@ -99,8 +99,18 @@ impl Recording {
                 .spawn(move || {
                     if let Some(feed) = call_feed {
                         play_into(&feed, &call, &stop);
-                    } else if let Err(e) = loopback(&call, &stop) {
-                        *problem.lock().unwrap() = Some(e);
+                        return;
+                    }
+                    // Speakers unplugged, or Windows switched to headphones: open the new default again every
+                    // second. The spooler fills the gap with silence.
+                    while !stop.load(Ordering::SeqCst) {
+                        match loopback(&call, &stop, &problem) {
+                            Ok(()) => break,
+                            Err(e) => {
+                                *problem.lock().unwrap() = Some(e);
+                                std::thread::sleep(Duration::from_secs(1));
+                            }
+                        }
                     }
                 })
                 .map_err(|e| e.to_string())?;
@@ -120,10 +130,22 @@ impl Recording {
                             .ok()
                     };
                     let (mut you_file, mut call_file) = (open("you"), open("call"));
+                    let began = Instant::now();
+                    let mut written = [0usize; 2];
                     loop {
                         let done = stop.load(Ordering::SeqCst);
-                        for (side, buf, file) in [("you", &you, &mut you_file), ("call", &call, &mut call_file)] {
+                        for (n, (side, buf, file)) in [("you", &you, &mut you_file), ("call", &call, &mut call_file)].into_iter().enumerate() {
                             let mut chunk = std::mem::take(&mut *buf.lock().unwrap());
+                            // A side more than a second behind the clock lost its device for a while: silence for
+                            // the gap, so what is said after it stays in step with the other side.
+                            let due = (began.elapsed().as_secs_f64() * RATE as f64) as usize;
+                            if written[n] + chunk.len() + RATE as usize < due {
+                                let gap = due - RATE as usize / 4 - written[n] - chunk.len();
+                                let mut padded = vec![0.0f32; gap];
+                                padded.extend(chunk);
+                                chunk = padded;
+                            }
+                            written[n] += chunk.len();
                             if side == "you" && muted.load(Ordering::SeqCst) {
                                 chunk.iter_mut().for_each(|x| *x = 0.0);
                             }
@@ -182,7 +204,7 @@ fn play_into(feed: &[f32], out: &Arc<Mutex<Vec<f32>>>, stop: &AtomicBool) {
 
 /// The speakers' audio, as heard by the computer (any call app). Windows sends nothing while nothing plays, so the
 /// track is padded with silence by the clock: it stays in step with the microphone.
-fn loopback(out: &Arc<Mutex<Vec<f32>>>, stop: &AtomicBool) -> Result<(), String> {
+fn loopback(out: &Arc<Mutex<Vec<f32>>>, stop: &AtomicBool, problem: &Mutex<Option<String>>) -> Result<(), String> {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let e = |x: windows::core::Error| x.to_string();
@@ -215,10 +237,20 @@ fn loopback(out: &Arc<Mutex<Vec<f32>>>, stop: &AtomicBool) -> Result<(), String>
             .map_err(e)?;
         let cap: IAudioCaptureClient = client.GetService().map_err(e)?;
         client.Start().map_err(e)?;
+        *problem.lock().unwrap() = None;
+        let opened = crate::win::audio::default_id(&devices, eRender);
+        let mut checked = Instant::now();
         let began = Instant::now();
         let mut written: u64 = 0;
         while !stop.load(Ordering::SeqCst) {
             std::thread::sleep(Duration::from_millis(10));
+            if checked.elapsed() > Duration::from_secs(1) {
+                checked = Instant::now();
+                if crate::win::audio::default_id(&devices, eRender) != opened {
+                    let _ = client.Stop();
+                    return Err("the speakers changed".into());
+                }
+            }
             loop {
                 let n = cap.GetNextPacketSize().map_err(e)?;
                 if n == 0 {
