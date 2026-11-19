@@ -210,6 +210,38 @@ than right. Both fixes changed none of the 2,443 real dictations. Messy 3 at **5
 first two sets unchanged at 6.9% and 3.3%. Results: `compare-2026-11-18-messy3-fixed.json` and
 `compare-2026-11-18-messy-messy2.json`. The next held-out check needs a fourth set.
 
+## A set made by other people: DisfluencySpeech (Nov 18)
+
+All three messy sets above were written by us and read by macOS voices. To check against something we didn't write,
+the same three systems ran on the 250 test clips of [DisfluencySpeech](https://huggingface.co/datasets/amaai-lab/DisfluencySpeech)
+(Wang et al., 2024, [arXiv 2406.08820](https://arxiv.org/abs/2406.08820), Apache-2.0): one human speaker reading
+Switchboard phone-call transcripts aloud with every "uh", repeat and restart kept in. Its transcript A is every word
+said; its transcript C has the fillers, discourse markers ("well", "you know"), edit terms ("I mean") and restarts
+taken out. C is the "meant" here. No rule was tuned on it. `python3 bench/disfluency.py` fetches it (70 MB, to
+scratch), then `python3 bench/compare.py --sets disfluency`. Clips are tagged by the first thing their Switchboard
+annotation holds: a restart (122 clips), a filler (42), a discourse marker or edit term (43), or nothing (43).
+
+| System | Edits needed (against C) | restarts | fillers | discourse | nothing to remove | Word errors (against A) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Larynx | **10.9%** | 14.8% | 8.1% | 11.8% | 3.3% | 7.9% |
+| No cleanup (same speech model) | 16.1% | 24.6% | 12.7% | 11.6% | 3.0% | **2.9%** |
+| Apple SpeechTranscriber | 13.9% | 20.6% | 9.1% | 12.4% | 3.7% | 6.5% |
+
+**What it shows.**
+- Larynx leads, by less than on our own sets (10.9% against 13.9%, where messy 3 was 7.5% against 24.3%). Our
+  sets are heavy on spelled-out false starts like "no, the medium", which Apple doesn't touch. Phone talk has fewer.
+- The speech model alone gets 97.1% of the words said right, from a human voice it was never tuned on. Apple's
+  number against A is higher only because Apple drops some fillers itself.
+- **Most of what Larynx leaves is a style the set removes and Larynx keeps:** "you know" (41 times), a leading
+  "well" (36), "I mean" when it isn't a correction (11) and "oh" (11). Those four make up about 100 of Larynx's 526
+  edits. Larynx keeps them on purpose for now: they're meant often enough in dictation, and C removes every one.
+  Its discourse row (11.8%) is the same as no cleanup (11.6%).
+- Cleanup made 7 of 250 clips worse than the raw model. Most are the set's own choices: C keeps a trailing "and"
+  or "but" (Larynx drops it) and keeps "like" when Switchboard didn't mark it as a filler ("the baby is like 17
+  months"). One was a real miss: a doubled "has, has" at a clause boundary was taken as a stutter.
+
+Results: `compare-2026-11-18-disfluency.json`.
+
 ## Accents: real conversational English from many first languages (Nov 14)
 
 The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split
