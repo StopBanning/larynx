@@ -234,6 +234,10 @@ For the executor, one at a time, reporting and continuing as usual:
 6. L1 drafts, one per channel, for Colin to post. From here PLAN-v1 R6 and section C continue between issues.
 7. After LQ1: L2 in order, then L3.
 
+**Nov 18 (Colin):** Windows work paused until the Mac launch is moving: it had drifted ahead of this order (Windows
+was meant to wait for four weeks of real users, L4). Next: release 0.7.0, the three testers (LQ5), the demo
+recording (LQ6), then L1.
+
 **What needs Colin, in one place:** LQ1 to LQ7 above; 15 minutes of recording; naming three testers; creating the
 GitHub organization; posting (or approving) each launch item; the Apple enrolment and certificate steps.
 
