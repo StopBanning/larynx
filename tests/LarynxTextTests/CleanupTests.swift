@@ -226,3 +226,12 @@ private struct Cases: Decodable {
     #expect(ai("Take vitamin d daily.") == "Take vitamin d daily.")
     #expect(ai("I ate a apple.") == "I ate a apple.")                                     // "a" is a word
 }
+
+@Test func aRestartWithAPronounRepeatsTheVerb() {
+    func ai(_ s: String) -> String { Tidy.apply(s, mode: .ai) }
+    #expect(ai("The bakery closes at six. No, it closes at five on Mondays.") == "The bakery closes at five on Mondays.")
+    #expect(ai("The bus leaves at noon, sorry, it leaves at one.") == "The bus leaves at one.")
+    #expect(ai("Is the pool open at eight? No, it opens at nine.") == "Is the pool open at eight? No, it opens at nine.")  // an answer
+    #expect(ai("The fridge is old. No, it works fine.") == "The fridge is old. No, it works fine.")                // no repeated verb
+    #expect(ai("Ham, the porch light is out again.") == "The porch light is out again.")
+}

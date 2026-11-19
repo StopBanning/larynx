@@ -238,8 +238,8 @@ public enum Tidy {
         if text.range(of: "(?i)\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b", options: .regularExpression) != nil {
             s = s.replacingOccurrences(of: "^(?:Ah|Eh),?\\s+", with: "", options: .regularExpression)
         }
-        // "Hum," starting a sentence is "hmm" as the speech model hears it.
-        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)Hum,\\s+", with: "$1", options: .regularExpression)
+        // "Hum," and "Ham," starting a sentence are "hmm" as the speech model hears it.
+        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(?:Hum|Ham),\\s+", with: "$1", options: .regularExpression)
         // 1c. "Aye, I, I": a stuttered "I" written as "Aye".
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .regularExpression)
         // 1d. A false start: an unfinished clause ending on a small word, then the same speaker starts again.
@@ -752,6 +752,21 @@ public enum Tidy {
                 || (said == "no" && !afterStop)
             // Back to where the tail's first word was said before, in this sentence.
             let sentence = head[sentenceStart...]
+            // The restart names the subject with a pronoun and repeats the verb: "The store opens at nine. No, it opens
+            // at ten" -> "The store opens at ten". The verb must be among the sentence's first five words, after its
+            // first, so the restart picks up right after it.
+            if ["it", "he", "she", "they", "we"].contains(first) {
+                let tw = tail.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+                let hw = sentence.split(whereSeparator: \.isWhitespace)
+                if tw.count >= 2 {
+                    let verb = tw[1].lowercased().trimmingCharacters(in: .punctuationCharacters)
+                    if verb.count >= 2, let i = hw.prefix(5).indices.dropFirst().first(where: {
+                        hw[$0].lowercased().trimmingCharacters(in: .punctuationCharacters) == verb }) {
+                        s = String(head[..<sentence.startIndex]) + hw[...i].joined(separator: " ") + (tw.count == 3 ? " " + tw[2] : "")
+                        continue
+                    }
+                }
+            }
             var cut: String.Index?
             var search = sentence.startIndex
             while let r = sentence.range(of: "\\b" + NSRegularExpression.escapedPattern(for: first) + "\\b", options: [.regularExpression, .caseInsensitive], range: search..<sentence.endIndex) {

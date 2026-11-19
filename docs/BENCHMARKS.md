@@ -199,7 +199,16 @@ sentences the fixes never saw. Read clip by clip, the 61 edits are of three kind
   the dentist. The dentist can see you", 7); "uh" and "hmm" heard as "Ah,", "Eh," or "Ham," at the start (5). Not counted, since
   punctuation isn't scored: a comma left where a filler was taken out ("We should, leave").
 
-Results: `compare-2026-11-18-messy3.json`. The next held-out check needs a fourth set.
+Results: `compare-2026-11-18-messy3.json`.
+
+**Run 6 (Nov 18, after the fixes), not held out.** Of the three cleanup misses, only one shape was fixed: a restart
+that names the subject with a pronoun and repeats the verb ("The store opens at nine. No, it opens at ten on Sundays"
+becomes "The store opens at ten on Sundays"), plus "Ham," read as "hmm". The other two were left on purpose: every
+leading "Ah," in the author's 2,443 real dictations was meant ("Ah, I see", "Ah, okay"), and so was every short phrase
+said twice across a full stop (the kind of "Not yet. Not yet, anyway" a speaker means), so removing them would be wrong far more often
+than right. Both fixes changed none of the 2,443 real dictations. Messy 3 at **5.5%** (false starts **6.7%**); the
+first two sets unchanged at 6.9% and 3.3%. Results: `compare-2026-11-18-messy3-fixed.json` and
+`compare-2026-11-18-messy-messy2.json`. The next held-out check needs a fourth set.
 
 ## Accents: real conversational English from many first languages (Nov 14)
 
