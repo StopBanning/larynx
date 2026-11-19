@@ -14,6 +14,7 @@ Sets:
           voices. Scored on edits needed: the words a person would still change to get from the output to what was
           meant. Written after the rules and never used to tune them.
   messy2  bench/messy2.json: 40 more, written Nov 16 after the run-2 fixes, for the held-out run. Same scoring.
+  messy3  bench/messy3.json: 40 more, written Nov 18 after the run-3 fixes, held out again. Same scoring.
   jargon  the bench's jargon set (bench/make_sets.py), scored on word errors against the words said.
   accents real conversational English from speakers of many first languages (EdAcc, sampled by bench/accents.py),
           scored on word errors overall and per accent.
@@ -121,11 +122,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--binary", default=str(ROOT.parent / ".build/release/larynx"))
     ap.add_argument("--limit", type=int, default=0, help="first N sentences of each set (for a quick run)")
-    ap.add_argument("--sets", default="messy,jargon,accents", help="any of messy, messy2, jargon, accents (bench/accents.py)")
+    ap.add_argument("--sets", default="messy,jargon,accents", help="any of messy, messy2, messy3, jargon, accents (bench/accents.py)")
     a = ap.parse_args()
 
     wanted = a.sets.split(",")
-    loaders = {"messy": (messy_clips, "meant"), "messy2": (lambda n: messy_clips(n, "messy2"), "meant"), "jargon": (jargon_clips, "text"), "accents": (accent_clips, "text")}
+    loaders = {"messy": (messy_clips, "meant"), "messy2": (lambda n: messy_clips(n, "messy2"), "meant"), "messy3": (lambda n: messy_clips(n, "messy3"), "meant"), "jargon": (jargon_clips, "text"), "accents": (accent_clips, "text")}
     sets = {k: (loaders[k][0](a.limit), loaders[k][1]) for k in wanted}
     results = {"date": date.today().isoformat(), "systems": {}}
     for name, run in (("larynx", lambda p: larynx(a.binary, p, False)),
@@ -141,7 +142,7 @@ def main():
             s["seconds"] = round(time.time() - started, 1)
             results["systems"][name][set_name] = s
             print(f"{name:10} {set_name:7} {s['rate']}% ({s['edits']}/{s['words']}, {s['failed']} failed)", file=sys.stderr)
-            if set_name in ("messy", "messy2", "accents"):
+            if set_name in ("messy", "messy2", "messy3", "accents"):
                 results["systems"][name][f"{set_name}_outputs"] = {r["audio"].rsplit("/", 1)[-1]: outputs.get(r["audio"]) for r in rows}
 
     out = ROOT / "results" / f"compare-{results['date']}{'' if a.sets == 'messy,jargon,accents' else '-' + a.sets.replace(',', '-')}.json"
@@ -151,7 +152,7 @@ def main():
     print("| System | Messy: edits needed | " + " | ".join(cats) + " | Jargon: word errors |")
     print("| --- | --- | " + " | ".join("---" for _ in cats) + " | --- |")
     for name, r in results["systems"].items():
-        m, j = r.get("messy2") or r.get("messy", {}), r.get("jargon", {})
+        m, j = r.get("messy3") or r.get("messy2") or r.get("messy", {}), r.get("jargon", {})
         print(f"| {name} | {m.get('rate')}% | " + " | ".join(f"{m.get('by_category', {}).get(c)}%" for c in cats)
               + f" | {j.get('rate')}% |")
     if "accents" in sets and sets["accents"][0]:

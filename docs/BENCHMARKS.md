@@ -175,6 +175,32 @@ first set at **6.9%** (run 2: 7.4%), so nothing it had right got worse. Apple an
 The next held-out check needs a third set. Results: `compare-2026-11-16-messy2.json` (run 3) and
 `compare-2026-11-16-messy-messy2.json` (run 4).
 
+**Run 5, held out (Nov 18, commit 711d3cb).** A third set of forty (`bench/messy3.json`), written after run 4's fixes
+without rereading the rules, same five kinds, mix, voices and scoring. Two sentences were reworded and the whole set
+run again before publishing (they happened to share four words in a row with the author's own dictations, which never
+go in the repo); nothing was changed to improve the score:
+
+| System | Messy 3: edits needed | Fillers | Stutters | False starts | Numbers | Mixed |
+| --- | --- | --- | --- | --- | --- | --- |
+| Larynx | **7.5%** | **9.3%** | **3.4%** | **17.8%** | **0.0%** | **7.6%** |
+| Larynx, no cleanup | 27.7% | 20.0% | 18.4% | 76.3% | 0.0% | 35.4% |
+| Apple on-device | 24.3% | 13.3% | 10.9% | 77.0% | 0.6% | 32.6% |
+
+About a third of the edits Apple's text needs. False starts, the row lost in runs 1 and 3, fell from 47.6% to 17.8% on
+sentences the fixes never saw. Read clip by clip, the 61 edits are of three kinds:
+
+- **How the set was written, not a mistake** (20 edits): the expected text says "the fourteenth" and "the eleventh"
+  where Larynx writes "the 14th" and "the 11th", "wifi" where it writes "Wi-Fi", and "neighbor's" where the British
+  and Australian voices come out as "neighbour's". The expected text was left as written, so these still count.
+- **The speech model mishearing** (14): "the the" heard as "that the", "spare" as "spear", "we we" as "we re", "our our" as "our
+  hour" and "release", one garbled clause ("Hooded on the company card"), "Elena" as "Eleanor".
+- **Cleanup misses** (27): a correction across a full stop that repeats the verb, not the first words ("The store
+  opens at nine. No, it opens at ten on Sundays", 15 edits); a repeat split by a full stop after a leading "Ah" ("Ah,
+  the dentist. The dentist can see you", 7); "uh" and "hmm" heard as "Ah,", "Eh," or "Ham," at the start (5). Not counted, since
+  punctuation isn't scored: a comma left where a filler was taken out ("We should, leave").
+
+Results: `compare-2026-11-18-messy3.json`. The next held-out check needs a fourth set.
+
 ## Accents: real conversational English from many first languages (Nov 14)
 
 The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split

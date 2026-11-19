@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A third held-out test, and false starts are much better.** Forty new messy sentences, written without rereading the rules and never used to tune them (`bench/messy3.json`): Larynx needs 7.5% of words fixed, Apple's on-device speech 24.3%. False starts, the weakest row, went from 47.6% on the last held-out set to 17.8%. Every miss is sorted in docs/BENCHMARKS.md, including the ones that only come from how the set was written.
 - **A first install no longer downloads speech models in a silent Terminal.** The build's warm-up ran the speech model to get it ready, and on a Mac without one that meant downloading it (about 600 MB, with no progress shown), and then a backup model too. Now the warm-up only touches models already on the Mac; a new install gets its one model in the app, with the progress bar. Your Mac never showed it because its models were already there, and the install test skipped the warm-up; now it runs it, in an empty home.
 - **A failed build says so.** The installer printed "Done" even when the build failed. Now it shows the error and where the full log is, with a link to report it. Tested with a build made to fail.
 - **Plain words for the install's waits**: the developer tools take 10 to 20 minutes, the first build 5 to 10 with Terminal quiet, and after the tools install you paste the same line again.
