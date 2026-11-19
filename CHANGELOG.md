@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **A first install no longer downloads speech models in a silent Terminal.** The build's warm-up ran the speech model to get it ready, and on a Mac without one that meant downloading it (about 600 MB, with no progress shown), and then a backup model too. Now the warm-up only touches models already on the Mac; a new install gets its one model in the app, with the progress bar. Your Mac never showed it because its models were already there, and the install test skipped the warm-up; now it runs it, in an empty home.
+- **A failed build says so.** The installer printed "Done" even when the build failed. Now it shows the error and where the full log is, with a link to report it. Tested with a build made to fail.
+- **Plain words for the install's waits**: the developer tools take 10 to 20 minutes, the first build 5 to 10 with Terminal quiet, and after the tools install you paste the same line again.
+- **Permissions macOS forgot after an update.** A build from the install line has no signing certificate, so after each update macOS treats it as a new app: System Settings still shows Larynx switched on, but it no longer works. The setup window now says what to do (remove Larynx with −, then Open Settings again), and so does the installer after an update.
+
 ## 0.7.0 (Nov 18, 2026): "Think out loud"
 
 Cleaner text from messy speech (stutters, restarts, changes of mind), a History window, an app icon, a professional style and a texting style, and meeting notes to try: meeting mode is off by default (Settings → Meetings).

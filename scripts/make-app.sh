@@ -52,16 +52,31 @@ codesign --force --sign "$IDENTITY" --identifier com.automatedworkflow.larynx "$
 echo "signed with: $IDENTITY"
 # The Neural Engine compiles a model the first time this bundle id loads it (about 95 s for Parakeet Ultra), and the
 # app would sit deaf meanwhile. Load the configured model once with the app's own binary so the cache is warm before
-# restart-app.sh. LARYNX_NO_WARM=1 skips it.
-if [ -z "${LARYNX_NO_WARM:-}" ]; then
+# restart-app.sh. Only models already on this Mac: loading a missing one downloads it, and a first install must get its
+# one model in the app, with a progress bar, not hundreds of megabytes in a silent Terminal (nor a backup model it never
+# asked for). LARYNX_NO_WARM=1 skips it.
+MODELS="$HOME/Library/Application Support/Larynx/models"
+folder_for() {
+  case "$1" in
+    clean) echo bark-3.0-clean ;; bark3) echo bark-3.0 ;; parakeet) echo parakeet-tdt-0.6b-v3 ;;
+    unified) echo parakeet-unified-en-0.6b ;; *) echo parakeet-ultra ;;
+  esac
+}
+on_disk() { ls "$MODELS/$(folder_for "$1")" 2>/dev/null | grep -q '\.mlmodelc$'; }
+ENGINE=$(plutil -extract engine raw -o - "$HOME/Library/Application Support/Larynx/settings.json" 2>/dev/null || echo ultra)
+if [ -n "${LARYNX_NO_WARM:-}" ]; then
+  :
+elif ! on_disk "$ENGINE"; then
+  echo "speech model: downloads on first launch, in the app"
+else
   START=$(date +%s)
-  if "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav \
-       --models-dir "$HOME/Library/Application Support/Larynx/models" >/dev/null 2>&1; then
+  if "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav --engine "$ENGINE" --models-dir "$MODELS" >/dev/null 2>&1; then
     echo "speech model warm ($(( $(date +%s) - START )) s)"
     # The backup model (tried when the main one hears nothing) compiles on first use too: a 160 s stall once.
     for backup in clean parakeet; do
-      "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav --engine $backup \
-        --models-dir "$HOME/Library/Application Support/Larynx/models" >/dev/null 2>&1 && break
+      [ "$backup" = "$ENGINE" ] && continue
+      on_disk "$backup" || continue
+      "$APP/Contents/MacOS/larynx" transcribe tests/fixtures/report.wav --engine $backup --models-dir "$MODELS" >/dev/null 2>&1 && break
     done
   else
     echo "speech model warm-up skipped (the app will compile it on first use)"

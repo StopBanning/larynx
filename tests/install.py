@@ -3,10 +3,11 @@
 
     python3 tests/install.py
 
-Runs the installer with HOME set to a new, empty folder, ad-hoc signing (no identity from this Mac), no model
-warm-up and nothing opened, then checks the bundle: it exists, is ad-hoc signed, has the bundle id, the icon, the licence
-texts and the microphone text, its binary runs, the new home holds no Larynx data (so the first launch starts at setup), and the uninstall script
-then leaves that home clean.
+Runs the installer with HOME set to a new, empty folder, ad-hoc signing (no identity from this Mac) and nothing
+opened, then checks the bundle: it exists, is ad-hoc signed, has the bundle id, the icon, the licence
+texts and the microphone text, its binary runs, the new home holds no Larynx data (so the first launch starts at setup, and the build's
+model warm-up downloaded nothing: the model comes in the app, with a progress bar), and the uninstall script then
+leaves that home clean. Also: a build that fails makes the installer fail and say where the log is, never "Done".
 Permissions (microphone, accessibility, input monitoring) cannot be tested this way.
 
 The new home is under ~/work/scratch (the startup disk) and is deleted afterwards. This never restarts, opens or
@@ -29,10 +30,11 @@ def main():
         if not ok: failures.append(what)
 
     try:
-        env = dict(os.environ, HOME=str(home), LARYNX_SIGN="adhoc", LARYNX_NO_WARM="1", LARYNX_NO_OPEN="1")
+        env = dict(os.environ, HOME=str(home), LARYNX_SIGN="adhoc", LARYNX_NO_OPEN="1")
         r = subprocess.run(["zsh", str(ROOT / "scripts/install.sh")], env=env, capture_output=True, text=True, timeout=1800)
         check(r.returncode == 0, "install.sh finished")
         check(not (home / "Library/Application Support/Larynx").exists(), "no Larynx data in the new home (first launch starts at setup)")
+        check("downloads on first launch, in the app" in r.stdout, "the warm-up downloads no model on a fresh Mac")
         app = home / "Applications/Larynx.app"
         binary = app / "Contents/MacOS/larynx"
         check(binary.exists(), "Larynx.app is in the new home's Applications")
@@ -57,6 +59,16 @@ def main():
             un = subprocess.run(["zsh", str(ROOT / "scripts/uninstall.sh"), "--files-only", "--yes"], env=env, capture_output=True, text=True, timeout=60)
             check(un.returncode == 0 and not app.exists() and not (home / "Library/Application Support/Larynx").exists()
                   and (home / "Documents/keep.txt").exists(), "uninstall removes the app and its data, and nothing else")
+        # A failed build: a fake source whose make-app.sh fails. The installer must fail too, and show the log.
+        fake = home / "fake-src"
+        (fake / "scripts").mkdir(parents=True)
+        shutil.copy(ROOT / "scripts/install.sh", fake / "scripts/install.sh")
+        (fake / "Package.swift").write_text("// larynx\n")
+        (fake / "scripts/make-app.sh").write_text("#!/bin/zsh\necho 'error: something broke'\nexit 1\n")
+        (fake / "scripts/make-app.sh").chmod(0o755)
+        bad = subprocess.run(["zsh", str(fake / "scripts/install.sh")], env=env, capture_output=True, text=True, timeout=60)
+        check(bad.returncode != 0 and "Done." not in bad.stdout and "something broke" in bad.stderr and "larynx-build.log" in bad.stderr,
+              "a failed build fails the installer and shows the error, never \"Done\"")
         if failures:
             print("\n--- install.sh output\n" + (r.stdout + r.stderr)[-2000:])
     finally:

@@ -34,6 +34,12 @@ final class SettingsWindow {
                                           Section("Downloading") { ModelRow(state: .downloading(fraction: 0.35, megabytes: 212, of: 603, secondsLeft: 140), preparingSeconds: 0) }
                                           Section("Preparing") { ModelRow(state: .preparing, preparingSeconds: 72) }
                                           Section("Ready") { ModelRow(state: .ready, preparingSeconds: 0) }
+                                      }.formStyle(.grouped))),
+                                      ("permissions-missing", AnyView(Form {
+                                          Section("Permissions") {
+                                              StepRow(done: false, title: "Input Monitoring", detail: "To notice your talk key in any app.", button: "Open Settings", hint: FirstRunView.staleHint) {}
+                                              StepRow(done: false, title: "Accessibility", detail: "To put your words where the cursor is.", button: "Open Settings", hint: FirstRunView.staleHint) {}
+                                          }
                                       }.formStyle(.grouped)))]
     FirstRunModel.shared.refresh()
     FirstRunModel.shared.modelState = .ready   // the picture shows a finished setup; "model-states" shows the waits

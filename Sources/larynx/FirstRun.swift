@@ -131,11 +131,13 @@ final class FirstRunModel: ObservableObject {
     }
 }
 
-private struct StepRow: View {
+struct StepRow: View {
     let done: Bool
     let title: String
     let detail: String
     let button: String
+    /// Shown under the detail while the step isn't done.
+    var hint: String = ""
     let action: () -> Void
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -144,6 +146,9 @@ private struct StepRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
                 Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if !done, !hint.isEmpty {
+                    Text(hint).font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer()
             if !done, !button.isEmpty { Button(button, action: action) }
@@ -180,6 +185,9 @@ struct ModelRow: View {
 }
 
 struct FirstRunView: View {
+    /// A build without a signing certificate (every build from the install line) is a new app to macOS after each
+    /// update: System Settings still shows Larynx switched on, but the switch belongs to the old build.
+    static let staleHint = "Larynx already switched on there? After an update macOS can forget it: select Larynx, remove it with −, then press Open Settings again."
     @ObservedObject private var model = FirstRunModel.shared
     var body: some View {
         Form {
@@ -199,10 +207,10 @@ struct FirstRunView: View {
                 }
                 StepRow(done: model.inputMonitoring, title: "Input Monitoring",
                         detail: "To notice your talk key in any app. Larynx only looks for that key; it never records what you type.",
-                        button: "Open Settings") { Hotkey.requestListen(); FirstRunModel.openPane("Privacy_ListenEvent") }
+                        button: "Open Settings", hint: FirstRunView.staleHint) { Hotkey.requestListen(); FirstRunModel.openPane("Privacy_ListenEvent") }
                 StepRow(done: model.accessibility, title: "Accessibility",
                         detail: "To put your words where the cursor is and check they arrived. Password fields are never read or saved.",
-                        button: "Open Settings") { Inserter.requestTrust(); FirstRunModel.openPane("Privacy_Accessibility") }
+                        button: "Open Settings", hint: FirstRunView.staleHint) { Inserter.requestTrust(); FirstRunModel.openPane("Privacy_Accessibility") }
             }
             Section {
                 Button("What Larynx can and can't see") { NSWorkspace.shared.open(URL(string: Links.repo + "/blob/main/docs/PRIVACY.md")!) }

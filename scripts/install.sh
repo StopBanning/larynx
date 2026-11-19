@@ -14,9 +14,10 @@ fail() { print -P "%F{red}larynx:%f $*" >&2; exit 1; }
 major=$(sw_vers -productVersion | cut -d. -f1)
 (( major >= 15 )) || fail "Larynx needs macOS 15 or later (this Mac has $(sw_vers -productVersion))."
 if ! xcrun --find swift >/dev/null 2>&1; then
-  say "Apple's command-line developer tools are needed to build Larynx. Opening the installer..."
+  say "Larynx is built on your Mac, which needs Apple's free command-line developer tools. A window is opening to"
+  say "install them: click Install and agree. It can take 10 to 20 minutes."
   xcode-select --install 2>/dev/null || true
-  fail "Run this script again once the developer tools have finished installing."
+  fail "When that window says the software was installed, paste the same line into Terminal again."
 fi
 
 # Use this checkout when run from inside one; otherwise fetch the source (or update it).
@@ -34,8 +35,15 @@ else
   fi
 fi
 
-say "Building (a few minutes the first time)..."
-"$src/scripts/make-app.sh" | grep -E "speech model|Larynx.app$" || true
+say "Building Larynx. The first time takes about 5 to 10 minutes, and Terminal stays quiet while it works."
+say "Leave this window open."
+log="${TMPDIR:-/tmp}/larynx-build.log"
+if ! "$src/scripts/make-app.sh" >"$log" 2>&1; then
+  tail -n 25 "$log" >&2
+  fail "The build failed. The full log is $log. Please open an issue with it attached:
+  https://github.com/StopBanning/larynx/issues/new"
+fi
+grep -E "speech model|Larynx.app$" "$log" || true
 if [[ -n "${LARYNX_NO_OPEN:-}" ]]; then
   # Tests and CI: build only. Never restart or open anything (a second Larynx would fight the first for the talk key).
   say "Built $HOME/Applications/Larynx.app (LARYNX_NO_OPEN: not opened)"
@@ -43,6 +51,10 @@ if [[ -n "${LARYNX_NO_OPEN:-}" ]]; then
 elif pgrep -x larynx >/dev/null; then
   say "Restarting Larynx on the new build (waits until you're not dictating)"
   "$src/scripts/restart-app.sh"
+  if grep -q "signed with: -" "$log"; then
+    say "If Larynx stops hearing its key or typing after this update, macOS forgot its permissions: in System Settings,"
+    say "Privacy & Security, remove Larynx with − from Input Monitoring and Accessibility, then follow the setup window."
+  fi
 else
   open "$HOME/Applications/Larynx.app"
 fi
