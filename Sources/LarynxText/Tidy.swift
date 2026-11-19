@@ -273,6 +273,9 @@ public enum Tidy {
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place". Until nothing changes,
         // so a stumble said three times ("we could, we could, we could try") ends as one copy, not two. A phrase said three
         // or more times that ends its sentence ("No way, no way, no way.") is meant, and is marked so this leaves it.
+        // 1f. "you know" as a filler, in every style: "it's, you know, fine", "But you know, it works". Before the
+        // repeat rules, so "it's you know, it's fine" ends as one "it's".
+        s = fillerYouKnow(s)
         s = markChants(s)
         var before = ""
         while before != s {
@@ -382,6 +385,34 @@ public enum Tidy {
         return out
     }
 
+    /// "you know" where it is only a filler: opening a sentence or a clause with a comma after it ("You know, it's
+    /// right there", "and you know, it worked"), between commas ("it was, you know, fine"), in mid-sentence with a
+    /// comma after it ("it's you know, it's fine"), or as a tag at the end (", you know." / ", you know?"). Never
+    /// without the comma after it ("so you know he's happy", "you know what she said"), and never where it is the verb:
+    /// after "do", "if", "as", "that", "what", "how" and the like ("if you know, tell me", "the people that you know").
+    static func fillerYouKnow(_ text: String) -> String {
+        var s = text
+        func re(_ pattern: String, _ template: String) {
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+        }
+        let verbBefore = "(?<!\\bdo)(?<!\\bdid)(?<!\\bdon't)(?<!\\bdidn't)(?<!\\bif)(?<!\\bas)(?<!\\bnow)(?<!\\bwhat)(?<!\\bhow)"
+            + "(?<!\\bthat)(?<!\\bwho)(?<!\\bwould)(?<!\\bwill)(?<!\\bcould)(?<!\\bshould)(?<!\\bmay)(?<!\\bmight)(?<!\\bwhether)"
+            + "(?<!\\bthink)(?<!\\bguess)(?<!\\bbet)(?<!\\bhope)(?<!\\bbelieve)(?<!\\bsuppose)(?<!\\bsure)"  // "I bet you know"
+        re("(^|[.!?]\\s+)you know,\\s+(?=\\w)", "$1")
+        re("\\b(and|but|so|or|because)\\s+you know,\\s+(?=\\w)", "$1 ")
+        // Between commas: after a word that can't end a phrase ("it was, you know, fine") both commas go; elsewhere one
+        // stays, since it usually splits two thoughts ("keep sanding, you know, we can paint tomorrow" -> "keep sanding,
+        // we can paint tomorrow").
+        let open = "(?<=\\b(?:a|an|the|to|of|for|with|in|on|at|up|out|off|is|was|are|were|be|been|really|just|still|"
+            + "always|even|very|quite|pretty|so|too|let's|it's|that's|we're|you're|they're|i'm|can|you|me|us|them|him|her))"
+        re(open + verbBefore + ",\\s*you know,\\s*(?=\\w)", " ")
+        re(verbBefore + ",\\s*you know,\\s*(?=\\w)", ", ")
+        re("(?<=[a-z'])" + verbBefore + "\\s+you know,\\s+(?=\\w)", " ")
+        re(",\\s*you know\\?(?=\\s|$)", ".")
+        re(",\\s*you know(?=[.!]|$)", "")
+        return s
+    }
+
     static func numberRanges(_ text: String) -> String {
         guard let re = try? NSRegularExpression(pattern: "\\b(\\d{1,3})\\s+(\\d{1,3})\\s+(?=(?:minutes|mins|hours|days|weeks|months|years|people|dollars|bucks|percent|miles|times|seconds)\\b)") else { return text }
         let ns = text as NSString
@@ -452,6 +483,9 @@ public enum Tidy {
         while previous != s {
             previous = s
             if voice { re(start + "(?:yeah|yep|yup|okay so|ok so|alright|all right|dude|bro|man|big dog|ah|oh)(?:,\\s*|\\s+)(?=\\w)", "$1") }
+            // "Well," opening a sentence ("Well, I think so"). Without the comma only before a new clause's subject,
+            // so "Well done" and "Well over half" stay.
+            if voice { re(start + "well(?:,\\s*|\\s+(?=(?:i|i'm|i'd|we|you|they|he|she|it|it's|that's|there's|this|if|my|our)\\b))(?=\\w)", "$1") }
             // A swear said as an exclamation before the sentence starts: "Oh f***, the oven is still on".
             if !keepSwearing { re(start + "(?:oh\\s+)?(?:fuck|shit|damn|goddamn|god damn|crap)(?:\\s+(?:me|yeah|man|dude))?[,.!]+\\s*(?=\\w)", "$1") }
             if voice { re(start + "so(?:,\\s*|\\s+(?=(?:we|i|you|they|he|she|it|let's|that's|it's|there's|this|if|yeah)\\b))", "$1") }
@@ -696,7 +730,7 @@ public enum Tidy {
             + "fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)",
     ]
 
-    static let meantDoubles = "that|had|is|really|very|so|no|yes|yeah|bye|ha|haha|hey|ok|okay|night|knock|chop|well|"
+    static let meantDoubles = "that|had|has|is|really|very|so|no|yes|yeah|bye|ha|haha|hey|ok|okay|night|knock|chop|well|"
         + "too|far|much|many|long|wait|way|super|tsk|there|now|go|come|do|not|aye|one|two|three|four|five|six|seven|eight|nine|zero|oh"
     static let correctionCues = "no,?\\s+wait|wait|no|sorry|i mean|actually|or rather|rather"
 

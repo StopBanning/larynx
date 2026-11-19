@@ -106,10 +106,11 @@ class Engine:
             if msg.get("event") == "ready": break
             if msg.get("event") == "error": raise RuntimeError(msg)
 
-    def transcribe(self, path, verbatim=True, mode=None):
+    def transcribe(self, path, verbatim=True, mode=None, style=None):
         self.n += 1
         req = {"cmd": "transcribe", "path": path, "verbatim": verbatim, "id": self.n}
         if mode: req["mode"] = mode
+        if style: req["style"] = style
         self.p.stdin.write(json.dumps(req) + "\n")
         while True:
             msg = json.loads(self.p.stdout.readline())

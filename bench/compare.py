@@ -5,6 +5,7 @@
 
 Systems:
   larynx      the full Larynx pipeline (Parakeet Ultra, cleanup rules; AI rewrite off, so it is the same on every Mac)
+  larynx-pro  the same, in the professional style (also drops openers like "Well," and "Oh,", and "I mean" as a filler)
   larynx-raw  the same speech model with no cleanup (verbatim)
   apple       Apple's on-device SpeechTranscriber (macOS 26 Speech framework). This is the speech API apps can call;
               it is not the same as the Dictation button on the keyboard, whose model was not installed here.
@@ -97,12 +98,12 @@ def apple(paths):
     return out
 
 
-def larynx(binary, paths, verbatim):
+def larynx(binary, paths, verbatim, style=None):
     e = Engine(binary, "ultra", str(MODELS))
     try:
         out = {}
         for p in paths:
-            r = e.transcribe(p, verbatim=verbatim, mode=None if verbatim else "correspondence")
+            r = e.transcribe(p, verbatim=verbatim, mode=None if verbatim else "correspondence", style=style)
             out[p] = r.get("text", "") if r.get("event") == "result" else None
         return out
     finally:
@@ -141,6 +142,7 @@ def main():
     sets = {k: (loaders[k][0](a.limit), loaders[k][1]) for k in wanted}
     results = {"date": date.today().isoformat(), "systems": {}}
     for name, run in (("larynx", lambda p: larynx(a.binary, p, False)),
+                      ("larynx-pro", lambda p: larynx(a.binary, p, False, "professional")),
                       ("larynx-raw", lambda p: larynx(a.binary, p, True)),
                       ("apple", apple)):
         results["systems"][name] = {}

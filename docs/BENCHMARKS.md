@@ -242,6 +242,30 @@ annotation holds: a restart (122 clips), a filler (42), a discourse marker or ed
 
 Results: `compare-2026-11-18-disfluency.json`.
 
+**After the fixes (Nov 19), no longer held out.** Three changes came from reading those misses. They are tuned on
+this set now, so the new numbers aren't a clean test the way the first run was.
+- "you know" as a filler goes in every style: between commas, opening a sentence or a clause with a comma after it,
+  in mid-sentence with a comma after it, and as a tag at the end. It stays where it's the verb ("if you know, tell
+  me", "the people that you know", "as you know", "I bet you know"), and wherever no comma follows ("just so you
+  know he called", "you know what she said"). Where it sat between two thoughts, one comma stays.
+- The professional style also drops a leading "Well," (and "Well" before a new clause's subject; "Well done" stays).
+  It already dropped "Oh," and "I mean" as a filler, so this set's professional row is new too.
+- "has has" counts as a meant double ("everybody who has has a ticket").
+
+Read against all 2,490 of the author's real dictations before turning on: casual changed 33, professional 36. Every
+change removed a filler "you know" or a professional "Well,", and none was wrong. The first version of the rule ran
+two thoughts together ("keep sanding we can paint"), so the comma rule above was added.
+
+| System | Edits needed (against C) | restarts | fillers | discourse | nothing to remove |
+| --- | --- | --- | --- | --- | --- |
+| Larynx (casual) | **8.3%** (was 10.9%) | 11.6% | 6.4% | 7.1% | 3.2% |
+| Larynx (professional) | **7.5%** | 10.7% | 5.4% | 5.0% | 4.1% |
+| Apple SpeechTranscriber | 13.9% | 20.6% | 9.1% | 12.4% | 3.7% |
+
+The professional row is a little worse on clips with nothing to remove (4.1%), because it drops openers like "Yeah,"
+and "So" that the set keeps. Our three messy sets didn't change (6.9%, 3.3%, 5.5% casual). Results:
+`compare-2026-11-19-disfluency.json` and `compare-2026-11-19-messy-messy2-messy3.json`.
+
 ## Accents: real conversational English from many first languages (Nov 14)
 
 The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split

@@ -183,8 +183,8 @@ private struct Cases: Decodable {
 }
 
 @Test func youYouKnowKeepsBothYous() {
-    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .correspondence) == "Nobody told you, you know, that the shop moved.")
-    // The AI mode drops "you know" as noise, and the "you" it follows stays.
+    // "you know" as a filler goes in every mode (Nov 19), and the "you" it follows stays.
+    #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .correspondence) == "Nobody told you that the shop moved.")
     #expect(Tidy.apply("Nobody told you, you know, that the shop moved", mode: .ai) == "Nobody told you that the shop moved")
     #expect(Tidy.apply("Did you you finish the report", mode: .ai) == "Did you finish the report")
 }
@@ -234,4 +234,30 @@ private struct Cases: Decodable {
     #expect(ai("Is the pool open at eight? No, it opens at nine.") == "Is the pool open at eight? No, it opens at nine.")  // an answer
     #expect(ai("The fridge is old. No, it works fine.") == "The fridge is old. No, it works fine.")                // no repeated verb
     #expect(ai("Ham, the porch light is out again.") == "The porch light is out again.")
+}
+
+@Test func fillerYouKnowGoesInEveryStyle() {
+    func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(c("The soup was, you know, a bit cold.") == "The soup was a bit cold.")
+    #expect(c("Keep sanding, you know, we can paint tomorrow.") == "Keep sanding, we can paint tomorrow.")  // two thoughts
+    #expect(c("But you know, our bus was late.") == "But our bus was late.")
+    #expect(c("You know, the garden needs rain.") == "The garden needs rain.")
+    #expect(c("It's you know, it's a long walk.") == "It's a long walk.")
+    #expect(c("We should leave early, you know?") == "We should leave early.")
+    #expect(c("If you know, tell me.") == "If you know, tell me.")                                   // the verb
+    #expect(c("The neighbors that you know, they moved.") == "The neighbors that you know, they moved.")
+    #expect(c("As you know, the shop closes at six.") == "As you know, the shop closes at six.")
+    #expect(c("I bet you know, the answer is no.") == "I bet you know, the answer is no.")
+    #expect(c("Just so you know he called.") == "Just so you know he called.")                       // no comma after
+    #expect(c("You know what she said.") == "You know what she said.")
+    #expect(c("Everybody who has has a ticket.") == "Everybody who has has a ticket.")               // meant double
+}
+
+@Test func professionalDropsAnOpeningWell() {
+    func p(_ s: String) -> String { Tidy.apply(s, mode: .correspondence, style: .professional) }
+    #expect(p("Well, the meeting moved to Friday.") == "The meeting moved to Friday.")
+    #expect(p("Well we can try again tomorrow.") == "We can try again tomorrow.")
+    #expect(p("Well done on the launch.") == "Well done on the launch.")
+    #expect(p("Well over half of them replied.") == "Well over half of them replied.")
+    #expect(Tidy.apply("Well, the meeting moved to Friday.", mode: .correspondence) == "Well, the meeting moved to Friday.")  // casual keeps it
 }
