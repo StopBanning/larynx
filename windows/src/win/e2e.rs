@@ -628,3 +628,102 @@ pub fn run_welcome(args: &Args) -> Result<(), String> {
         Err(failures.join("; "))
     }
 }
+
+const BROWSER_TITLE: &str = "Larynx browser test";
+
+unsafe extern "system" fn find_browser(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    if focus::class_name(hwnd) == "Chrome_WidgetWin_1" && unsafe { IsWindowVisible(hwnd).as_bool() } {
+        if focus::window_text(hwnd).is_some_and(|t| t.starts_with(BROWSER_TITLE)) {
+            unsafe { *(lparam.0 as *mut HWND) = hwnd };
+            return false.into();
+        }
+    }
+    true.into()
+}
+
+/// `larynx e2e-browser`: the same dictation as `e2e`, into a text box on a web page in Microsoft Edge, which is what
+/// most people type into (webmail, Teams and Outlook are built on the same engine). The page copies the box into its
+/// title as it changes, so the window's title shows what arrived. CI only: it drives the real desktop.
+pub fn run_browser(args: &Args) -> Result<(), String> {
+    let app = args.flag("app").map(str::to_string).unwrap_or_else(|| std::env::current_exe().unwrap().to_string_lossy().into_owned());
+    let feed = args.flag("feed").ok_or("--feed <wav> is required")?;
+    let split = |s: Option<&str>| -> Vec<String> { s.unwrap_or_default().split('|').map(|s| s.to_lowercase()).filter(|s| !s.is_empty()).collect() };
+    let (expect, reject) = (split(args.flag("expect")), split(args.flag("reject")));
+    let out_dir = Path::new(args.flag("out").unwrap_or("e2e-browser"));
+    std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
+    let out_abs = std::fs::canonicalize(out_dir).map_err(|e| e.to_string())?;
+    let log = out_abs.join("app.jsonl");
+    let _ = std::fs::remove_file(&log);
+    let seconds = wav::read(Path::new(feed))?.len() as f64 / wav::RATE as f64;
+    let mut failures: Vec<String> = Vec::new();
+    let mut report = serde_json::Map::new();
+    insert::copy_only("clipboard before dictation");
+
+    let page = out_abs.join("page.html");
+    std::fs::write(
+        &page,
+        format!(
+            "<!doctype html><meta charset=utf-8><title>{BROWSER_TITLE}</title>\
+             <textarea id=t autofocus style='width:90vw;height:40vh;font:16px sans-serif' \
+             oninput=\"document.title='{BROWSER_TITLE}: '+this.value\"></textarea>"
+        ),
+    )
+    .map_err(|e| e.to_string())?;
+    let edge = ["C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe", "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"]
+        .into_iter()
+        .find(|p| Path::new(p).exists())
+        .ok_or("Microsoft Edge is not installed")?;
+    let url = format!("file:///{}", page.to_string_lossy().trim_start_matches("\\\\?\\").replace('\\', "/"));
+    let mut children = Kill(Vec::new());
+    children.0.push(
+        Command::new(edge)
+            .args(["--no-first-run", "--no-default-browser-check", "--disable-features=msEdgeSidebarV2"])
+            .arg(format!("--user-data-dir={}", out_abs.join("edge-profile").display()))
+            .arg(format!("--app={url}"))
+            .spawn()
+            .map_err(|e| format!("edge: {e}"))?,
+    );
+    let mut browser = HWND::default();
+    wait_for(30.0, || {
+        browser = HWND::default();
+        unsafe {
+            let _ = EnumWindows(Some(find_browser), LPARAM(&mut browser as *mut HWND as isize));
+        }
+        !browser.is_invalid()
+    })
+    .ok_or("Edge's window with the test page never appeared")?;
+    std::thread::sleep(Duration::from_secs(2));
+
+    let mut cmd = Command::new(&app);
+    cmd.args(["run", "--feed", feed, "--log"]).arg(&log);
+    for flag in ["model", "provider", "threads"] {
+        if let Some(v) = args.flag(flag) {
+            cmd.args([format!("--{flag}").as_str(), v]);
+        }
+    }
+    children.0.push(cmd.spawn().map_err(|e| format!("{app}: {e}"))?);
+    wait_for(300.0, || log_events(&log).iter().any(|e| e["event"] == "ready" || e["event"] == "error"));
+    if !log_events(&log).iter().any(|e| e["event"] == "ready") {
+        return Err("the app never became ready".into());
+    }
+
+    let check = Check { notepad: browser, edit: browser, seconds, expect: &expect, reject: &reject, out_dir: &out_abs };
+    report.insert("first".into(), check.dictate("Edge", &mut failures));
+    let _ = screenshot(&out_abs.join("browser.bmp"));
+    // Edge hands the window to a process of its own, so close the window rather than rely on killing the launcher.
+    unsafe {
+        let _ = PostMessageW(Some(browser), WM_CLOSE, windows::Win32::Foundation::WPARAM(0), LPARAM(0));
+    }
+    let events: Vec<serde_json::Value> = log_events(&log).into_iter().filter(|e| e["event"] != "key_down").collect();
+    report.insert("app_log".into(), events.into());
+    report.insert("failures".into(), failures.clone().into());
+    let json = serde_json::to_string_pretty(&serde_json::Value::Object(report)).unwrap();
+    println!("{json}");
+    std::fs::write(out_abs.join("e2e.json"), json).map_err(|e| e.to_string())?;
+    drop(children);
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures.join("; "))
+    }
+}

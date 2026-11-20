@@ -116,6 +116,8 @@ pub fn entry(app: bool) {
         #[cfg(all(windows, feature = "asr"))]
         "e2e-welcome" => win::e2e::run_welcome(&args),
         #[cfg(all(windows, feature = "asr"))]
+        "e2e-browser" => win::e2e::run_browser(&args),
+        #[cfg(all(windows, feature = "asr"))]
         "e2e-meeting-devices" => win::e2e_devices::run(&args),
         _ => Err(format!("unknown command {command:?}; see the top of windows/src/lib.rs")),
     };
