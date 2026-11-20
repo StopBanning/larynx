@@ -261,7 +261,7 @@ fn steps(key: &str) -> [String; 3] {
 
 fn foot(key: &str) -> String {
     format!(
-        "Larynx keeps running in the tray, by the clock (click ^ if its blue icon is hidden), so you can close this window. No {key} key? Right-click the icon and pick another Talk key."
+        "Larynx keeps running in the tray, by the clock (click ^ if you don't see its icon), so you can close this window. No {key} key? Right-click the icon and pick another Talk key."
     )
 }
 
