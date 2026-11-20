@@ -198,13 +198,18 @@ public enum Tidy {
     static let restartVerbs = "[a-z]+ed|drove|went|was|think|thought|want|need|have|had|got|get|said|say|mean|guess|told|saw|see|did|do|don't|didn't|put|took|take|made|make|can|could|will|would|just|really|also|bought|came|come|left|ran|found|know|knew|love|like|wanna|gotta|gonna"
     /// Small words a speaker goes back to when correcting the next word ("from your uh from our", "the cat um the dog").
     static let restartWords = "from|to|in|on|at|for|with|of|about|into|the|a|an|my|your|our|their|his|her|this|that"
-    static let joiners = "to|at|of|for|with|from|about|the|a|an|and|but|or|my|your|our|their"
+    static let joinerPreps = "to|at|of|for|with|from|about"
+    static let joinerWords = "the|a|an|and|but|or|my|your|our|their"
     /// What may follow "on," / "in," when the comma is a leftover: a determiner, a number, or a capitalized name.
     static let clauseFollowers = "(?:(?i:the|a|an|my|your|our|their|his|her|its)\\b|\\d|(?i:one|two|three|four|five|six|seven|eight|nine|ten)\\b|(?!I\\b|I')[A-Z])"
     /// The subject of a new clause, after which "is," keeps its comma.
     static let clauseStarts = "(?i:i|i'm|i'll|i've|i'd|we|we're|we'll|you|you're|they|they're|he|she|it|it's|there|there's|that's|this|let's|so|then|because|'cause|honestly|actually|okay|ok)\\b"
     /// Words after a comma that close or tag a phrase ("come along with, okay?"); the comma before them is real.
     static let tagWords = "(?i:okay|ok|right|yeah|yes|though|too|honestly|man|dude|bro|then|please|lol)\\b"
+    /// Words that open a new phrase. A preposition that ends its own phrase ("what we argued about, without
+    /// shouting", "the friend I came with, and her sister") keeps the comma before them.
+    static let phraseOpeners = "(?i:without|and|but|or|so|because|if|when|while|since|unless|which|who|where|before|after|"
+        + "until|although|whereas|instead|plus|not|even|except|like|just)\\b"
 
     /// Placeholders for spoken "new line" / "new paragraph" while the rules run (not letters, not whitespace).
     static let lineMark = "\u{E000}", paragraphMark = "\u{E001}"
@@ -319,7 +324,8 @@ public enum Tidy {
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
-        s = s.replacingOccurrences(of: "(?i)\\b(\(joiners)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerPreps)),\\s+(?!\(tagWords))(?!\(phraseOpeners))(?=\\w)", with: "$1 ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerWords)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .regularExpression)
         s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .regularExpression)
         // "The thing is, we need more time": a be-verb keeps its comma before a new clause's subject.
         s = s.replacingOccurrences(of: "\\b([Ii]s|[Ww]as|[Aa]re|[Ww]ere|[Bb]e),\\s+(?!\(clauseStarts))(?=\\w)", with: "$1 ",

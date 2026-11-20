@@ -236,6 +236,13 @@ private struct Cases: Decodable {
     #expect(ai("Ham, the porch light is out again.") == "The porch light is out again.")
 }
 
+@Test func prepositionEndingAPhraseKeepsItsComma() {
+    func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(c("Ask them what they argued about, without raising your voice.") == "Ask them what they argued about, without raising your voice.")
+    #expect(c("That's the friend I came with, and her sister came too.") == "That's the friend I came with, and her sister came too.")
+    #expect(c("Let's meet at, um, the library.") == "Let's meet at the library.")             // a filler's leftover comma still goes
+}
+
 @Test func fillerYouKnowGoesInEveryStyle() {
     func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
     #expect(c("The soup was, you know, a bit cold.") == "The soup was a bit cold.")

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **A comma you said is no longer dropped after "about", "with" or "for".** Larynx removes the comma a filler leaves behind ("meet at, um, the library" becomes "meet at the library"), but it also took real ones: "ask them what they argued about, without shouting" lost its comma. Now a comma before a word that starts a new phrase ("without", "and", "but", "so", "just") stays. 21 of the developer's real dictations change, each one getting back a comma that was said.
+
 - **"You know" as a filler is gone, in every style.** "The soup was, you know, a bit cold" becomes "The soup was a bit cold". It stays where it means something ("if you know, tell me", "as you know", "you know what she said"). The professional style also drops a "Well," that starts a sentence. Checked against all 2,490 of the developer's real dictations first. On the outside test set, Larynx went from 10.9% to 8.3% of words needing a fix, and to 7.5% in the professional style.
 
 - **Tested on a set other people made.** DisfluencySpeech is 250 clips of a human voice reading phone-call transcripts with every "uh" and restart kept in, from university researchers (`bench/disfluency.py`). Larynx needs 10.9% of words fixed, Apple's on-device speech 13.9%, and the speech model alone gets 97.1% of the words said right. Most of what's left is "you know", a leading "well", "I mean" and "oh", which the set removes and Larynx keeps for now. Details in docs/BENCHMARKS.md.
