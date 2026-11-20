@@ -475,3 +475,146 @@ pub fn run(args: &Args) -> Result<(), String> {
         Err(failures.join("; "))
     }
 }
+
+unsafe extern "system" fn find_console(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    if focus::class_name(hwnd) == "ConsoleWindowClass" && unsafe { IsWindowVisible(hwnd).as_bool() } {
+        unsafe { *(lparam.0 as *mut bool) = true };
+        return false.into();
+    }
+    true.into()
+}
+
+/// A console window is on screen (curl started without CREATE_NO_WINDOW would show one).
+fn console_visible() -> bool {
+    let mut found = false;
+    unsafe {
+        let _ = EnumWindows(Some(find_console), LPARAM(&mut found as *mut bool as isize));
+    }
+    found
+}
+
+/// `larynx e2e-welcome`: the very first start, as someone new sees it. Starts the app with an empty data folder and
+/// no model, and checks: the welcome window opens at once; no console window appears while the model downloads; the
+/// download finishes and the window turns into the instructions with the cursor in its practice box; holding Right
+/// Ctrl and talking types the cleaned words into that box; closing the window leaves Larynx running; and starting
+/// Larynx again brings the window back instead of doing nothing. Screenshots of both states go to --out. CI only:
+/// it drives the real desktop and downloads the model (about 670 MB).
+pub fn run_welcome(args: &Args) -> Result<(), String> {
+    let app = args.flag("app").map(str::to_string).unwrap_or_else(|| std::env::current_exe().unwrap().to_string_lossy().into_owned());
+    let feed = args.flag("feed").ok_or("--feed <wav> is required")?;
+    let split = |s: Option<&str>| -> Vec<String> { s.unwrap_or_default().split('|').map(|s| s.to_lowercase()).filter(|s| !s.is_empty()).collect() };
+    let (expect, reject) = (split(args.flag("expect")), split(args.flag("reject")));
+    let out_dir = Path::new(args.flag("out").unwrap_or("e2e-welcome"));
+    std::fs::create_dir_all(out_dir).map_err(|e| e.to_string())?;
+    let out_abs = std::fs::canonicalize(out_dir).map_err(|e| e.to_string())?;
+    let data = out_abs.join("data");
+    let _ = std::fs::remove_dir_all(&data);
+    let log = out_abs.join("app.jsonl");
+    let _ = std::fs::remove_file(&log);
+    let seconds = wav::read(Path::new(feed))?.len() as f64 / wav::RATE as f64;
+    let mut failures: Vec<String> = Vec::new();
+    let mut report = serde_json::Map::new();
+    insert::copy_only("clipboard before dictation");
+
+    let start = |extra: &[&str]| -> Result<Child, String> {
+        let mut cmd = Command::new(&app);
+        cmd.args(extra).env("LARYNX_DATA_DIR", &data);
+        for flag in ["provider", "threads"] {
+            if let Some(v) = args.flag(flag) {
+                cmd.args([format!("--{flag}").as_str(), v]);
+            }
+        }
+        cmd.spawn().map_err(|e| format!("{app}: {e}"))
+    };
+    let mut children = Kill(Vec::new());
+    let launched = Instant::now();
+    children.0.push(start(&["run", "--feed", feed, "--welcome", "--log", &log.to_string_lossy()])?);
+
+    let mut welcome = HWND::default();
+    let appeared = wait_for(15.0, || {
+        welcome = unsafe { FindWindowW(super::welcome::CLASS, None) }.unwrap_or_default();
+        !welcome.is_invalid() && unsafe { IsWindowVisible(welcome).as_bool() }
+    });
+    report.insert("welcome_appeared_s".into(), appeared.map(|d| d.as_secs_f64()).into());
+    if appeared.is_none() {
+        return Err("the welcome window never appeared on the first start".into());
+    }
+
+    // The download: watch for console windows the whole time, and take one screenshot partway.
+    let mut console = false;
+    let mut shot = false;
+    let ready = wait_for(900.0, || {
+        console |= console_visible();
+        if !shot && launched.elapsed() > Duration::from_secs(4) {
+            shot = true;
+            let _ = screenshot(&out_abs.join("welcome-downloading.bmp"));
+        }
+        log_events(&log).iter().any(|e| e["event"] == "ready" || e["event"] == "error")
+    });
+    if console {
+        failures.push("a console window appeared during the first start".into());
+    }
+    report.insert("console_window_seen".into(), console.into());
+    report.insert("first_start_ready_s".into(), launched.elapsed().as_secs_f64().into());
+    if let Some(e) = log_events(&log).iter().find(|e| e["event"] == "error") {
+        let _ = screenshot(&out_abs.join("welcome-failed.bmp"));
+        return Err(format!("the first start failed: {e}"));
+    }
+    if ready.is_none() {
+        return Err("the first start never became ready".into());
+    }
+    let model = data.join("models").join("parakeet-tdt-0.6b-v3-onnx");
+    if !crate::model_ready(&model) {
+        failures.push("the model is not complete after the first start".into());
+    }
+
+    // Ready: the practice box is showing and has the keyboard.
+    let edit = unsafe { FindWindowExW(Some(welcome), None, w!("EDIT"), None) }.unwrap_or_default();
+    let box_ready = wait_for(5.0, || !edit.is_invalid() && unsafe { IsWindowVisible(edit).as_bool() });
+    if box_ready.is_none() {
+        return Err("the practice box never appeared when Larynx was ready".into());
+    }
+    std::thread::sleep(Duration::from_millis(500));
+    let _ = screenshot(&out_abs.join("welcome-ready.bmp"));
+    report.insert("welcome_in_front_when_ready".into(), (unsafe { GetForegroundWindow() } == welcome).into());
+
+    let check = Check { notepad: welcome, edit, seconds, expect: &expect, reject: &reject, out_dir: &out_abs };
+    report.insert("practice_box".into(), check.dictate("practice box", &mut failures));
+    let _ = screenshot(&out_abs.join("welcome-after.bmp"));
+
+    // Closing the window leaves Larynx running; starting it again brings the window back.
+    unsafe {
+        let _ = PostMessageW(Some(welcome), WM_CLOSE, windows::Win32::Foundation::WPARAM(0), LPARAM(0));
+    }
+    let closed = wait_for(5.0, || unsafe { FindWindowW(super::welcome::CLASS, None) }.is_err());
+    if closed.is_none() {
+        failures.push("the welcome window didn't close".into());
+    }
+    if unsafe { FindWindowW(w!("LarynxApp"), None) }.is_err() {
+        failures.push("closing the welcome window quit Larynx".into());
+    }
+    let mut second = start(&[])?;
+    let reopened = wait_for(10.0, || unsafe { FindWindowW(super::welcome::CLASS, None) }.map(|h| unsafe { IsWindowVisible(h).as_bool() }).unwrap_or(false));
+    let second_quit = wait_for(10.0, || matches!(second.try_wait(), Ok(Some(_))));
+    if reopened.is_none() {
+        failures.push("starting Larynx again didn't bring the welcome window back".into());
+    }
+    if second_quit.is_none() {
+        let _ = second.kill();
+        failures.push("a second start of Larynx kept running".into());
+    }
+    report.insert("second_start_reopens_welcome".into(), reopened.is_some().into());
+
+    let events: Vec<serde_json::Value> = log_events(&log).into_iter().filter(|e| e["event"] != "key_down").collect();
+    report.insert("app_log".into(), events.into());
+    report.insert("failures".into(), failures.clone().into());
+    let json = serde_json::to_string_pretty(&serde_json::Value::Object(report)).unwrap();
+    println!("{json}");
+    std::fs::write(out_abs.join("e2e.json"), json).map_err(|e| e.to_string())?;
+    drop(children);
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures.join("; "))
+    }
+}

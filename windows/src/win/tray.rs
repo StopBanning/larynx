@@ -14,6 +14,7 @@ pub const ID_MEETINGS: usize = 104;
 pub const ID_CLAUDE_KEY: usize = 105;
 pub const ID_MEETING_RETRY: usize = 106;
 pub const ID_REPORT: usize = 107;
+pub const ID_WELCOME: usize = 108;
 
 /// What the meeting part of the menu offers.
 pub struct MeetingMenu {
@@ -111,6 +112,7 @@ impl Tray {
                 let w: Vec<u16> = line.encode_utf16().chain(std::iter::once(0)).collect();
                 let _ = AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, windows::core::PCWSTR(w.as_ptr()));
             }
+            let _ = AppendMenuW(menu, MF_STRING, ID_WELCOME, windows::core::w!("How to use Larynx"));
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let start = if meeting.recording { windows::core::w!("Stop recording this meeting") } else { windows::core::w!("Start recording this meeting") };
             let _ = AppendMenuW(menu, if meeting.busy { MF_STRING | MF_GRAYED } else { MF_STRING }, ID_MEETING, start);

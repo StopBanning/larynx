@@ -11,3 +11,4 @@ pub mod meeting;
 pub mod pill;
 pub mod report;
 pub mod tray;
+pub mod welcome;

@@ -114,6 +114,8 @@ pub fn entry(app: bool) {
         #[cfg(all(windows, feature = "asr"))]
         "e2e-meeting" => win::e2e::run_meeting(&args),
         #[cfg(all(windows, feature = "asr"))]
+        "e2e-welcome" => win::e2e::run_welcome(&args),
+        #[cfg(all(windows, feature = "asr"))]
         "e2e-meeting-devices" => win::e2e_devices::run(&args),
         _ => Err(format!("unknown command {command:?}; see the top of windows/src/lib.rs")),
     };
@@ -179,28 +181,76 @@ fn clean_one(args: &Args) -> Result<(), String> {
     Ok(())
 }
 
-/// Downloads the int8 model with Windows' own curl.exe (or any curl), resuming partial files.
-pub fn setup(args: &Args) -> Result<(), String> {
+/// The int8 model's files and their sizes in bytes (Hugging Face, Nov 2026), for the progress bar.
+pub const MODEL_SIZES_INT8: &[u64] = &[139_764, 93_939, 97, 18_202_004, 652_183_999];
+
+/// Every model file is there and not empty. (Checking one file was not enough: a download cut off after the small
+/// files left a model that looked present and couldn't load, on every start after.)
+pub fn model_ready(dir: &std::path::Path) -> bool {
+    MODEL_FILES_INT8.iter().all(|f| dir.join(f).metadata().map(|m| m.len() > 0).unwrap_or(false))
+}
+
+/// Downloads the int8 model with Windows' own curl.exe (or any curl), resuming partial files. `progress` is called
+/// a few times a second with (bytes so far, bytes in all). No console window opens, even from the tray app.
+pub fn download_model(args: &Args, progress: &dyn Fn(u64, u64)) -> Result<(), String> {
     let dir = model_dir(args);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let total: u64 = MODEL_SIZES_INT8.iter().sum();
+    let size = |p: &std::path::Path| p.metadata().map(|m| m.len()).unwrap_or(0);
+    let mut finished = 0u64;
     for f in MODEL_FILES_INT8 {
         let path = dir.join(f);
-        if path.exists() && path.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+        if size(&path) > 0 {
+            finished += size(&path);
+            progress(finished.min(total), total);
             continue;
         }
         let part = dir.join(format!("{f}.part"));
-        println!("downloading {f}");
-        let status = std::process::Command::new("curl")
-            .args(["-fL", "--retry", "3", "-C", "-", "-o"])
+        let mut cmd = std::process::Command::new("curl");
+        cmd.args(["-fsSL", "--retry", "5", "--retry-delay", "2", "--connect-timeout", "20", "-C", "-", "-o"])
             .arg(&part)
             .arg(format!("{MODEL_URL}{f}"))
-            .status()
-            .map_err(|e| format!("curl: {e}"))?;
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped());
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        }
+        let mut child = cmd.spawn().map_err(|e| format!("couldn't start curl: {e}"))?;
+        let status = loop {
+            if let Some(s) = child.try_wait().map_err(|e| e.to_string())? {
+                break s;
+            }
+            progress((finished + size(&part)).min(total), total);
+            std::thread::sleep(std::time::Duration::from_millis(250));
+        };
         if !status.success() {
-            return Err(format!("download of {f} failed"));
+            let mut err = String::new();
+            if let Some(mut e) = child.stderr.take() {
+                use std::io::Read;
+                let _ = e.read_to_string(&mut err);
+            }
+            return Err(format!("download of {f} failed: {}", err.trim()));
         }
         std::fs::rename(&part, &path).map_err(|e| e.to_string())?;
+        finished += size(&path);
+        progress(finished.min(total), total);
     }
-    println!("model ready in {}", dir.display());
+    Ok(())
+}
+
+/// `larynx setup`: downloads the model, printing every 10%.
+pub fn setup(args: &Args) -> Result<(), String> {
+    let last = std::cell::Cell::new(u64::MAX);
+    download_model(args, &|done, total| {
+        let tenth = done * 10 / total.max(1);
+        if tenth != last.get() {
+            last.set(tenth);
+            println!("downloading the speech model: {} of {} MB", done / 1_000_000, total / 1_000_000);
+        }
+    })?;
+    println!("model ready in {}", model_dir(args).display());
     Ok(())
 }

@@ -14,6 +14,7 @@ use super::insert::{self, Delivery};
 use super::meeting::{self as meet, Panel, Recording, Show};
 use super::pill::{Mode, Pill};
 use super::tray::{self, Tray};
+use super::welcome::{self, State as Welcome};
 use crate::asr::{default_threads, Parakeet, Provider};
 use crate::engine::{Dictation, Engine};
 use crate::stream::Config;
@@ -37,6 +38,12 @@ const WAKE: u32 = WM_APP + 1;
 const FINISHED: u32 = WM_APP + 2;
 const READY: u32 = WM_APP + 4;
 const MEETING_DONE: u32 = WM_APP + 10;
+/// The model download moved on: WPARAM is the bytes so far, LPARAM the bytes in all.
+const PROGRESS: u32 = WM_APP + 12;
+/// The model is downloaded and now loading.
+const LOADING: u32 = WM_APP + 13;
+/// Show the welcome window (posted by a second start of Larynx, which then quits).
+pub const SHOW_WELCOME: u32 = WM_APP + 14;
 const WM_APP_REPORTED: u32 = WM_APP + 11;
 const TICK: usize = 1;
 const HIDE: usize = 2;
@@ -132,6 +139,8 @@ struct App {
     call_feed: Option<Arc<Vec<f32>>>,
     meeting_done: Receiver<meet::Outcome>,
     meeting_tx: Sender<meet::Outcome>,
+    /// What the welcome window shows when it is opened: the download, loading, ready or what went wrong.
+    welcome: Welcome,
 }
 
 thread_local! {
@@ -161,6 +170,13 @@ fn is_taskbar_created(msg: u32) -> bool {
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WAKE => with_app(|a| a.on_keys()),
+        PROGRESS => with_app(|a| a.on_progress(wparam.0 as u64, lparam.0 as u64)),
+        LOADING => with_app(|a| {
+            a.welcome = Welcome::Loading;
+            welcome::set(Welcome::Loading);
+            a.tray.set("Larynx: loading the speech model", false);
+        }),
+        SHOW_WELCOME => with_app(|a| a.show_welcome()),
         FINISHED => with_app(|a| a.on_finished()),
         MEETING_DONE => with_app(|a| a.on_meeting_done()),
         WM_APP_REPORTED => with_app(|a| a.log.write(serde_json::json!({"event": "report_saved", "ok": wparam.0 == 1}))),
@@ -176,12 +192,15 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         }),
         tray::CALLBACK => {
             let event = (lparam.0 & 0xFFFF) as u32;
-            if event == WM_RBUTTONUP || event == WM_LBUTTONUP {
+            if event == WM_RBUTTONUP {
                 with_app(|a| a.show_menu());
+            } else if event == WM_LBUTTONUP {
+                with_app(|a| a.show_welcome());
             }
         }
         WM_COMMAND => match wparam.0 & 0xFFFF {
             tray::ID_QUIT => unsafe { PostQuitMessage(0) },
+            tray::ID_WELCOME => with_app(|a| a.show_welcome()),
             tray::ID_COPY_LAST => with_app(|a| {
                 if !a.last_text.is_empty() {
                     insert::copy_only(&a.last_text);
@@ -219,6 +238,18 @@ impl App {
             v.push(format!("Last dictation: {:.2} s after you let go", ms / 1000.0));
         }
         v
+    }
+
+    fn show_welcome(&mut self) {
+        welcome::open(self.key_name, self.welcome.clone());
+    }
+
+    fn on_progress(&mut self, done: u64, total: u64) {
+        self.welcome = Welcome::Downloading { done, total };
+        welcome::set(self.welcome.clone());
+        let pct = if total > 0 { done * 100 / total } else { 0 };
+        self.status = format!("Downloading the speech model ({pct}%)");
+        self.tray.set(&format!("Larynx: downloading the speech model, {pct}%"), false);
     }
 
     fn show_menu(&self) {
@@ -548,6 +579,8 @@ impl App {
                 self.finisher = Some(start_finisher(engine.clone(), cleanup, self.finished_tx.clone(), self.hwnd));
                 self.engine = Some(engine);
                 self.tray.set(&format!("Larynx: hold {} to talk", self.key_name), true);
+                self.welcome = Welcome::Ready;
+                welcome::set(Welcome::Ready);
                 // A meeting that was recording when the app closed or crashed: finish it now.
                 if let Some(info) = meet::interrupted().into_iter().next() {
                     self.show(Show::Working("Finishing a meeting that was interrupted.".into()));
@@ -558,6 +591,9 @@ impl App {
                 self.status = format!("Speech model unavailable: {e}");
                 self.log.write(serde_json::json!({"event": "error", "error": e}));
                 self.tray.set(&format!("Larynx: {}", self.status), false);
+                // A problem must be seen, not only sit in the tray's tooltip.
+                self.welcome = Welcome::Failed(friendly_error(&e));
+                welcome::open(self.key_name, self.welcome.clone());
             }
         }
     }
@@ -669,6 +705,15 @@ fn load_engine(args: &Args, notes: &mut Vec<serde_json::Value>) -> Result<Engine
     Ok(engine)
 }
 
+/// What to tell a person when the model can't be had, in words they can act on.
+fn friendly_error(e: &str) -> String {
+    if e.starts_with("download") || e.contains("curl") {
+        format!("Larynx couldn't download its speech model. Check that this PC is connected to the internet, then start Larynx again; the download picks up where it stopped.\n\n({e})")
+    } else {
+        format!("The speech model couldn't be loaded.\n\n({e})")
+    }
+}
+
 type Loaded = Result<(Engine, Option<Cleanup>, Vec<serde_json::Value>, f64), String>;
 
 pub fn run(args: &Args) -> Result<(), String> {
@@ -677,6 +722,13 @@ pub fn run(args: &Args) -> Result<(), String> {
         // One Larynx at a time.
         let _mutex = CreateMutexW(None, true, w!("Local\\LarynxDictation"));
         if windows::Win32::Foundation::GetLastError() == windows::Win32::Foundation::ERROR_ALREADY_EXISTS {
+            // Started again while running (a second double-click): show the running one's welcome window, so the
+            // click visibly does something, and quit.
+            if let Ok(running) = FindWindowW(w!("LarynxApp"), None) {
+                let _ = AllowSetForegroundWindow(ASFW_ANY);
+                let _ = PostMessageW(Some(running), SHOW_WELCOME, WPARAM(0), LPARAM(0));
+                return Ok(());
+            }
             return Err("Larynx is already running".into());
         }
     }
@@ -757,8 +809,20 @@ pub fn run(args: &Args) -> Result<(), String> {
         meeting_busy: false,
         meeting_done,
         meeting_tx,
+        welcome: if crate::model_ready(&model_dir(args)) {
+            Welcome::Loading
+        } else {
+            Welcome::Downloading { done: 0, total: crate::MODEL_SIZES_INT8.iter().sum() }
+        },
     };
+    // A person started Larynx: say so in a window. The tests (`--feed`) skip it unless they ask with `--welcome`.
+    let show_welcome = !args.has("feed") || args.has("welcome");
+    let first_state = app.welcome.clone();
+    let key_for_welcome = app.key_name;
     APP.with(|a| *a.borrow_mut() = Some(app));
+    if show_welcome {
+        welcome::open(key_for_welcome, first_state);
+    }
 
     // Load the model and the cleanup library off the UI thread; the tray says so meanwhile.
     let (ready_tx, ready_rx) = channel::<Loaded>();
@@ -767,8 +831,25 @@ pub fn run(args: &Args) -> Result<(), String> {
         std::thread::spawn(move || {
             let args = Args { positional: vec![], flags };
             let t = Instant::now();
-            if !model_dir(&args).join("vocab.txt").exists() {
-                let _ = crate::setup(&args);
+            let post = |msg: u32, w: usize, l: isize| unsafe {
+                let _ = PostMessageW(Some(HWND(hwnd_raw as *mut _)), msg, WPARAM(w), LPARAM(l));
+            };
+            if !crate::model_ready(&model_dir(&args)) {
+                let last = std::cell::Cell::new((0u64, Instant::now()));
+                let got = crate::download_model(&args, &|done, total| {
+                    // About four updates a second is plenty for a progress bar.
+                    let (prev, at) = last.get();
+                    if done == total || (done != prev && at.elapsed() >= Duration::from_millis(200)) {
+                        last.set((done, Instant::now()));
+                        post(PROGRESS, done as usize, total as isize);
+                    }
+                });
+                if let Err(e) = got {
+                    let _ = ready_tx.send(Err(e));
+                    post(READY, 0, 0);
+                    return;
+                }
+                post(LOADING, 0, 0);
             }
             let mut notes = Vec::new();
             let result = load_engine(&args, &mut notes).map(|e| {

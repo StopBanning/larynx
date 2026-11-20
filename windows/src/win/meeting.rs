@@ -437,7 +437,7 @@ fn dpi(hwnd: Option<HWND>) -> i32 {
     d.max(96) as i32
 }
 
-fn scale(px: i32) -> i32 {
+pub(super) fn scale(px: i32) -> i32 {
     px * dpi(None) / 96
 }
 
@@ -445,7 +445,7 @@ fn scale_at(dpi: i32, px: i32) -> i32 {
     px * dpi / 96
 }
 
-fn font(px: i32, weight: FONT_WEIGHT) -> HFONT {
+pub(super) fn font(px: i32, weight: FONT_WEIGHT) -> HFONT {
     font_at(dpi(None), px, weight)
 }
 

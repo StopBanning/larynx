@@ -105,6 +105,21 @@ jobs:
             $img.Save("$PWD/e2e/pill.png", [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
             Remove-Item e2e/pill.bmp
           }
+      - name: The first start, as someone new sees it (welcome window, the model downloading, then talking into its practice box)
+        timeout-minutes: 30
+        run: |
+          dist/larynx-cli.exe e2e-welcome --app dist/larynx.exe --provider cpu --feed speech/fillers.wav --expect "launch|next week" --reject "um|uh" --out e2e-welcome
+      - name: Screenshots of the welcome window as PNG
+        if: always()
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          foreach ($f in Get-ChildItem e2e-welcome -Filter *.bmp -ErrorAction SilentlyContinue) {
+            $img = [System.Drawing.Image]::FromFile($f.FullName)
+            $img.Save(($f.FullName -replace '\.bmp$', '.png'), [System.Drawing.Imaging.ImageFormat]::Png); $img.Dispose()
+            Remove-Item $f.FullName
+          }
+          # The downloaded model (670 MB) is not a result.
+          Remove-Item -Recurse -Force e2e-welcome/data/models -ErrorAction SilentlyContinue
       - name: Meeting mode in the real app (echo from speakers, Mute me, Stop, notes via a Claude Code stand-in, cut-off recovery)
         timeout-minutes: 30
         run: |
@@ -217,6 +232,7 @@ jobs:
             transcribe.txt
             speech/manifest.json
             e2e/
+            e2e-welcome/
             meeting/out.json
             meeting/data/
             e2e-meeting/
