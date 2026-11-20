@@ -266,6 +266,22 @@ The professional row is a little worse on clips with nothing to remove (4.1%), b
 and "So" that the set keeps. Our three messy sets didn't change (6.9%, 3.3%, 5.5% casual). Results:
 `compare-2026-11-19-disfluency.json` and `compare-2026-11-19-messy-messy2-messy3.json`.
 
+**Held out again: the validation split (Nov 19).** To check the fixes weren't just fitted to those 250 clips, we ran
+the 250 validation clips, which nobody had looked at (`python3 bench/disfluency.py --split validation`, then
+`bench/compare.py --sets disfluency-validation`). Same speaker and same kind of transcripts, different calls. Nothing
+will be tuned on this split.
+
+| System | Edits needed (against C) | restarts | fillers | discourse | nothing to remove | against every word said |
+| --- | --- | --- | --- | --- | --- | --- |
+| Larynx (casual) | **8.6%** | 11.3% | 5.7% | 7.9% | 2.7% | 11.1% |
+| Larynx (professional) | **8.2%** | 11.1% | 4.3% | 6.6% | 3.3% | 12.8% |
+| Speech model alone (raw) | 17.8% | 23.9% | 13.8% | 15.2% | 2.7% | 2.9% |
+| Apple SpeechTranscriber | 15.7% | 20.3% | 10.2% | 18.3% | 4.3% | 7.5% |
+
+Casual lands at 8.6% on unseen clips against 8.3% on the tuned ones, so the fixes carry over. Apple needs nearly
+twice as many words fixed. The speech model alone gets 97.1% of the words said right, the same as on the test split.
+Restarts are still the biggest row for every system. Results: `compare-2026-11-19-disfluency-validation.json`.
+
 ## Accents: real conversational English from many first languages (Nov 14)
 
 The sets above are one voice (the author's) and macOS voices. This one is real people: 144 clips from the test split

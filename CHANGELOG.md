@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Checked on 250 clips nobody had looked at.** After tuning on DisfluencySpeech's test clips, we ran its validation clips as a fresh held-out test: Larynx needs 8.6% of words fixed (8.2% professional), against Apple's 15.7%, close to the 8.3% on the tuned clips, so the fixes carry over. `bench/disfluency.py --split validation` fetches them.
+
 - **A comma you said is no longer dropped after "about", "with" or "for".** Larynx removes the comma a filler leaves behind ("meet at, um, the library" becomes "meet at the library"), but it also took real ones: "ask them what they argued about, without shouting" lost its comma. Now a comma before a word that starts a new phrase ("without", "and", "but", "so", "just") stays. 21 of the developer's real dictations change, each one getting back a comma that was said.
 
 - **"You know" as a filler is gone, in every style.** "The soup was, you know, a bit cold" becomes "The soup was a bit cold". It stays where it means something ("if you know, tell me", "as you know", "you know what she said"). The professional style also drops a "Well," that starts a sentence. Checked against all 2,490 of the developer's real dictations first. On the outside test set, Larynx went from 10.9% to 8.3% of words needing a fix, and to 7.5% in the professional style.
