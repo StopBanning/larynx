@@ -15,6 +15,8 @@ pub const ID_CLAUDE_KEY: usize = 105;
 pub const ID_MEETING_RETRY: usize = 106;
 pub const ID_REPORT: usize = 107;
 pub const ID_WELCOME: usize = 108;
+/// The Talk key menu: ID_KEY + the index in hotkey::CHOICES.
+pub const ID_KEY: usize = 120;
 
 /// What the meeting part of the menu offers.
 pub struct MeetingMenu {
@@ -105,7 +107,7 @@ impl Tray {
         }
     }
 
-    pub fn menu(&self, hwnd: HWND, lines: &[String], meeting: &MeetingMenu) {
+    pub fn menu(&self, hwnd: HWND, lines: &[String], meeting: &MeetingMenu, talk_key: u32) {
         unsafe {
             let Ok(menu) = CreatePopupMenu() else { return };
             for line in lines {
@@ -113,6 +115,14 @@ impl Tray {
                 let _ = AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, windows::core::PCWSTR(w.as_ptr()));
             }
             let _ = AppendMenuW(menu, MF_STRING, ID_WELCOME, windows::core::w!("How to use Larynx"));
+            if let Ok(keys) = CreatePopupMenu() {
+                for (i, vk) in super::hotkey::CHOICES.iter().enumerate() {
+                    let name: Vec<u16> = super::hotkey::key_name(*vk).encode_utf16().chain(std::iter::once(0)).collect();
+                    let flags = if *vk == talk_key { MF_STRING | MF_CHECKED } else { MF_STRING };
+                    let _ = AppendMenuW(keys, flags, ID_KEY + i, windows::core::PCWSTR(name.as_ptr()));
+                }
+                let _ = AppendMenuW(menu, MF_POPUP, keys.0 as usize, windows::core::w!("Talk key"));
+            }
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
             let start = if meeting.recording { windows::core::w!("Stop recording this meeting") } else { windows::core::w!("Start recording this meeting") };
             let _ = AppendMenuW(menu, if meeting.busy { MF_STRING | MF_GRAYED } else { MF_STRING }, ID_MEETING, start);

@@ -78,6 +78,21 @@ pub fn open(key: &str, state: State) {
     focus_try_box();
 }
 
+/// The talk key changed: the instructions name the new one.
+pub fn set_key(key: &str) {
+    let hwnd = WELCOME.with(|w| {
+        let mut w = w.borrow_mut();
+        let i = w.as_mut()?;
+        i.key = key.to_string();
+        Some(i.hwnd)
+    });
+    if let Some(h) = hwnd {
+        unsafe {
+            let _ = InvalidateRect(Some(h), None, false);
+        }
+    }
+}
+
 pub fn is_open() -> bool {
     WELCOME.with(|w| w.borrow().is_some())
 }
@@ -222,7 +237,7 @@ fn words(state: &State, key: &str) -> (String, String, String) {
         State::Ready => (
             format!("Ready. Hold {key} and talk."),
             format!(
-                "1.  Click where you want the words to go, in any app.\n2.  Hold the {key} key while you talk.\n3.  Let go. Your words appear, with the ums taken out.\n\nTry it in this box:"
+                "1.  Click where you want the words to go, in any app.\n2.  Hold the {key} key while you talk.\n3.  Let go. Your words appear, with the ums taken out.\n\nNo {key} on this keyboard? Right-click Larynx's icon in the tray and pick another Talk key.\nTry it in this box:"
             ),
             tray,
         ),

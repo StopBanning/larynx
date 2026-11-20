@@ -103,6 +103,38 @@ unsafe extern "system" fn hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRE
     unsafe { CallNextHookEx(None, code, wparam, lparam) }
 }
 
+/// The keys offered in the tray's Talk key menu. Caps Lock is left out on purpose: the key is never swallowed, so
+/// holding it would switch capitals on and off with every dictation.
+pub const CHOICES: &[u32] = &[0xA3, 0xA5, 0xA1];
+
+/// Changes the talk key while running.
+pub fn set_key(vk: u32) {
+    HELD.store(false, Ordering::SeqCst);
+    TALK.store(vk, Ordering::SeqCst);
+}
+
+/// The short name saved in talk-key.txt and accepted by --key.
+pub fn key_id(vk: u32) -> &'static str {
+    match vk {
+        0xA5 => "ralt",
+        0xA1 => "rshift",
+        _ => "rctrl",
+    }
+}
+
+fn saved_path() -> std::path::PathBuf {
+    crate::data_dir().join("talk-key.txt")
+}
+
+/// The talk key chosen in the tray last time, if any.
+pub fn saved() -> Option<u32> {
+    std::fs::read_to_string(saved_path()).ok().and_then(|s| parse_key(s.trim()))
+}
+
+pub fn save(vk: u32) {
+    let _ = std::fs::write(saved_path(), key_id(vk));
+}
+
 /// Starts the hook thread. `wake` is called after each event is queued (it posts a message to the app's window).
 pub fn start(vk: u32, tx: Sender<KeyEvent>, wake: Box<dyn Fn() + Send + Sync>) -> Result<(), String> {
     TALK.store(vk, Ordering::SeqCst);

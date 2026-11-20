@@ -126,6 +126,7 @@ struct App {
     log: Log,
     log_path: PathBuf,
     key_name: &'static str,
+    talk_key: u32,
     provider: String,
     last_text: String,
     last_latency: Option<f64>,
@@ -201,6 +202,9 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
         WM_COMMAND => match wparam.0 & 0xFFFF {
             tray::ID_QUIT => unsafe { PostQuitMessage(0) },
             tray::ID_WELCOME => with_app(|a| a.show_welcome()),
+            id if (tray::ID_KEY..tray::ID_KEY + hotkey::CHOICES.len()).contains(&id) => {
+                with_app(|a| a.choose_key(hotkey::CHOICES[id - tray::ID_KEY]))
+            }
             tray::ID_COPY_LAST => with_app(|a| {
                 if !a.last_text.is_empty() {
                     insert::copy_only(&a.last_text);
@@ -240,6 +244,19 @@ impl App {
         v
     }
 
+    /// A new talk key from the tray: used at once, remembered for next time, and shown everywhere it is named.
+    fn choose_key(&mut self, vk: u32) {
+        hotkey::set_key(vk);
+        hotkey::save(vk);
+        self.talk_key = vk;
+        self.key_name = hotkey::key_name(vk);
+        self.log.write(serde_json::json!({"event": "talk_key", "key": hotkey::key_id(vk)}));
+        if self.engine.is_some() {
+            self.tray.set(&format!("Larynx: hold {} to talk", self.key_name), true);
+        }
+        welcome::set_key(self.key_name);
+    }
+
     fn show_welcome(&mut self) {
         welcome::open(self.key_name, self.welcome.clone());
     }
@@ -258,7 +275,7 @@ impl App {
             busy: self.meeting_busy,
             can_retry: meet::latest_without_notes().is_some(),
         };
-        self.tray.menu(self.hwnd, &self.status_lines(), &meeting);
+        self.tray.menu(self.hwnd, &self.status_lines(), &meeting, self.talk_key);
     }
 
     fn show(&mut self, show: Show) {
@@ -739,7 +756,8 @@ pub fn run(args: &Args) -> Result<(), String> {
         let _ = std::fs::write(&log_path, t);
     }
     let mut log = Log { file: std::fs::OpenOptions::new().create(true).append(true).open(&log_path).ok(), words: args.has("log") };
-    let vk = args.flag("key").and_then(hotkey::parse_key).unwrap_or(0xA3);
+    // --key (tests, power users), else the key chosen in the tray last time, else Right Ctrl.
+    let vk = args.flag("key").and_then(hotkey::parse_key).or_else(hotkey::saved).unwrap_or(0xA3);
     let feed = match args.flag("feed") {
         Some(p) => Some(wav::read(std::path::Path::new(p))?),
         None => None,
@@ -798,6 +816,7 @@ pub fn run(args: &Args) -> Result<(), String> {
         log,
         log_path: log_path.clone(),
         key_name: hotkey::key_name(vk),
+        talk_key: vk,
         provider: String::new(),
         last_text: String::new(),
         last_latency: None,

@@ -16,6 +16,13 @@ if (-not $core) { $core = Get-ChildItem $roots -Recurse -Filter swiftCore.dll -E
 if (-not $core) { throw "Swift runtime not found under $roots" }
 Write-Host "Swift runtime: $($core.Directory)"
 Get-ChildItem $core.Directory -Filter *.dll | Copy-Item -Destination $Dist
+# The Visual C++ runtime that larynx.exe, ONNX Runtime and the Swift runtime all link against. Every CI machine has
+# it installed; a home PC may not, and without it the app silently fails to start. Microsoft allows shipping these
+# next to the app ("app-local" deployment of the VC++ redistributable).
+foreach ($dll in "vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll") {
+  $src = Join-Path "$env:SystemRoot\System32" $dll
+  if ((Test-Path $src) -and -not (Test-Path (Join-Path $Dist $dll))) { Copy-Item $src $Dist }
+}
 Get-ChildItem $Dist -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
 $mb = [math]::Round(((Get-ChildItem $Dist -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
 Write-Host "dist size: $mb MB"

@@ -545,7 +545,7 @@ pub fn run_welcome(args: &Args) -> Result<(), String> {
     let mut shot = false;
     let ready = wait_for(900.0, || {
         console |= console_visible();
-        if !shot && launched.elapsed() > Duration::from_secs(4) {
+        if !shot && launched.elapsed() > Duration::from_millis(800) {
             shot = true;
             let _ = screenshot(&out_abs.join("welcome-downloading.bmp"));
         }
@@ -581,6 +581,16 @@ pub fn run_welcome(args: &Args) -> Result<(), String> {
     let check = Check { notepad: welcome, edit, seconds, expect: &expect, reject: &reject, out_dir: &out_abs };
     report.insert("practice_box".into(), check.dictate("practice box", &mut failures));
     let _ = screenshot(&out_abs.join("welcome-after.bmp"));
+
+    // The Talk key menu: picking Right Alt is used and remembered (laptops without a Right Ctrl need it).
+    post_to_app(super::tray::ID_KEY + 1)?;
+    let picked = wait_for(5.0, || log_events(&log).iter().any(|e| e["event"] == "talk_key" && e["key"] == "ralt"));
+    let saved = std::fs::read_to_string(data.join("talk-key.txt")).unwrap_or_default();
+    if picked.is_none() || saved.trim() != "ralt" {
+        failures.push(format!("choosing Right Alt as the talk key didn't take (saved: {saved:?})"));
+    }
+    post_to_app(super::tray::ID_KEY)?; // back to Right Ctrl
+    wait_for(5.0, || std::fs::read_to_string(data.join("talk-key.txt")).map(|s| s.trim() == "rctrl").unwrap_or(false));
 
     // Closing the window leaves Larynx running; starting it again brings the window back.
     unsafe {
