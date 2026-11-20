@@ -70,6 +70,23 @@ pub fn make_icon(size: i32, busy: bool) -> HICON {
     }
 }
 
+/// The app's own icon (packaging/larynx.ico, embedded by build.rs) at `size` pixels: the same mark as on the Mac.
+/// Falls back to the drawn mark if the build had no resources.
+pub fn app_icon(size: i32) -> HICON {
+    unsafe {
+        let instance = windows::Win32::System::LibraryLoader::GetModuleHandleW(None).ok();
+        match LoadImageW(instance.map(|m| m.into()), windows::core::PCWSTR(1 as *const u16), IMAGE_ICON, size, size, LR_DEFAULTCOLOR) {
+            Ok(h) if !h.is_invalid() => HICON(h.0),
+            _ => make_icon(size, false),
+        }
+    }
+}
+
+/// The tray's size for an icon on this screen.
+fn tray_size() -> i32 {
+    unsafe { GetSystemMetrics(SM_CXSMICON) }.max(16)
+}
+
 pub struct Tray {
     data: NOTIFYICONDATAW,
 }
@@ -82,7 +99,7 @@ impl Tray {
             uID: 1,
             uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP,
             uCallbackMessage: CALLBACK,
-            hIcon: make_icon(32, true),
+            hIcon: app_icon(tray_size()),
             ..Default::default()
         };
         copy_wide(&mut data.szTip, tip);
@@ -101,7 +118,11 @@ impl Tray {
 
     pub fn set(&mut self, tip: &str, ready: bool) {
         copy_wide(&mut self.data.szTip, tip);
-        self.data.hIcon = make_icon(32, !ready);
+        // The same mark while loading and when ready; the tooltip says which.
+        let _ = ready;
+        if self.data.hIcon.is_invalid() {
+            self.data.hIcon = app_icon(tray_size());
+        }
         unsafe {
             let _ = Shell_NotifyIconW(NIM_MODIFY, &self.data);
         }

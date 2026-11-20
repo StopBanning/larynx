@@ -71,6 +71,17 @@ pub fn decide(build: u32, high_contrast: bool, test: Option<&str>) -> Look {
 
 /// Puts the window on glass where Windows can, and says what it got.
 pub fn apply(hwnd: HWND) -> Look {
+    apply_margins(hwnd, MARGINS { cxLeftWidth: -1, cxRightWidth: -1, cyTopHeight: -1, cyBottomHeight: -1 })
+}
+
+/// Glass over the top `top` pixels of the window only (and its title bar), the rest a normal opaque window. For
+/// windows with standard controls in them (a text box), which GDI draws without alpha and would come out
+/// see-through on glass.
+pub fn apply_top(hwnd: HWND, top: i32) -> Look {
+    apply_margins(hwnd, MARGINS { cxLeftWidth: 0, cxRightWidth: 0, cyTopHeight: top, cyBottomHeight: 0 })
+}
+
+fn apply_margins(hwnd: HWND, margins: MARGINS) -> Look {
     let want = decide(build(), high_contrast(), std::env::var("LARYNX_TEST_GLASS").ok().as_deref());
     let mut got = Look::default();
     let set = |attr: DWMWINDOWATTRIBUTE, value: &i32| unsafe {
@@ -84,8 +95,7 @@ pub fn apply(hwnd: HWND) -> Look {
     }
     if want.glass {
         // The frame over the whole window, so what the panel leaves clear shows the backdrop.
-        let all = MARGINS { cxLeftWidth: -1, cxRightWidth: -1, cyTopHeight: -1, cyBottomHeight: -1 };
-        got.glass = unsafe { DwmExtendFrameIntoClientArea(hwnd, &all).is_ok() } && set(DWMWA_SYSTEMBACKDROP_TYPE, &DWMSBT_TRANSIENTWINDOW.0);
+        got.glass = unsafe { DwmExtendFrameIntoClientArea(hwnd, &margins).is_ok() } && set(DWMWA_SYSTEMBACKDROP_TYPE, &DWMSBT_TRANSIENTWINDOW.0);
         if !got.glass {
             let none = MARGINS::default();
             let _ = unsafe { DwmExtendFrameIntoClientArea(hwnd, &none) };
