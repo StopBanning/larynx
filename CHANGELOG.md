@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Stray letters from a stumble are gone.** When a word is started and restarted, the speech model sometimes writes the start as a lone letter: "walked o over to", "maybe b as biking". The letter now goes ("walked over to", "maybe biking"); labels like "plan b" and "vitamin d" stay. The rule ran in shadow first, and all 13 of its proposals on the developer's real dictations were right.
+
 - **"Hey Dad" gets its capital.** Dad, Mom, Grandma and the like are capitalized when you speak to them: after a greeting or thanks ("Hey Dad", "Thanks, Mom") or at the end of a sentence ("pretty quick, Dad."). "My dad" stays lowercase. 6 of the developer's real dictations change, all to the right form.
 
 - **Windows: a first start you can see.** Starting Larynx on Windows used to show only a tray icon while it downloaded 670 MB, so it looked like nothing happened. Now a welcome window opens on Windows' own glass, with the Larynx icon: the download with a progress bar, then how to talk and a box to try it in, or what went wrong in plain words. The tray icon and a second start bring it back. Also new on Windows: Larynx's own icon and name on `larynx.exe`, a Talk key choice in the tray (Right Ctrl, Right Alt or Right Shift) for keyboards without a Right Ctrl, the Visual C++ runtime shipped beside the app so it starts on PCs without it, and a download that resumes properly if it was cut off. CI now tests the whole first start and dictating into a web page in Edge.

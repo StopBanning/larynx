@@ -81,7 +81,6 @@ public enum Tidy {
     /// `shadow:<name>` step, and `larynx mine --shadow` lists them. A rule moves into `apply` once its proposals on
     /// real dictations have been read and are right (PLAN-v1 B1: every risky rule goes through here first).
     public static let shadowRules: [(name: String, apply: (String) -> String)] = [
-        ("lone-letter", loneLetterRestarts),
         ("spoken-list", spokenList),
         ("counted-list", countedList),
         ("spoken-punctuation", spokenPunctuation),
@@ -162,6 +161,18 @@ public enum Tidy {
     /// drops the "f". Not when it labels something ("plan b", "vitamin d", "the letter s") or the word follows at once
     /// ("the b branch").
     static func loneLetterRestarts(_ text: String) -> String {
+        // A stutter heard as "b as b biking" / "h as half": the letter, an "as", and the word it starts. Not after a
+        // label ("plan b as backup").
+        var text = text
+        if let stammer = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+as\\s+(?:\\1\\s+)?(?=\\1[a-z]{2,})") {
+            for m in stammer.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+                guard let whole = Range(m.range, in: text) else { continue }
+                let before = text[..<whole.lowerBound].split(whereSeparator: \.isWhitespace).last
+                    .map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) } ?? ""
+                if letterLabels.contains(before) { continue }
+                text.removeSubrange(whole)
+            }
+        }
         guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+((?:[\\w']+\\s+){1,2})(?=\\1[a-z])") else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
@@ -272,6 +283,9 @@ public enum Tidy {
         s = stutterRestarts(s)
         // 1e1b. A lone letter right before the word it starts: "that k kids" -> "that kids".
         s = letterRestarts(s)
+        // 1e1c. A lone letter that starts a word said a little later: "walked o over to" -> "walked over to", "we w we
+        // can" -> "we we can" (the repeat goes next). Ran in shadow first; its 13 proposals on real dictations were all right.
+        s = loneLetterRestarts(s)
         // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
         // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
         s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)

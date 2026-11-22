@@ -146,18 +146,25 @@ private let withoutNumbers = Settings.Snapshot(values: [.numbersStage: "off"])
 }
 
 @Test func shadowRulesRecordProposalsButNeverChangeTheText() async {
-    let input = "We can b maybe borrow it tomorrow."
+    let input = "Send it over tomorrow question mark"
     let result = await Pipeline().run(transcript(input, mode: .ai), context: .init(rewrite: false))
     #expect(result.text == input)
-    let shadow = result.steps.first { $0.stage == "shadow:lone-letter" }
+    let shadow = result.steps.first { $0.stage == "shadow:spoken-punctuation" }
     #expect(shadow?.applied == false)
-    #expect(shadow?.after == "We can maybe borrow it tomorrow.")
+    #expect(shadow?.after == "Send it over tomorrow?")
     // Nothing to propose: no shadow step at all.
     let plain = await Pipeline().run(transcript("We should go with plan b because it is cheaper.", mode: .ai), context: .init(rewrite: false))
     #expect(!plain.steps.contains { $0.stage.hasPrefix("shadow:") })
-    for keep in ["Take vitamin d daily for a week.", "Press k to keep it.", "It is in the b branch, so check that branch.", "x and y are both broken."] {
+}
+
+/// The lone-letter rule left shadow on Nov 22 (its 13 proposals on real dictations were all right): it now changes the
+/// text, and still leaves labels alone.
+@Test func loneLetterStumblesAreRemovedButLabelsStay() async {
+    let result = await Pipeline().run(transcript("We can b maybe borrow it tomorrow.", mode: .ai), context: .init(rewrite: false))
+    #expect(result.text == "We can maybe borrow it tomorrow.")
+    for keep in ["Take vitamin d daily for a week.", "Press k to keep it.", "It is in the b branch, so check that branch.", "Both x and y are broken."] {
         let r = await Pipeline().run(transcript(keep, mode: .ai), context: .init(rewrite: false))
-        #expect(!r.steps.contains { $0.stage.hasPrefix("shadow:") }, "\(keep)")
+        #expect(r.text == keep, "\(keep)")
     }
 }
 

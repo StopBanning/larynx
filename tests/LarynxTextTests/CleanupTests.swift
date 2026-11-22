@@ -236,6 +236,16 @@ private struct Cases: Decodable {
     #expect(ai("Ham, the porch light is out again.") == "The porch light is out again.")
 }
 
+@Test func loneLetterStumblesGo() {
+    func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(c("Maybe b as b biking is faster.") == "Maybe biking is faster.")
+    #expect(c("Give h as half the cake to Sam.") == "Give half the cake to Sam.")
+    #expect(c("She walked o over to the shop.") == "She walked over to the shop.")
+    #expect(c("Sure, we w we can leave now.") == "Sure, we can leave now.")
+    #expect(c("Keep plan b as backup.") == "Keep plan b as backup.")                  // a label
+    #expect(c("Take vitamin d daily.") == "Take vitamin d daily.")
+}
+
 @Test func familyNamesGetACapitalWhenSpokenTo() {
     func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
     #expect(c("Hey dad, the parcel came today.") == "Hey Dad, the parcel came today.")
