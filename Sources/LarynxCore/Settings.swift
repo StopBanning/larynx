@@ -14,7 +14,7 @@ public final class Settings: @unchecked Sendable {
     public enum Key: String, CaseIterable, Sendable {
         case engine, rewrite, vocabulary, vocabularyRoots, devTerms, preview, learn, keys, loginItemSet
         case history, historyDays, keepAudio, debugText, pillPosition, pillGlass, handsFree, toggleKeys, doubtHint, micWarm, verifyPaste, fitToField, context, onboarded, micDevice
-        case style, professionalKey, professionalSwearing
+        case style, professionalKey, professionalSwearing, stutterCleanup
         case meetingSummary, meetingClaude, meetingEmail, meetingMode, pillFont, alphabet
         case snippetStage = "stages.snippet"
         case dictionaryStage = "stages.dictionary"
@@ -40,6 +40,7 @@ public final class Settings: @unchecked Sendable {
             case .style: return "casual"
             case .professionalKey: return "none"
             case .professionalSwearing: return "remove"
+            case .stutterCleanup: return "normal"
             case .meetingSummary: return "auto"
             case .meetingClaude: return "opus"
             case .meetingEmail: return ""
@@ -65,6 +66,7 @@ public final class Settings: @unchecked Sendable {
             case .style: return ["casual", "professional", "texting"].contains(value)
             case .professionalKey: return value == "none" || Hotkey.Key(rawValue: value) != nil
             case .professionalSwearing: return ["remove", "keep"].contains(value)
+            case .stutterCleanup: return StutterCleanup(rawValue: value) != nil
             case .meetingSummary: return ["auto", "claude", "on-device", "private-cloud"].contains(value)
             case .meetingClaude: return ["sonnet", "opus"].contains(value)
             case .meetingEmail: return value.isEmpty || (value.contains("@") && !value.contains(" "))

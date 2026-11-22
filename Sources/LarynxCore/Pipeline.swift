@@ -98,7 +98,8 @@ public struct Pipeline {
             var result = input
             if context.tidy {
                 result.text = Tidy.apply(input.text, mode: input.mode, style: context.style,
-                                         keepSwearing: context.settings.string(.professionalSwearing) == "keep")
+                                         keepSwearing: context.settings.string(.professionalSwearing) == "keep",
+                                         stutter: StutterCleanup(rawValue: context.settings.string(.stutterCleanup)) ?? .normal)
             }
             return result
         },

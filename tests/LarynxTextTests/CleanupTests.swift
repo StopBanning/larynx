@@ -290,3 +290,18 @@ private struct Cases: Decodable {
     #expect(p("Well over half of them replied.") == "Well over half of them replied.")
     #expect(Tidy.apply("Well, the meeting moved to Friday.", mode: .correspondence) == "Well, the meeting moved to Friday.")  // casual keeps it
 }
+
+@Test func strongStutterCleanupOnlyWhenTurnedOn() {
+    func n(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    func strong(_ s: String) -> String { Tidy.apply(s, mode: .correspondence, stutter: .strong) }
+    // A cut-off word said twice, never finished, and a two-word phrase said twice.
+    #expect(strong("We are packing and cle uh to cle to leave soon.") == "We are packing and to leave soon.")
+    #expect(strong("Ride on a on a bike.") == "Ride on a bike.")
+    #expect(strong("She sent it she sent it twice.") == "She sent it twice.")
+    // The standard rules leave them.
+    #expect(n("We are packing and cle uh to cle to leave soon.") == "We are packing and cle to cle to leave soon.")
+    // Meant repeats stay, even when strong.
+    #expect(strong("Row row row row your boat.") == "Row row row row your boat.")
+    #expect(strong("We had had enough.") == "We had had enough.")
+    #expect(strong("Bye bye now.") == "Bye bye now.")
+}

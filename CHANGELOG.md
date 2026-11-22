@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Strong stutter cleanup, for people who stutter.** A new setting (Settings › Cleanup, or `stutterCleanup: strong`) also removes restarts the standard rules leave: a cut-off word said twice and never finished ("packing and cle to cle to leave" becomes "packing and to leave"), and a two- or three-word phrase said twice in a row. One word said over and over ("no no no") stays. It is off by default, because it can now and then drop a word someone meant; on the developer's 3,007 dictations it changes 2, both right.
+
+
 - **Stray letters from a stumble are gone.** When a word is started and restarted, the speech model sometimes writes the start as a lone letter: "walked o over to", "maybe b as biking". The letter now goes ("walked over to", "maybe biking"); labels like "plan b" and "vitamin d" stay. The rule ran in shadow first, and all 13 of its proposals on the developer's real dictations were right.
 
 - **"Hey Dad" gets its capital.** Dad, Mom, Grandma and the like are capitalized when you speak to them: after a greeting or thanks ("Hey Dad", "Thanks, Mom") or at the end of a sentence ("pretty quick, Dad."). "My dad" stays lowercase. 6 of the developer's real dictations change, all to the right form.

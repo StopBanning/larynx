@@ -225,6 +225,9 @@ private struct CleanupPane: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Cleanup") {
+                Toggle("Strong stutter cleanup", isOn: onOff(.stutterCleanup, on: "strong", off: "normal"))
+                Text("For people who stutter: also removes restarts the standard rules leave, like a cut-off word said twice. It can now and then drop a word you meant, so it is off unless you turn it on.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("AI rewrite for corrections in Mail and Messages (Apple's on-device model)", isOn: onOff(.rewrite, on: "auto"))
                 Toggle("Fit dictations to the text already in the field", isOn: onOff(.fitToField))
                 Toggle("Check each paste arrived, and insert another way if it didn't", isOn: onOff(.verifyPaste))

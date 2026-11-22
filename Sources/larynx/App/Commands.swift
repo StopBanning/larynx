@@ -559,16 +559,17 @@ case "golden":
 case "tidy":
     let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
     let style = option("--style").flatMap(Style.init(rawValue:)) ?? .casual
+    let stutter = option("--stutter").flatMap(StutterCleanup.init(rawValue:)) ?? .normal
     // --stdin: one JSON string per line in, the tidied JSON string per line out (for checking a rule against many).
     if args.contains("--stdin") {
         while let line = readLine() {
             guard let data = line.data(using: .utf8), let text = try? JSONDecoder().decode(String.self, from: data) else { print("null"); continue }
-            let out = Tidy.apply(text, mode: mode, style: style)
+            let out = Tidy.apply(text, mode: mode, style: style, stutter: stutter)
             print(String(decoding: try! JSONEncoder().encode(out), as: UTF8.self))
         }
         exit(0)
     }
-    let tidied = Tidy.apply(args.last ?? "", mode: mode, style: style)
+    let tidied = Tidy.apply(args.last ?? "", mode: mode, style: style, stutter: stutter)
     print(tidied)
     // --shadow: also what each shadow rule would make of it.
     if args.contains("--shadow") {

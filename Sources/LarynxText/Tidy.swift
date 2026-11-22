@@ -11,6 +11,13 @@ public enum Style: String, Codable, Sendable, CaseIterable {
     case casual, professional, texting
 }
 
+/// How hard to look for stutters. `normal` is what every rule has to pass: checked on outside speech as well as the
+/// dictations it came from. `strong` adds patterns from one speaker with a stutter that are right for that speaker but
+/// could now and then cut a word someone else meant; it is off unless the user turns it on.
+public enum StutterCleanup: String, Codable, Sendable, CaseIterable {
+    case normal, strong
+}
+
 public enum CleanupMode: String, Codable, Sendable {
     /// AI chats, terminals, code editors: the model reading it doesn't care about polish. Light tidy, no added period.
     case ai
@@ -185,6 +192,35 @@ public enum Tidy {
         return s
     }
 
+    // MARK: Strong stutter cleanup
+
+    /// Patterns that only run with `StutterCleanup.strong`: right for a speaker who stutters, too eager for everyone.
+    static func strongStutters(_ text: String) -> String {
+        var s = text
+        // A cut-off word said twice with the same words after it, never finished: "and cle to cle to leave" ->
+        // "and to leave". The fragment is not a word but starts one, so it was a word abandoned twice.
+        if let re = try? NSRegularExpression(pattern: "(?i)(?<![\\w'-])([a-z]{2,6})\\s+((?:[\\w']+\\s+){0,2}[\\w']+)[,.]?\\s+\\1\\s+(?=\\2\\b)") {
+            for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
+                guard let whole = Range(m.range, in: s), let frag = Range(m.range(at: 1), in: s) else { continue }
+                let word = String(s[frag])
+                if BundledWordList.shared.contains(word) || !BundledWordList.shared.startsAWord(word) { continue }
+                s.removeSubrange(whole)
+            }
+        }
+        // A phrase of two or three words said twice in a row: "ride on a on a bike" -> "ride on a bike". (The normal rules
+        // leave doubles of two-word phrases with no comma between them, because some are meant.)
+        // Not one word said over and over ("row row row row"): that is meant.
+        if let re = try? NSRegularExpression(pattern: "(?i)(?<![\\w'])((?:[\\w']+\\s+){1,2}[\\w']+)\\s+\\1(?![\\w'])") {
+            for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
+                guard let whole = Range(m.range, in: s), let first = Range(m.range(at: 1), in: s) else { continue }
+                let phrase = String(s[first])
+                if Set(phrase.lowercased().split(separator: " ")).count < 2 { continue }
+                s.replaceSubrange(whole, with: phrase)
+            }
+        }
+        return s
+    }
+
     /// Words before a lone letter that make it a label, not a stumble: "plan b", "vitamin d", "press k".
     static let letterLabels: Set<String> = ["plan", "vitamin", "letter", "option", "grade", "type", "class", "section", "part",
         "step", "row", "column", "size", "model", "version", "level", "tier", "group", "team", "line", "the", "a", "press", "hit",
@@ -227,7 +263,8 @@ public enum Tidy {
     /// Joins the copies of a chant ("No way, no way, no way.") so the repeat rules leave it; removed before the end.
     static let chantMark = "\u{2060}"
 
-    public static func apply(_ text: String, mode: CleanupMode, style: Style = .casual, keepSwearing: Bool = false) -> String {
+    public static func apply(_ text: String, mode: CleanupMode, style: Style = .casual, keepSwearing: Bool = false,
+                             stutter: StutterCleanup = .normal) -> String {
         var s = text
         // 0a. "New paragraph." / "new line," said as its own phrase between sentence boundaries ("A new line of
         // shoes" stays). Marked now, turned into line breaks after the spacing rules.
@@ -286,6 +323,8 @@ public enum Tidy {
         // 1e1c. A lone letter that starts a word said a little later: "walked o over to" -> "walked over to", "we w we
         // can" -> "we we can" (the repeat goes next). Ran in shadow first; its 13 proposals on real dictations were all right.
         s = loneLetterRestarts(s)
+        // 1e1d. Strong stutter cleanup, only when turned on.
+        if stutter == .strong { s = strongStutters(s) }
         // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
         // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
         s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)
