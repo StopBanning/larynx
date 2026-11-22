@@ -236,6 +236,18 @@ private struct Cases: Decodable {
     #expect(ai("Ham, the porch light is out again.") == "The porch light is out again.")
 }
 
+@Test func familyNamesGetACapitalWhenSpokenTo() {
+    func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(c("Hey dad, the parcel came today.") == "Hey Dad, the parcel came today.")
+    #expect(c("Thanks mom for the soup.") == "Thanks Mom for the soup.")
+    #expect(c("The train was quick, dad.") == "The train was quick, Dad.")
+    #expect(c("Love you grandma.") == "Love you Grandma.")
+    #expect(c("My dad fixed the fence.") == "My dad fixed the fence.")                // not a name here
+    #expect(c("We visited your mom on Sunday.") == "We visited your mom on Sunday.")
+    #expect(c("I called my sister, mom and the plumber.") == "I called my sister, mom and the plumber.")
+    #expect(Tidy.apply("hey dad", mode: .ai) == "Hey dad")                         // AI mode leaves it
+}
+
 @Test func prepositionEndingAPhraseKeepsItsComma() {
     func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
     #expect(c("Ask them what they argued about, without raising your voice.") == "Ask them what they argued about, without raising your voice.")

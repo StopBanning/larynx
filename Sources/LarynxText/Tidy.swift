@@ -362,6 +362,9 @@ public enum Tidy {
         s = capitalizeSentences(s)
         // 5b. Days of the week are names ("friday" is "Friday"). Not in AI mode, where the text may be code.
         if mode != .ai { s = capitalizeWeekdays(s) }
+        // 5c. "Dad", "Mom" and the like used as a name, when you speak to them: "Hey Dad", "Thanks, Mom", "pretty
+        // quick, Dad." "My dad" stays as it is.
+        if mode != .ai { s = capitalizeFamilyNames(s) }
         // 6. Text for people ends like a sentence.
         if mode.isForPeople, let last = s.last, !".!?:)\"'".contains(last), !emailSignedOff(s) { s += "." }
         // 7. Professional: a list you said ("first..., second...", "three things: a, b and c") becomes a real one.
@@ -426,6 +429,33 @@ public enum Tidy {
         for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
             guard let a = Int(ns.substring(with: m.range(at: 1))), let b = Int(ns.substring(with: m.range(at: 2))), a < b else { continue }
             out = (out as NSString).replacingCharacters(in: m.range, with: "\(a) to \(b) ")
+        }
+        return out
+    }
+
+    static let familyNames = "dad|mom|mum|mommy|mummy|daddy|grandma|grandpa|granny|nana|papa|mama"
+
+    /// Capitalizes a family word used as a name in address: after a greeting or thanks ("hey dad" -> "hey Dad", "love
+    /// you mom" -> "love you Mom"), or spoken to at the end of a clause (", dad." -> ", Dad."). Only those two
+    /// places, so "my dad", "your mom" and "a dad" are never touched.
+    static func capitalizeFamilyNames(_ text: String) -> String {
+        let greet = "hey|hi|hello|thanks|thank you|love you|bye|goodbye|morning|good morning|good night|night|sorry|congrats|happy birthday|yes|okay|ok"
+        let patterns = [
+            "(?i)(?<![\\w'])(?:\(greet)),?\\s+(\(familyNames))(?![\\w'])",
+            "(?i),\\s*(\(familyNames))(?=\\s*(?:[.!?,]|$))",
+        ]
+        var out = text
+        for p in patterns {
+            guard let re = try? NSRegularExpression(pattern: p) else { continue }
+            let ns = out as NSString
+            for m in re.matches(in: out, range: NSRange(location: 0, length: ns.length)).reversed() {
+                let r = m.range(at: 1)
+                let word = (out as NSString).substring(with: r)
+                // A possessive before the comma ("my mom, dad and I") is a list, not someone spoken to.
+                let before = (out as NSString).substring(to: m.range.location)
+                if p.hasPrefix("(?i),"), before.range(of: "(?i)\\b(?:my|your|his|her|our|their|the)\\s+\\w+$", options: .regularExpression) != nil { continue }
+                out = (out as NSString).replacingCharacters(in: r, with: word.prefix(1).uppercased() + word.dropFirst())
+            }
         }
         return out
     }
