@@ -127,8 +127,14 @@ and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
 - The notes are the Mac's: the same Claude request, schema and `verify()`, through Windows' own `curl.exe` (the tool
   `larynx setup` already uses), with the key going in on standard input. The key lives in Windows Credential Manager:
   right-click → **Set Claude key…**. Claude Code (`claude.exe`, signed in to a Claude plan) is used first when it is
-  installed, the same as on the Mac. If the notes fail, the transcript is saved and the menu offers **Write the summary
-  again**.
+  installed, the same as on the Mac. **Gemini** (added Nov 23, for a tester whose work allows Gemini or Copilot, not
+  Claude): right-click → **Set Gemini key…** (a free key from aistudio.google.com) and Gemini writes the notes with the
+  same instructions, schema and `verify()` (`gemini_notes`, generateContent with `responseJsonSchema`; model
+  `gemini-flash-latest`, or `LARYNX_GEMINI_MODEL`). The order is Claude Code, the Claude key, then Gemini; Gemini also
+  steps in when Claude fails (a plan's 5-hour limit, say). Copilot has no API for this, so every meeting page has
+  **Copy for Copilot or Gemini**: the same instructions and the transcript as one message, with buttons that open
+  Copilot and Gemini to paste it into. With no AI set up at all, the page says to use that button. If the notes fail,
+  the transcript is saved and the menu offers **Write the summary again**.
 - "Email this to me" fills in the address in `%LOCALAPPDATA%\Larynx\meetings\email.txt` (or `LARYNX_MEETING_EMAIL`).
 - CI speaks the scripted client call with Windows' voices into two tracks, runs `larynx-cli meeting you.wav call.wav
   --save` against a stand-in for the API, and checks both sides, the request and the saved page.

@@ -99,6 +99,7 @@ pub fn entry(app: bool) {
         "setup" => setup(&args),
         "meeting-notes" => meeting_notes(&args),
         "set-claude-key" => set_claude_key(),
+        "set-gemini-key" => set_gemini_key(),
         #[cfg(feature = "asr")]
         "meeting" => bench::meeting(&args),
         #[cfg(feature = "asr")]
@@ -132,7 +133,7 @@ pub fn entry(app: bool) {
 fn meeting_notes(args: &Args) -> Result<(), String> {
     let path = args.positional.get(1).ok_or("usage: larynx meeting-notes <meeting.json> [--save]")?;
     let mut m = meeting::load(std::path::Path::new(path))?;
-    let notes = meeting::notes_by_claude(&m, meeting::claude_code_path().as_deref(), credential::claude_key().as_deref(), &meeting::curl_post, &meeting::sleep_seconds)
+    let notes = meeting::write_notes_any(&m, meeting::claude_code_path().as_deref(), credential::claude_key().as_deref(), credential::gemini_key().as_deref(), &meeting::curl_post, &meeting::sleep_seconds)
         .map_err(|e| e.to_string())?;
     println!("{}", serde_json::to_string_pretty(&notes).map_err(|e| e.to_string())?);
     if args.has("save") {
@@ -149,6 +150,14 @@ pub fn meeting_email() -> String {
         .or_else(|| std::fs::read_to_string(meeting::folder().join("email.txt")).ok())
         .map(|s| s.trim().to_string())
         .unwrap_or_default()
+}
+
+fn set_gemini_key() -> Result<(), String> {
+    let mut key = String::new();
+    std::io::stdin().read_line(&mut key).map_err(|e| e.to_string())?;
+    credential::save_gemini(key.trim())?;
+    println!("{}", if key.trim().is_empty() { "Gemini key removed." } else { "Gemini key saved. Meeting notes will be written by Gemini when Claude isn't set up." });
+    Ok(())
 }
 
 fn set_claude_key() -> Result<(), String> {

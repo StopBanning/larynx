@@ -435,6 +435,9 @@ pub enum Failure {
     Api(u16, String),
     ClaudeCodeNotSignedIn,
     ClaudeCode(String),
+    /// No Claude Code, no Claude key and no Gemini key: nothing can write the notes.
+    NoWay,
+    Gemini(String),
 }
 
 impl std::fmt::Display for Failure {
@@ -450,6 +453,8 @@ impl std::fmt::Display for Failure {
             Failure::Api(status, message) => write!(f, "Claude returned an error ({status}): {message}"),
             Failure::ClaudeCodeNotSignedIn => write!(f, "Claude Code isn't signed in. Open Terminal, type claude, and sign in with the Claude account."),
             Failure::ClaudeCode(why) => write!(f, "Claude Code couldn't write the notes ({why})."),
+            Failure::NoWay => write!(f, "No AI is set up to write it. On the meeting's page, press Copy for Copilot or Gemini, then paste in either one, or right-click the Larynx icon and choose Set Gemini key."),
+            Failure::Gemini(why) => write!(f, "{why}"),
         }
     }
 }
@@ -722,6 +727,162 @@ pub fn notes_by_claude(
     }
 }
 
+/// Which Gemini writes the notes: `LARYNX_GEMINI_MODEL`, else Google's "latest Flash" alias (Google gives two weeks'
+/// notice before the alias moves, and Flash is on the free tier).
+pub fn gemini_model() -> String {
+    std::env::var("LARYNX_GEMINI_MODEL")
+        .ok()
+        .filter(|m| !m.trim().is_empty())
+        .unwrap_or_else(|| "gemini-flash-latest".into())
+}
+
+pub fn gemini_endpoint() -> String {
+    let base = std::env::var("LARYNX_GEMINI_URL")
+        .unwrap_or_else(|_| "https://generativelanguage.googleapis.com".into());
+    format!("{}/v1beta/models/{}:generateContent", base.trim_end_matches('/'), gemini_model())
+}
+
+/// The same instructions, transcript and notes shape as Claude's request, in Gemini's generateContent form.
+pub fn gemini_body(meeting: &Meeting) -> String {
+    let (system, user) = prompt(meeting);
+    json!({
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": user}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseJsonSchema": schema(),
+            "maxOutputTokens": 16000
+        }
+    })
+    .to_string()
+}
+
+/// Reads Gemini's reply: the notes' JSON is the text of the first candidate.
+pub fn parse_gemini(text: &str) -> Result<Notes, Failure> {
+    let v: Value = serde_json::from_str(text)
+        .map_err(|e| Failure::Malformed(format!("not JSON: {e}")))?;
+    if v["promptFeedback"]["blockReason"].is_string() {
+        return Err(Failure::Gemini("Gemini declined to write notes for this meeting.".into()));
+    }
+    let c = &v["candidates"][0];
+    match c["finishReason"].as_str().unwrap_or("STOP") {
+        "STOP" => {}
+        "MAX_TOKENS" | "CONTINUATION" => return Err(Failure::CutOff),
+        _ => return Err(Failure::Gemini("Gemini declined to write notes for this meeting.".into())),
+    }
+    let body: String = c["content"]["parts"]
+        .as_array()
+        .map(|parts| {
+            parts
+                .iter()
+                .filter(|p| p["thought"].as_bool() != Some(true))
+                .filter_map(|p| p["text"].as_str())
+                .collect()
+        })
+        .unwrap_or_default();
+    let body = body.trim();
+    let body = body
+        .strip_prefix("```json")
+        .or_else(|| body.strip_prefix("```"))
+        .map(|b| b.trim_end().trim_end_matches("```").trim())
+        .unwrap_or(body);
+    let inner: Value = serde_json::from_str(body)
+        .map_err(|e| Failure::Malformed(format!("the notes weren't JSON: {e}")))?;
+    if !inner.is_object() {
+        return Err(Failure::Malformed("the notes weren't an object".into()));
+    }
+    Ok(notes_from(&inner))
+}
+
+/// Notes from Gemini with the person's own key (from Google AI Studio): one request, retried twice when Gemini is
+/// busy or unreachable, then the same check against the transcript as Claude's.
+pub fn gemini_notes(
+    meeting: &Meeting,
+    key: &str,
+    post: Transport,
+    pause: &dyn Fn(f64),
+) -> Result<Notes, Failure> {
+    let meeting = meeting.naming_the_call();
+    if !meeting.segments.iter().any(|s| s.text.chars().any(char::is_alphabetic)) {
+        return Err(Failure::Malformed("there was nothing to summarize".into()));
+    }
+    let headers: Vec<(String, String)> = vec![
+        ("content-type".into(), "application/json".into()),
+        ("x-goog-api-key".into(), key.trim().into()),
+    ];
+    let request = gemini_body(&meeting);
+    let started = std::time::Instant::now();
+    let mut attempt = 0u32;
+    loop {
+        attempt += 1;
+        let (status, text, retry_after) = match post(&gemini_endpoint(), &headers, &request) {
+            Ok(r) => r,
+            Err(_) if attempt < 3 => {
+                pause((attempt * attempt) as f64 * 2.0);
+                continue;
+            }
+            Err(why) => return Err(Failure::Gemini(format!("Couldn't reach Gemini ({why}). Check the internet connection."))),
+        };
+        if status == 200 {
+            let mut notes = verify(parse_gemini(&text)?, &meeting);
+            notes.model = "gemini".into();
+            notes.seconds = started.elapsed().as_secs_f64();
+            return Ok(notes);
+        }
+        let err = serde_json::from_str::<Value>(&text).unwrap_or(Value::Null);
+        let message = err["error"]["message"].as_str().map(String::from)
+            .unwrap_or_else(|| text.chars().take(300).collect());
+        let bad_key = status == 401 || status == 403 || text.contains("API_KEY_INVALID");
+        match status {
+            _ if bad_key => return Err(Failure::Gemini("The Gemini key wasn't accepted. Right-click the Larynx icon and choose Set Gemini key.".into())),
+            402 => return Err(Failure::Gemini("The Gemini account is out of credit. Check it at aistudio.google.com.".into())),
+            408 | 429 | 500..=599 if attempt < 3 => {
+                pause(retry_after.unwrap_or((attempt * attempt) as f64 * 4.0).min(30.0));
+            }
+            429 => return Err(Failure::Gemini("Gemini's limit for now was reached. Try Write the summary again in a few minutes.".into())),
+            _ => return Err(Failure::Gemini(format!("Gemini returned an error ({status}): {message}"))),
+        }
+    }
+}
+
+/// Every way to write the notes, in order: Claude Code on the person's plan, then a Claude key, then a Gemini key.
+/// If Claude fails and a Gemini key is saved, Gemini writes them (a Claude plan's 5-hour limit, for one).
+pub fn write_notes_any(
+    meeting: &Meeting,
+    claude_code: Option<&Path>,
+    claude_key: Option<&str>,
+    gemini_key: Option<&str>,
+    post: Transport,
+    pause: &dyn Fn(f64),
+) -> Result<Notes, Failure> {
+    let has = |k: Option<&str>| k.map_or(false, |k| !k.trim().is_empty());
+    let gemini = gemini_key.filter(|k| !k.trim().is_empty());
+    if claude_code.is_some() || has(claude_key) {
+        match notes_by_claude(meeting, claude_code, claude_key, post, pause) {
+            Ok(n) => Ok(n),
+            Err(e) => match gemini {
+                Some(k) => gemini_notes(meeting, k, post, pause).map_err(|_| e),
+                None => Err(e),
+            },
+        }
+    } else {
+        match gemini {
+            Some(k) => gemini_notes(meeting, k, post, pause),
+            None => Err(Failure::NoWay),
+        }
+    }
+}
+
+/// The meeting as one message for any chat AI (Copilot, Gemini, ChatGPT): the same instructions as the notes request,
+/// asking for plain text, then the transcript. What "Copy for Copilot or Gemini" puts on the clipboard.
+pub fn ai_prompt(meeting: &Meeting) -> String {
+    let meeting = meeting.naming_the_call();
+    let (system, user) = prompt(&meeting);
+    format!(
+        "{system}\n\nWrite the notes as plain text with these parts: a short title; Summary; Decisions; To do (with who and by when, only if said); Still open.\n\n{user}"
+    )
+}
+
 fn blank_to_none(s: &str) -> Option<String> {
     let t = s.trim();
     let blank = t.is_empty()
@@ -992,9 +1153,11 @@ pub fn page_html(meeting: &Meeting, email: &str) -> String {
             section("Still open", &n.open_questions);
             if n.model == "claude" {
                 body += "<p class=quiet>Summary written by Claude.</p>";
+            } else if n.model == "gemini" {
+                body += "<p class=quiet>Summary written by Gemini.</p>";
             }
         }
-        None => body += "<p class=note>There's no summary for this meeting yet. Everything that was said is below. To try again, right-click the Larynx icon and choose Write the summary again.</p>",
+        None => body += "<p class=note>There's no summary for this meeting yet. Everything that was said is below. To have Copilot or Gemini write one, use the button just below. To try again here, right-click the Larynx icon and choose Write the summary again.</p>",
     }
     let said: String = meeting
         .segments
@@ -1022,22 +1185,28 @@ h1{{font-size:2em;line-height:1.2;margin:0 0 6px}} h2{{font-size:1.3em;margin:28
 .when{{color:#444;margin:0 0 22px}} .quiet{{color:#555;font-size:.8em}} .note{{background:#fff6d6;padding:14px 16px;border-radius:10px}}
 .buttons{{display:flex;gap:12px;flex-wrap:wrap}} button,a.button{{font:inherit;font-size:.95em;padding:12px 20px;border-radius:10px;border:2px solid #222;background:#fff;color:#111;cursor:pointer;text-decoration:none}}
 button:hover,a.button:hover{{background:#f0f0f0}} li{{margin:6px 0}} details{{margin-top:34px}} summary{{font-size:1.2em;font-weight:600;cursor:pointer}}
+.ai{{margin-top:30px;padding:4px 18px 16px;border:2px solid #ddd;border-radius:12px}} .ai p{{margin:6px 0 14px}} #copiedai{{color:#176b2c;font-weight:600}}
 .line{{margin:14px 0}} .who{{font-size:.75em;font-weight:600;color:#555}} #copied{{color:#176b2c;font-weight:600}}
-@media print{{.buttons{{display:none}} details{{display:block}}}}
+@media print{{.buttons,.ai{{display:none}} details{{display:block}}}}
 </style></head><body>
 <h1>{title}</h1><p class=when>{when} · {minutes} minute{s}</p>
 <div class=buttons><a class=button href="{mailto}">Email this to me</a><button onclick="copyNotes()">Copy</button><button onclick="window.print()">Print</button> <span id=copied></span></div>
 {body}
+<div class=ai><h2>Ask your own AI</h2><p>Copy this meeting, open Copilot or Gemini, click in its message box and paste (Ctrl+V). It asks for the same kind of summary. If Copilot says it's too long, use Gemini.</p>
+<div class=buttons><button onclick="copyText('forai','copiedai')">Copy for Copilot or Gemini</button><a class=button href="https://copilot.microsoft.com/" target=_blank rel=noopener>Open Copilot</a><a class=button href="https://gemini.google.com/app" target=_blank rel=noopener>Open Gemini</a> <span id=copiedai></span></div></div>
 <details><summary>Everything that was said</summary>{said}</details>
 <textarea id=plain style="position:absolute;left:-9999px">{plain}</textarea>
-<script>function copyNotes(){{var t=document.getElementById('plain').value;function done(){{document.getElementById('copied').textContent='Copied'}}
-if(navigator.clipboard){{navigator.clipboard.writeText(t).then(done,function(){{fallback()}})}}else{{fallback()}}
-function fallback(){{var a=document.getElementById('plain');a.select();document.execCommand('copy');done()}}}}</script>
+<textarea id=forai style="position:absolute;left:-9999px">{forai}</textarea>
+<script>function copyNotes(){{copyText('plain','copied')}}
+function copyText(id,say){{var a=document.getElementById(id);function done(){{document.getElementById(say).textContent='Copied'}}
+function fallback(){{a.select();document.execCommand('copy');done()}}
+if(navigator.clipboard){{navigator.clipboard.writeText(a.value).then(done,fallback)}}else{{fallback()}}}}</script>
 </body></html>"#,
         title = esc(&title),
         when = when_local(meeting.started, meeting.utc_offset),
         s = if minutes == 1 { "" } else { "s" },
         plain = esc(&plain(meeting)),
+        forai = esc(&ai_prompt(meeting)),
     )
 }
 
@@ -1321,6 +1490,73 @@ mod tests {
         let api = |_: &str, _: &[(String, String)], _: &str| Ok((200, reply(GOOD, "end_turn"), None));
         assert_eq!(notes_by_claude(&meeting(), Some(&bin), Some("k"), &api, &|_| {}).unwrap().title, "Renovation schedule");
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    fn gemini_reply(notes: &str, finish: &str) -> String {
+        json!({"candidates": [{"content": {"role": "model", "parts": [{"text": notes}]}, "finishReason": finish}]}).to_string()
+    }
+
+    #[test]
+    fn gemini_writes_the_same_notes() {
+        let sent = RefCell::new(Vec::new());
+        let post = |url: &str, headers: &[(String, String)], body: &str| {
+            sent.borrow_mut().push((url.to_string(), headers.to_vec(), body.to_string()));
+            Ok((200, gemini_reply(&format!("```json\n{GOOD}\n```"), "STOP"), None))
+        };
+        let notes = gemini_notes(&meeting(), " g-key ", &post, &|_| {}).unwrap();
+        assert_eq!(notes.title, "Renovation schedule");
+        assert_eq!(notes.model, "gemini");
+        assert_eq!(notes.action_items.len(), 1); // the same check: "900 tiles" was never said
+        let sent = sent.borrow();
+        let (url, headers, body) = &sent[0];
+        assert!(url.starts_with("https://generativelanguage.googleapis.com/v1beta/models/"), "{url}");
+        assert!(url.ends_with(":generateContent"), "{url}");
+        assert!(headers.contains(&("x-goog-api-key".into(), "g-key".into())));
+        let body: Value = serde_json::from_str(body).unwrap();
+        let (system, user) = prompt(&meeting().naming_the_call());
+        assert_eq!(body["systemInstruction"]["parts"][0]["text"], system.as_str());
+        assert_eq!(body["contents"][0]["parts"][0]["text"], user.as_str());
+        assert_eq!(body["generationConfig"]["responseMimeType"], "application/json");
+        assert_eq!(body["generationConfig"]["responseJsonSchema"], schema());
+    }
+
+    #[test]
+    fn gemini_failures_say_what_to_do() {
+        let bad = |_: &str, _: &[(String, String)], _: &str| Ok((400, r#"{"error":{"code":400,"message":"API key not valid.","status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}"#.into(), None));
+        assert!(gemini_notes(&meeting(), "k", &bad, &|_| {}).unwrap_err().to_string().contains("Set Gemini key"));
+        let cut = |_: &str, _: &[(String, String)], _: &str| Ok((200, gemini_reply("{\"title\":", "MAX_TOKENS"), None));
+        assert_eq!(gemini_notes(&meeting(), "k", &cut, &|_| {}).unwrap_err(), Failure::CutOff);
+        let tries = RefCell::new(0);
+        let busy = |_: &str, _: &[(String, String)], _: &str| { *tries.borrow_mut() += 1; Ok((429, r#"{"error":{"status":"RESOURCE_EXHAUSTED"}}"#.into(), None)) };
+        assert!(gemini_notes(&meeting(), "k", &busy, &|_| {}).unwrap_err().to_string().contains("limit"));
+        assert_eq!(*tries.borrow(), 3);
+    }
+
+    #[test]
+    fn notes_fall_back_to_gemini_and_say_when_nothing_is_set_up() {
+        let none = |_: &str, _: &[(String, String)], _: &str| -> Result<(u16, String, Option<f64>), String> { panic!("nothing should be sent") };
+        assert_eq!(write_notes_any(&meeting(), None, None, None, &none, &|_| {}).unwrap_err(), Failure::NoWay);
+        assert!(Failure::NoWay.to_string().contains("Copy for Copilot or Gemini"));
+        // Claude refuses the key (a used-up plan or a bad key), Gemini is saved: Gemini writes them.
+        let post = |url: &str, _: &[(String, String)], _: &str| {
+            if url.contains("anthropic") { Ok((401, r#"{"error":{"message":"invalid x-api-key"}}"#.into(), None)) }
+            else { Ok((200, gemini_reply(GOOD, "STOP"), None)) }
+        };
+        assert_eq!(write_notes_any(&meeting(), None, Some("c"), Some("g"), &post, &|_| {}).unwrap().model, "gemini");
+        // Without a Gemini key, Claude's own reason is what the person sees.
+        assert_eq!(write_notes_any(&meeting(), None, Some("c"), None, &post, &|_| {}).unwrap_err(), Failure::BadKey);
+    }
+
+    #[test]
+    fn the_page_offers_copilot_and_gemini() {
+        let page = page_html(&meeting(), "");
+        assert!(page.contains("Copy for Copilot or Gemini"));
+        assert!(page.contains("https://copilot.microsoft.com/"));
+        assert!(page.contains("https://gemini.google.com/app"));
+        let ai = ai_prompt(&meeting());
+        assert!(ai.contains("Use only what was said in the transcript"));
+        assert!(ai.contains("[00:00] Priya: The tile is back-ordered"));
+        assert!(page.contains(&esc(&ai)));
     }
 
     #[test]

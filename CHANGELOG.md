@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Windows: meeting notes by Gemini, or by Copilot with one paste.** Right-click the Larynx icon → Set Gemini key… and Gemini writes the summary, with the same instructions and the same check against what was said as Claude. It also takes over when Claude can't (a used-up plan, for one). Every meeting page now has **Copy for Copilot or Gemini**, which puts the meeting and the instructions on the clipboard, with buttons that open Copilot and Gemini to paste into, for workplaces that only allow their own AI.
+
 - **Repeats said on purpose stay, and a restart around "you know" goes.** "Tries and tries and tries" and "and so on and so on" now keep every copy (one was being dropped as a stumble), while "a lot of days it's, you know, a lot of days it's fine" ends as one copy. Found by running every cleanup rule since Nov 10 over 1,004 clips of other people's speech; on those clips the rules that came from one stutterer's dictations fixed 28 and broke none.
 
 - **Strong stutter cleanup, for people who stutter.** A new setting (Settings › Cleanup, or `stutterCleanup: strong`) also removes restarts the standard rules leave: a cut-off word said twice and never finished ("packing and cle to cle to leave" becomes "packing and to leave"), and a two- or three-word phrase said twice in a row. One word said over and over ("no no no") stays. It is off by default, because it can now and then drop a word someone meant; on the developer's 3,007 dictations it changes 2, both right.

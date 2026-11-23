@@ -335,10 +335,11 @@ pub fn finish(info: &Started, engine: &Arc<Mutex<Engine>>, email: &str) -> Outco
     if m.segments.is_empty() {
         problem = Some("I didn't hear anyone speak in this recording. If people were talking, check that the microphone isn't muted.".into());
     } else {
-        match meeting::notes_by_claude(
+        match meeting::write_notes_any(
             &m,
             meeting::claude_code_path().as_deref(),
             crate::credential::claude_key().as_deref(),
+            crate::credential::gemini_key().as_deref(),
             &meeting::curl_post,
             &meeting::sleep_seconds,
         ) {
@@ -823,7 +824,16 @@ impl Panel {
     }
 }
 
-/// The small window for pasting the Claude key (right-click the icon → Set Claude key).
+/// Which key the key window is for.
+#[derive(Clone, Copy, PartialEq)]
+pub enum KeyFor {
+    Claude,
+    Gemini,
+}
+
+static KEY_FOR_GEMINI: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The small window for pasting a key (right-click the icon → Set Claude key / Set Gemini key).
 unsafe extern "system" fn key_proc(
     hwnd: HWND,
     msg: u32,
@@ -837,12 +847,19 @@ unsafe extern "system" fn key_proc(
                 let mut buf = vec![0u16; 512];
                 let n = GetWindowTextW(edit, &mut buf).max(0) as usize;
                 let key = String::from_utf16_lossy(&buf[..n]);
-                let (text, title) = match crate::credential::save(key.trim()) {
-                    Ok(()) if key.trim().is_empty() => {
-                        (w!("The Claude key was removed."), w!("Larynx"))
-                    }
+                let gemini = KEY_FOR_GEMINI.load(std::sync::atomic::Ordering::SeqCst);
+                let saved = if gemini { crate::credential::save_gemini(key.trim()) } else { crate::credential::save(key.trim()) };
+                let (text, title) = match saved {
+                    Ok(()) if key.trim().is_empty() => (
+                        if gemini { w!("The Gemini key was removed.") } else { w!("The Claude key was removed.") },
+                        w!("Larynx"),
+                    ),
                     Ok(()) => (
-                        w!("Saved. Notes for your meetings will be written by Claude."),
+                        if gemini {
+                            w!("Saved. Notes for your meetings will be written by Gemini.")
+                        } else {
+                            w!("Saved. Notes for your meetings will be written by Claude.")
+                        },
                         w!("Larynx"),
                     ),
                     Err(_) => (
@@ -859,7 +876,9 @@ unsafe extern "system" fn key_proc(
     }
 }
 
-pub fn ask_for_key() {
+pub fn ask_for_key(kind: KeyFor) {
+    let gemini = kind == KeyFor::Gemini;
+    KEY_FOR_GEMINI.store(gemini, std::sync::atomic::Ordering::SeqCst);
     unsafe {
         let Ok(instance) = GetModuleHandleW(None) else {
             return;
@@ -878,7 +897,7 @@ pub fn ask_for_key() {
         let Ok(hwnd) = CreateWindowExW(
             WS_EX_TOPMOST,
             w!("LarynxClaudeKey"),
-            w!("Larynx: Claude key for meeting notes"),
+            if gemini { w!("Larynx: Gemini key for meeting notes") } else { w!("Larynx: Claude key for meeting notes") },
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
             scale(200),
             scale(200),
@@ -922,7 +941,11 @@ pub fn ask_for_key() {
         let pad = scale(20);
         child(
             w!("STATIC"),
-            w!("Paste the Claude key here. Larynx keeps it in Windows Credential Manager."),
+            if gemini {
+                w!("Paste the Gemini key here. Larynx keeps it in Windows Credential Manager.")
+            } else {
+                w!("Paste the Claude key here. Larynx keeps it in Windows Credential Manager.")
+            },
             WINDOW_STYLE(0),
             pad,
             pad,
@@ -944,7 +967,11 @@ pub fn ask_for_key() {
         );
         child(
             w!("STATIC"),
-            w!("A key comes from console.anthropic.com → API keys."),
+            if gemini {
+                w!("Get a free key at aistudio.google.com → Get API key.")
+            } else {
+                w!("A key comes from console.anthropic.com → API keys.")
+            },
             WINDOW_STYLE(0),
             pad,
             pad + scale(76),

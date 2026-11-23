@@ -213,7 +213,8 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
             tray::ID_MEETING | meet::ID_PANEL_STOP => with_app(|a| a.meeting_button()),
             meet::ID_PANEL_MUTE => with_app(|a| a.toggle_mute()),
             tray::ID_MEETING_RETRY => with_app(|a| a.retry_notes()),
-            tray::ID_CLAUDE_KEY => meet::ask_for_key(),
+            tray::ID_CLAUDE_KEY => meet::ask_for_key(meet::KeyFor::Claude),
+            tray::ID_GEMINI_KEY => meet::ask_for_key(meet::KeyFor::Gemini),
             tray::ID_MEETINGS => {
                 let dir = crate::meeting::folder();
                 let _ = std::fs::create_dir_all(&dir);
@@ -353,13 +354,14 @@ impl App {
     /// "Send a report…": a text file for whoever helps with Larynx (win/report.rs).
     fn send_report(&mut self) {
         let app = format!(
-            "Larynx {} for Windows\nStatus: {}\nTalk key: {}\nSpeech on: {}\nClaude Code: {}\nClaude key saved: {}",
+            "Larynx {} for Windows\nStatus: {}\nTalk key: {}\nSpeech on: {}\nClaude Code: {}\nClaude key saved: {}\nGemini key saved: {}",
             env!("CARGO_PKG_VERSION"),
             self.status,
             self.key_name,
             self.provider,
             if crate::meeting::claude_code_path().is_some() { "installed" } else { "not found" },
             if crate::credential::claude_key().is_some() { "yes" } else { "no" },
+            if crate::credential::gemini_key().is_some() { "yes" } else { "no" },
         );
         self.log.write(serde_json::json!({"event": "report_requested"}));
         let hwnd = self.hwnd.0 as isize;
@@ -419,7 +421,7 @@ impl App {
         let (tx, hwnd_raw) = (self.meeting_tx.clone(), self.hwnd.0 as isize);
         std::thread::spawn(move || {
             // Claude Code on the person's plan first, the key as the backup: the same order as after Stop.
-            let outcome = match crate::meeting::notes_by_claude(&m, crate::meeting::claude_code_path().as_deref(), crate::credential::claude_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
+            let outcome = match crate::meeting::write_notes_any(&m, crate::meeting::claude_code_path().as_deref(), crate::credential::claude_key().as_deref(), crate::credential::gemini_key().as_deref(), &crate::meeting::curl_post, &crate::meeting::sleep_seconds) {
                 Ok(n) => {
                     m.notes = Some(n);
                     meet::Outcome { page: crate::meeting::save(&m, &crate::meeting_email()).ok(), problem: None }
