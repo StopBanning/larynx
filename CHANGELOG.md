@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Mac meeting notes no longer fail when Claude can't write them.** If Claude Code hits its plan's limit (or is offline) and no key is saved, the Mac's own model writes the notes, and the page says so. A used-up plan now says plainly that the limit was reached and when it resets. The privacy page and README now say that meeting notes send the transcript text (never audio) to the AI you set up.
+
 - **Windows: meeting notes by Gemini, or by Copilot with one paste.** Right-click the Larynx icon → Set Gemini key… and Gemini writes the summary, with the same instructions and the same check against what was said as Claude. It also takes over when Claude can't (a used-up plan, for one). Every meeting page now has **Copy for Copilot or Gemini**, which puts the meeting and the instructions on the clipboard, with buttons that open Copilot and Gemini to paste into, for workplaces that only allow their own AI.
 
 - **Repeats said on purpose stay, and a restart around "you know" goes.** "Tries and tries and tries" and "and so on and so on" now keep every copy (one was being dropped as a stumble), while "a lot of days it's, you know, a lot of days it's fine" ends as one copy. Found by running every cleanup rule since Nov 10 over 1,004 clips of other people's speech; on those clips the rules that came from one stutterer's dictations fixed 28 and broke none.

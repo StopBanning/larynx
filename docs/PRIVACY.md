@@ -11,6 +11,14 @@ runs a deliberate web request under the same sandbox, which must fail, so a pass
 Last run Nov 12 with the installed app's binary: all four checks pass. The test covers the speech and cleanup path;
 the microphone and paste need macOS permissions a script cannot grant, and the optional on-device AI rewrite is off.
 
+## Meeting notes: the one thing that can leave
+
+Meeting mode is the exception, and only for the summary. The recording and the transcript are made on your computer
+and the audio never leaves it. To write the notes (summary, decisions, to-dos), the **transcript text** is sent to the
+AI you set up: Claude (through Claude Code on your own plan, or your Anthropic key) or, on Windows, Gemini with your
+own key. With none set up, nothing is sent: on a Mac the notes come from Apple's on-device model, and the meeting page
+also offers a button that copies the transcript for you to paste into an AI yourself. Dictation never sends anything.
+
 ## What is stored, and where
 
 Everything lives under `~/Library/Application Support/Larynx/` unless noted. Folders are created readable by your

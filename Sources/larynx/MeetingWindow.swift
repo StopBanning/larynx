@@ -478,6 +478,9 @@ struct MeetingDetail: View {
                     if !n.openQuestions.isEmpty { Section(title: "Still open", items: n.openQuestions) }
                     HStack(spacing: 12) {
                         if n.model == "claude" { Text("Summary written by Claude.").font(.system(size: 13)).foregroundStyle(.secondary) }
+                        else if n.model == MeetingSummarizer.Model.onDevice.rawValue, MeetingSummarizer.Model.chosen(Settings.shared.string(.meetingSummary)) == .claude {
+                            Text("Claude wasn't available, so your Mac's own model wrote this.").font(.system(size: 13)).foregroundStyle(.secondary)
+                        }
                         if model.writing == meeting.id {
                             ProgressView().controlSize(.small); Text("Writing the notes again…").font(.system(size: 13))
                         } else {

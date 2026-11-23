@@ -129,7 +129,9 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/uni
 
 **Private by design**
 
-- Audio and text never leave your Mac. There is no server, no account and no telemetry. A test runs speech to text
+- Audio and text never leave your Mac. There is no server, no account and no telemetry. (Meeting notes are the one
+  exception: if you set up Claude or Gemini to write them, the meeting's transcript text, never the audio, goes to it.
+  [docs/PRIVACY.md](docs/PRIVACY.md).) A test runs speech to text
   with every network connection blocked and passes ([docs/PRIVACY.md](docs/PRIVACY.md)).
 - **History stays local**: 30 days in a database on your Mac. The History window (menu: History…, ⌘Y) searches it,
   copies a dictation again and plays the recording when one is kept; `larynx history --search <words>` does the same

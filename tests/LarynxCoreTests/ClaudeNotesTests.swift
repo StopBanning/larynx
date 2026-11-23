@@ -163,6 +163,13 @@ private func fakeClaudeCode(_ reply: String) throws -> (binary: URL, dir: URL) {
         }
     }
 
+    @Test func aUsedUpPlanSaysToWaitForTheReset() {
+        let why = ClaudeCode.Failure.failed("You've hit your 5-hour limit · resets 3:40pm").description
+        #expect(why.contains("plan's limit was reached"))
+        #expect(why.contains("resets 3:40pm"))
+        #expect(ClaudeCode.Failure.failed("exit 1").description == "Claude Code couldn't write the notes (exit 1).")
+    }
+
     @Test func notSignedInSaysHowToSignIn() async throws {
         let (binary, dir) = try fakeClaudeCode(#"{"type":"result","subtype":"success","is_error":true,"result":"Not logged in · Please run /login"}"#)
         defer { try? FileManager.default.removeItem(at: dir) }

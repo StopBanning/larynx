@@ -157,6 +157,8 @@ public enum ClaudeCode {
             switch self {
             case .notInstalled: return "Claude Code isn't installed on this Mac."
             case .notSignedIn: return "Claude Code isn't signed in. Open Terminal, type claude, and sign in with your Claude account."
+            case .failed(let why) where why.lowercased().contains("limit"):
+                return "Your Claude plan's limit was reached (\(why)). Write the notes again once it resets."
             case .failed(let why): return "Claude Code couldn't write the notes (\(why))."
             }
         }

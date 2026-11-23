@@ -103,8 +103,15 @@ public enum MeetingSummarizer {
         guard transcript.rangeOfCharacter(from: .letters) != nil else { throw Failure.empty }
         if model == .claude {
             let started = Date()
-            let notes = verify(try await writeWithClaude(meeting), against: meeting)
-            return MeetingNotes(notes, model: model, seconds: Date().timeIntervalSince(started))
+            do {
+                let notes = verify(try await writeWithClaude(meeting), against: meeting)
+                return MeetingNotes(notes, model: model, seconds: Date().timeIntervalSince(started))
+            } catch {
+                // Claude couldn't (a plan's 5-hour limit, no internet, a bad key): the Mac's own model writes the notes
+                // rather than none. The meeting page says so and offers Write the notes again.
+                guard isAvailable(.onDevice) else { throw error }
+                return try await summarize(original, model: .onDevice)
+            }
         }
         guard isAvailable(model) else { throw Failure.unavailable(model == .onDevice ? "Apple Intelligence is off or not supported on this Mac" : "Private Cloud Compute needs macOS 27 and Apple Intelligence") }
         let started = Date()
