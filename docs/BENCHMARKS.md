@@ -336,7 +336,7 @@ themselves instead. App-against-app on the same audio is PLAN-v1 F2.
 | App | Licence | Price | Offline | Speech engine | Cleanup | Stars (Nov 13) |
 | --- | --- | --- | --- | --- | --- | --- |
 | Larynx | MIT | Free, no limits | Yes, always | Parakeet Ultra (Neural Engine) | Rules, instant; optional on-device AI rewrite | (this repo) |
-| [Handy](https://github.com/cjpais/Handy) | MIT | Free | Yes | Whisper, Parakeet v3 | Not stated | 38,697 |
+| [Handy](https://github.com/cjpais/Handy) | MIT | Free | Yes | Whisper, Parakeet v3 | A filler-word list (uh, um, hmm) and words said 3+ times, on by default; optional AI rewrite (see below) | 38,697 |
 | [VoiceInk](https://github.com/Beingpax/VoiceInk) | GPL-3.0 | Paid build $25 to $49 one-time; free from source | Yes | Parakeet, WhisperKit | AI enhancement; cloud optional | 7,118 |
 | [FluidVoice](https://github.com/altic-dev/FluidVoice) | GPL-3.0 (its local AI runtime is closed) | Free | Yes | Parakeet, Nemotron, Whisper, Apple Speech and more | Optional AI: cloud, or a closed local model | 13,014 |
 | [OpenWhispr](https://github.com/OpenWhispr/openwhispr) | MIT | Free local; cloud 2,000 words a week free, Pro $80 a year | Optional | Whisper, Parakeet, cloud | AI step, local or cloud | 11,520 |
@@ -344,6 +344,26 @@ themselves instead. App-against-app on the same audio is PLAN-v1 F2.
 | macOS Dictation | Proprietary | Free | Depends on the Mac and language | Not stated | Punctuation; no filler removal mentioned | n/a |
 
 "Not stated" means the app's own pages do not say. Stars are from GitHub's API on Nov 13.
+
+### Handy's cleanup against ours, on the same transcripts (Nov 23)
+
+Handy runs Parakeet V3, the speech model family Larynx uses, so its cleanup can be compared with ours without its
+app: `bench/handy.py` ports Handy v0.10.1's default cleanup line for line from its source (MIT; it passes the English
+cases in Handy's own tests) and runs both on the same raw Parakeet transcripts. This compares cleanup only, not speech
+models, and not Handy's optional AI rewrite, which is off by default. Edits needed against what was meant:
+
+| Set | Clips | No cleanup | Handy's cleanup | Larynx cleanup |
+| --- | --- | --- | --- | --- |
+| DisfluencySpeech test (rules tuned on its misses) | 250 | 16.1% | 13.5% | 8.3% |
+| **DisfluencySpeech validation (held out)** | 250 | 17.8% | **14.2%** | **8.4%** |
+| messy (written by us) | 120 | 21.0% | 14.7% | 6.9% |
+| messy2 (written by us) | 120 | 23.9% | 18.8% | 3.3% |
+| messy3 (written by us) | 120 | 27.7% | 21.9% | 5.5% |
+
+The fair row is the held-out one: a set made by other people that no rule was tuned on. Handy removes "uh" and "um"
+and words said three or more times; what is left is mostly restarts ("we don't have we don't have cable"), doubled
+words ("the the dog show") and "you know" as a filler, which Larynx also removes. The messy sets were written by us and
+favour our rules, so they are shown only for completeness.
 
 ## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
 
