@@ -305,3 +305,14 @@ private struct Cases: Decodable {
     #expect(strong("We had had enough.") == "We had had enough.")
     #expect(strong("Bye bye now.") == "Bye bye now.")
 }
+
+@Test func phraseRestartedAroundYouKnowKeepsOneCopy() {
+    func c(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    #expect(c("Most days the bus is you know, most days the bus is late.") == "Most days the bus is late.")
+    #expect(c("She can, you know, she can paint it blue.") == "She can paint it blue.")
+    #expect(c("It was you know, fine.") == "It was fine.")
+}
+
+@Test func strongStutterKeepsAndRepeats() {
+    #expect(Tidy.apply("She knocks and knocks and knocks.", mode: .correspondence, stutter: .strong) == "She knocks and knocks and knocks.")
+}

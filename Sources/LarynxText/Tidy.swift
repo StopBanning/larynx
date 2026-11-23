@@ -214,7 +214,12 @@ public enum Tidy {
             for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
                 guard let whole = Range(m.range, in: s), let first = Range(m.range(at: 1), in: s) else { continue }
                 let phrase = String(s[first])
-                if Set(phrase.lowercased().split(separator: " ")).count < 2 { continue }
+                let words = phrase.lowercased().split(separator: " ")
+                if Set(words).count < 2 { continue }
+                // "knocks and knocks and knocks", "and so on and so on": said again on purpose.
+                if ["and", "or"].contains(words.last ?? "") || phrase.lowercased().hasSuffix("so on") { continue }
+                let around = (s[..<whole.lowerBound].split(whereSeparator: \.isWhitespace).last.map(String.init) ?? "") + " " + s[whole]
+                if around.range(of: "(?i)(?<![\\w'])([\\w']+)\\s+(?:and|or)\\s+\\1(?![\\w'])", options: .regularExpression) != nil { continue }
                 s.replaceSubrange(whole, with: phrase)
             }
         }
@@ -460,6 +465,8 @@ public enum Tidy {
         let verbBefore = "(?<!\\bdo)(?<!\\bdid)(?<!\\bdon't)(?<!\\bdidn't)(?<!\\bif)(?<!\\bas)(?<!\\bnow)(?<!\\bwhat)(?<!\\bhow)"
             + "(?<!\\bthat)(?<!\\bwho)(?<!\\bwould)(?<!\\bwill)(?<!\\bcould)(?<!\\bshould)(?<!\\bmay)(?<!\\bmight)(?<!\\bwhether)"
             + "(?<!\\bthink)(?<!\\bguess)(?<!\\bbet)(?<!\\bhope)(?<!\\bbelieve)(?<!\\bsuppose)(?<!\\bsure)"  // "I bet you know"
+        // A phrase restarted around it: "a lot of times it's you know, a lot of times it's not" -> one copy.
+        re("(?<![\\w'])((?:[\\w']+\\s+){1,5}[\\w']+),?\\s+you know,\\s+(?=\\1(?![\\w']))", "")
         re("(^|[.!?]\\s+)you know,\\s+(?=\\w)", "$1")
         re("\\b(and|but|so|or|because)\\s+you know,\\s+(?=\\w)", "$1 ")
         // Between commas: after a word that can't end a phrase ("it was, you know, fine") both commas go; elsewhere one
@@ -760,6 +767,9 @@ public enum Tidy {
             // are meant, not stumbles.
             if words.contains(where: { numberWords.contains(String($0)) || $0.allSatisfy(\.isNumber) }) { continue }
             if Set(words).count == 1 { continue }
+            // "tries and tries and tries", "on and on and on", "and so on and so on": said again on purpose. ("and then
+            // and then" is still a stumble.)
+            if ["and", "or"].contains(words.last ?? "") || words.joined(separator: " ").hasSuffix("so on") { continue }
             s.replaceSubrange(whole, with: String(s[phrase]))
         }
         return s
