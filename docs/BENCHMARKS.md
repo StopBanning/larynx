@@ -365,6 +365,25 @@ and words said three or more times; what is left is mostly restarts ("we don't h
 words ("the the dog show") and "you know" as a filler, which Larynx also removes. The messy sets were written by us and
 favour our rules, so they are shown only for completeness.
 
+### Restarts with Apple's on-device model: no-go (Nov 23)
+
+Restarts are the largest share of what the rules leave (11.0% on the held-out DisfluencySpeech set). We tried
+Apple's on-device model (Foundation Models, the one the optional rewrite uses) as a second pass after the rules, with
+a prompt written for restarts and the same guard the app uses, on all 250 held-out clips:
+
+| Kind of clip | Rules | Rules, then Apple's model |
+| --- | --- | --- |
+| Restarts | 11.0% | 10.7% |
+| "Well", "I mean" and the like | 7.9% | 5.0% |
+| Fillers | 5.7% | 6.8% |
+| Nothing to remove | 2.7% | 6.6% |
+| **All** | **8.4%** | **8.8%** |
+
+It made 48 clips better and 42 worse. It never added a word, but it deleted words people meant ("right?", "for
+example", "I guess") and barely touched restarts. It also took seconds per sentence and was throttled: after a short
+burst, macOS refused it for about 20 minutes. So the rewrite stays where it is (spoken corrections in mail and
+messages), and restarts need something else.
+
 ## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
 
 The speech model's per-word confidence (lowest token confidence in the word) against what was really said, on the
