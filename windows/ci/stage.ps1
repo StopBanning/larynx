@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 $rel = "windows/target/release"
 Copy-Item "$rel/larynx.exe", "$rel/larynx-cli.exe" $Dist
+Copy-Item "windows/packaging/Start here.txt" $Dist
 Get-ChildItem $rel -Filter *.dll | Copy-Item -Destination $Dist
 $swiftOut = (Get-ChildItem .build -Recurse -Filter larynx-text.exe | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1).Directory
 Copy-Item "$swiftOut/larynx-text.exe" $Dist

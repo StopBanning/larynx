@@ -215,6 +215,10 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
             tray::ID_MEETING_RETRY => with_app(|a| a.retry_notes()),
             tray::ID_CLAUDE_KEY => meet::ask_for_key(meet::KeyFor::Claude),
             tray::ID_GEMINI_KEY => meet::ask_for_key(meet::KeyFor::Gemini),
+            tray::ID_STARTUP => {
+                // The menu's tick is read from the registry each time it opens, so a failed write simply shows unticked.
+                let _ = super::startup::set(!super::startup::is_on());
+            }
             tray::ID_MEETINGS => {
                 let dir = crate::meeting::folder();
                 let _ = std::fs::create_dir_all(&dir);

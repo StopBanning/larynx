@@ -70,6 +70,11 @@ pub fn clock(seconds: f64) -> String {
 }
 
 impl Meeting {
+    /// One microphone heard everyone: no line is "You" or from the call.
+    pub fn in_room(&self) -> bool {
+        !self.segments.is_empty() && self.segments.iter().all(|s| s.speaker == ROOM)
+    }
+
     pub fn transcript(&self) -> String {
         self.segments
             .iter()
@@ -129,7 +134,7 @@ impl Meeting {
             "anyone",
         ];
         let mut names: Vec<String> = Vec::new();
-        for seg in self.segments.iter().filter(|s| s.speaker == "You") {
+        for seg in self.segments.iter().filter(|s| s.speaker == "You" || s.speaker == ROOM) {
             let chars: Vec<char> = seg.text.chars().collect();
             let mut i = 0;
             while i < chars.len() {
@@ -195,6 +200,14 @@ Rules:
   what was said.
 - Open questions are things raised and left unanswered.
 - Short, clear sentences. No filler, no \"the speaker said\", no timestamps.";
+
+/// The speaker of every line when one microphone heard everyone (no call audio on this computer).
+pub const ROOM: &str = "In the room";
+
+pub const ROOM_LEGEND: &str = "This meeting was recorded by one microphone that heard everyone, so the transcript does not say who said
+each line (every line is \"In the room\"). The person these notes are for was one of the people there. Work out names
+from how people address each other (\"Go ahead, Dana\") and use them when it is clear who said something; otherwise do
+not guess who said it. Give an action item an owner only when a name was said for it.";
 
 pub const LEGEND: &str = "In the transcript, \"You\" is the person these notes are for. \"On the call\" (or \"Person 1\", \"Person 2\"...) are the
 other people; work out their names from how they are addressed (\"Go ahead, Dana\" means the next person to speak
@@ -302,6 +315,9 @@ pub fn mic_note(error: &str) -> String {
 /// A line for the notes model when "You" said little (under a quarter of the words in a meeting of 150 words or more):
 /// the share, so it can tell a talk you listened to from a meeting you took part in (the Mac's `listeningNote`).
 pub fn listening_note(meeting: &Meeting) -> Option<String> {
+    if meeting.in_room() {
+        return None;
+    }
     let count = |t: &str| t.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).count();
     let total: usize = meeting.segments.iter().map(|s| count(&s.text)).sum();
     let mine: usize = meeting.segments.iter().filter(|s| s.speaker == "You").map(|s| count(&s.text)).sum();
@@ -390,7 +406,7 @@ fn is_echo(s: &Segment, call: &[Segment]) -> bool {
 /// The instructions and the transcript for one meeting, the same for the API and for Claude Code.
 pub fn prompt(meeting: &Meeting) -> (String, String) {
     let names = meeting.addressed_names();
-    let mut system = format!("{INSTRUCTIONS}\n{LEGEND}");
+    let mut system = format!("{INSTRUCTIONS}\n{}", if meeting.in_room() { ROOM_LEGEND } else { LEGEND });
     if let Some(note) = listening_note(meeting) {
         system += &format!("\n{note}");
     }
@@ -1437,6 +1453,23 @@ mod tests {
         }
     }
 
+    #[test]
+    fn one_microphone_in_a_room_is_not_called_you() {
+        let mut m = meeting();
+        for s in m.segments.iter_mut() {
+            s.speaker = ROOM.into();
+        }
+        m.segments.extend((0..40).map(|i| Segment { speaker: ROOM.into(), start: 20.0 + i as f64, end: 21.0 + i as f64,
+            text: "We went through the budget line by line and agreed on the order.".into() }));
+        assert!(m.in_room() && !meeting().in_room());
+        let (system, user) = prompt(&m);
+        assert!(system.contains(ROOM_LEGEND) && !system.contains(LEGEND), "{system}");
+        assert!(!system.contains("You said"), "no share of words for a room: {system}");
+        assert!(system.contains("Names said in this meeting: Priya."), "names come from every line: {system}");
+        assert!(user.contains("In the room: Thanks, Priya."), "{user}");
+        assert!(ai_prompt(&m).contains(ROOM_LEGEND));
+    }
+
     fn reply(notes: &str, stop: &str) -> String {
         json!({"type": "message", "stop_reason": stop, "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": notes}]}).to_string()
     }
@@ -1701,14 +1734,14 @@ mod tests {
             model: "claude".into(),
             ..Default::default()
         });
-        let page = page_html(&m, "dad@example.com");
+        let page = page_html(&m, "me@example.com");
         assert!(page.contains("Tiles &amp; &lt;budget&gt;"));
         assert!(
             page.contains("Email this to me")
                 && page.contains("window.print()")
                 && page.contains("Everything that was said")
         );
-        assert!(page.contains("mailto:dad%40example.com?subject=Tiles%20%26%20%3Cbudget%3E"));
+        assert!(page.contains("mailto:me%40example.com?subject=Tiles%20%26%20%3Cbudget%3E"));
         assert!(page.contains("Summary written by Claude."));
         m.notes = None;
         assert!(page_html(&m, "").contains("no summary for this meeting yet"));

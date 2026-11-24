@@ -10,5 +10,6 @@ pub mod insert;
 pub mod meeting;
 pub mod pill;
 pub mod report;
+pub mod startup;
 pub mod tray;
 pub mod welcome;

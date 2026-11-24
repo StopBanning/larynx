@@ -130,9 +130,10 @@ pub fn transcribe_track(engine: &mut Engine, samples: &[f32], speaker: &str) -> 
     Ok(out)
 }
 
-/// Both tracks into one transcript, in time order.
+/// Both tracks into one transcript, in time order. With no call audio (a laptop on the desk recording a meeting held
+/// on another computer, or people in a room), the microphone hears everyone, so its lines are "In the room", not "You".
 pub fn meeting_transcript(engine: &mut Engine, you: &[f32], call: Option<&[f32]>) -> Result<Vec<crate::meeting::Segment>, String> {
-    let mut segments = transcribe_track(engine, you, "You")?;
+    let mut segments = transcribe_track(engine, you, if call.is_some() { "You" } else { crate::meeting::ROOM })?;
     if let Some(call) = call {
         segments.extend(transcribe_track(engine, call, "On the call")?);
     }

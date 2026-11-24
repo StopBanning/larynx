@@ -1,0 +1,58 @@
+LARYNX FOR WINDOWS: START HERE
+==============================
+
+Larynx turns what you say into text, and it can record a meeting and write the notes for you.
+Your voice stays on this computer. Only the meeting's written words go to the AI you choose for the notes.
+
+
+1. OPEN IT
+----------
+Open the Larynx folder and double-click  larynx.exe
+
+Windows will warn you that the publisher is unknown (Larynx isn't signed yet).
+Click  More info , then  Run anyway . This happens only the first time.
+
+The first start downloads the speech model (about 670 MB). Leave it running until the
+welcome window says it's ready.
+
+Larynx then lives in the tray, the small icons by the clock. Its icon is a little
+bar chart with a cursor. If you don't see it, click the  ^  arrow by the clock.
+
+Right-click the Larynx icon and tick  Start Larynx with Windows , so it's there every
+time the computer starts.
+
+
+2. RECORD A MEETING
+-------------------
+Right-click the Larynx icon, then  Start recording this meeting .
+A small window in the corner shows the time and a red dot. That's all you need to watch.
+
+When the meeting ends, click  Stop . After a little while your notes open by themselves:
+a summary, what was decided, who will do what, and everything that was said.
+
+Using a second computer to record a meeting that's on your work computer?
+That's fine. Put this computer near your work computer's speakers, turn the volume
+up a little, and start the recording before the meeting starts. Larynx hears
+everyone through the microphone.
+
+Your meetings, any time: right-click the icon, then  Your meetings .
+
+
+3. GET THE NOTES WRITTEN BY YOUR AI
+-----------------------------------
+Gemini, written automatically:
+  Right-click the icon, then  Set Gemini key... . Get a free key at aistudio.google.com
+  (sign in with Google, then Get API key), paste it in, and save. Every meeting's notes
+  are then written by Gemini.
+
+Copilot or Gemini, by hand:
+  On any meeting's page, click  Copy for Copilot or Gemini , then click the Copilot or
+  Gemini button next to it and paste (Ctrl+V) into the chat box.
+
+
+4. IF SOMETHING GOES WRONG
+--------------------------
+Right-click the icon, then  Send a report... . It saves a file. Send that file to whoever
+set Larynx up for you. The report has no recordings and no words you said.
+
+To quit Larynx: right-click the icon, then  Quit Larynx .

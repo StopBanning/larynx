@@ -16,6 +16,7 @@ pub const ID_MEETING_RETRY: usize = 106;
 pub const ID_REPORT: usize = 107;
 pub const ID_WELCOME: usize = 108;
 pub const ID_GEMINI_KEY: usize = 109;
+pub const ID_STARTUP: usize = 110;
 /// The Talk key menu: ID_KEY + the index in hotkey::CHOICES.
 pub const ID_KEY: usize = 120;
 
@@ -155,6 +156,8 @@ impl Tray {
             let _ = AppendMenuW(menu, MF_STRING, ID_CLAUDE_KEY, windows::core::w!("Set Claude key…"));
             let _ = AppendMenuW(menu, MF_STRING, ID_GEMINI_KEY, windows::core::w!("Set Gemini key…"));
             let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+            let startup = if super::startup::is_on() { MF_STRING | MF_CHECKED } else { MF_STRING };
+            let _ = AppendMenuW(menu, startup, ID_STARTUP, windows::core::w!("Start Larynx with Windows"));
             let _ = AppendMenuW(menu, MF_STRING, ID_COPY_LAST, windows::core::w!("Copy last dictation"));
             let _ = AppendMenuW(menu, MF_STRING, ID_OPEN_LOGS, windows::core::w!("Open Larynx folder"));
             let _ = AppendMenuW(menu, MF_STRING, ID_REPORT, windows::core::w!("Send a report…"));

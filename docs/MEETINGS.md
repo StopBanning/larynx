@@ -138,6 +138,12 @@ and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
 - CI speaks the scripted client call with Windows' voices into two tracks, runs `larynx-cli meeting you.wav call.wav
   --save` against a stand-in for the API, and checks both sides, the request and the saved page.
 
+**A second computer as the recorder.** When the recording computer plays nothing (it sits by the speakers of the
+computer the call is on, or among people in a room), the microphone hears everyone: every line is "In the room"
+instead of "You", and the notes request says one microphone heard everyone (`ROOM_LEGEND`), so names come from how
+people address each other and nothing is credited to "you" by guess. **Start Larynx with Windows** in the tray keeps
+such a computer ready after a restart.
+
 Not yet on Windows: transcribing while the meeting runs (it happens after Stop, about a minute per 20 minutes of
 meeting on a CPU) and telling several people on the call apart.
 
