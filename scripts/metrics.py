@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Count how Larynx is doing from GitHub's public numbers, with no telemetry (PLAN-launch L0.12).
+"""Count how Larynx is doing from GitHub's public numbers, with no telemetry.
 
     python3 scripts/metrics.py [--repo owner/name] [--out ~/work/larynx-launch]
 

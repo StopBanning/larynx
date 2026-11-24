@@ -1,4 +1,4 @@
-//! Meeting mode on Windows (docs/dev/MEETING.md): the microphone is "You", the call's audio (WASAPI loopback of the
+//! Meeting mode on Windows (docs/MEETINGS.md): the microphone is "You", the call's audio (WASAPI loopback of the
 //! speakers, so any call app works) is "On the call". Both go to disk as they arrive, so a crash or a closed lid
 //! loses nothing. Stop transcribes both, asks Claude for the notes and opens the meeting's page.
 //!

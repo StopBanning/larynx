@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install test (R8): what someone who isn't Colin gets from scripts/install.sh.
+"""Install test: what someone else gets from scripts/install.sh.
 
     python3 tests/install.py
 

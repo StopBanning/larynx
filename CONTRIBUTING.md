@@ -55,4 +55,4 @@ A rule that fixes ten sentences and breaks one is not accepted.
 
 `Sources/LarynxText` is the text cleanup (portable). `Sources/LarynxCore` is audio, speech models, history and
 macOS integration. `Sources/larynx` is the menu bar app and the command line. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-has more, [ROADMAP.md](ROADMAP.md) says what is next, and `docs/dev/` holds the working plans.
+has more, [ROADMAP.md](ROADMAP.md) says what is next.

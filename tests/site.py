@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Landing page test (L0.10): the page matches the README's numbers, stays light, and every link it makes
+"""Landing page test: the page matches the README's numbers, stays light, and every link it makes
 into the repository points at a file that exists.
 
     python3 tests/site.py

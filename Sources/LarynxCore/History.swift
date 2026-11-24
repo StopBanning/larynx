@@ -339,7 +339,7 @@ public final class History: @unchecked Sendable {
             // What a dictation should have said, when the user fixed it: an edit in the field or a repeat with a word
             // changed. The golden set (`larynx golden`) takes its reference texts from here.
             try exec(handle, "CREATE TABLE IF NOT EXISTS corrections (id TEXT PRIMARY KEY, text TEXT NOT NULL, source TEXT, time REAL)")
-            // Version 2 (Nov 12, 2026): the time split and delivery reason of each dictation (R1).
+            // Version 2 (Nov 12, 2026): the time split and delivery reason of each dictation.
             if !Self.hasColumn(handle, table: "dictations", column: "timing") {
                 try exec(handle, "ALTER TABLE dictations ADD COLUMN timing TEXT")
             }

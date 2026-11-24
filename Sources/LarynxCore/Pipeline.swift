@@ -11,7 +11,7 @@ public struct Pipeline {
         public var dictionary: [String: String]
         public var caseTerms: [String]
         public var settings: Settings.Snapshot
-        /// Casual or professional (PLAN-v1 P): chosen per dictation by the key held or the menu's Professional Style.
+        /// Casual or professional: chosen per dictation by the key held or the menu's Professional Style.
         public var style: Style
 
         public init(tidy: Bool = true, rewrite: Bool = true, forceRewrite: Bool = false,

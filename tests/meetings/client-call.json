@@ -1,5 +1,5 @@
 {
-  "_about": "A synthetic client call (meeting mode tests, docs/dev/MEETING.md). Written for the test, said by macOS voices.",
+  "_about": "A synthetic client call (meeting mode tests, docs/MEETINGS.md). Written for the test, said by macOS voices.",
   "speakers": {"You": {"voice": "Daniel", "side": "you"}, "Priya": {"voice": "Moira", "side": "call"}},
   "lines": [
     ["Priya", "Hi, thanks for making time. I'd like to walk through the renovation schedule before the holidays."],

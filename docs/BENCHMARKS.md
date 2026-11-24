@@ -42,7 +42,7 @@ hears nothing. Ultra's remaining cleanup misses are false starts (10/20) and sel
 ## Real voice: the golden set (Nov 11, commit 7bae93b)
 
 Recordings of the author's own dictations (everyday mic and room) with what was meant to be typed, kept only on
-that Mac (`larynx golden`, PLAN-v1 B3). Unlike the sets above, this runs the whole pipeline (dictionary, vocabulary,
+that Mac (`larynx golden`). Unlike the sets above, this runs the whole pipeline (dictionary, vocabulary,
 cleanup rules; AI rewrite off) and scores the typed text. Numbers only; the clips and their text never leave the Mac.
 
 | Engine | WER | Punctuation F1 | Names | p50 | p90 |
@@ -61,7 +61,7 @@ may raise its golden WER), not yet a fair comparison between engines. References
 pasted dictation and repeats with a word changed are now recorded automatically) will replace that bias as they
 accumulate; the target is 100 clips.
 
-## Real voice, picked at random (PLAN-v1 R4, Nov 12, commit 7180b94)
+## Real voice, picked at random (Nov 12, commit 7180b94)
 
 The golden set above leans toward dictations that went wrong (they were picked because something needed fixing).
 This set is 57 dictations drawn at random from two days of daily use, a third each short (under 5 s), medium and
@@ -96,7 +96,7 @@ the absolute numbers are a floor. The author's own labels (`larynx golden label`
 | Misheard word | 2 | Speech model |
 | Cleanup removed a word (a "like"; a phrase said three times cut to two) | 2 | The second fixed in 7180b94 |
 
-## Against what a Mac already has (PLAN-launch L0.5, Nov 13 to 14)
+## Against what a Mac already has (Nov 13 to 14)
 
 The same audio through three systems. `python3 bench/compare.py` reproduces it (the audio is made by macOS voices on
 your Mac; nothing is downloaded).
@@ -331,7 +331,7 @@ and `bench-2026-11-14-9ce6642.json`.
 ## The other apps (facts from their own pages, read Nov 13, 2026)
 
 Feeding the same audio to the other apps needs a virtual audio driver, so they are compared on what they say about
-themselves instead. App-against-app on the same audio is PLAN-v1 F2.
+themselves instead.
 
 | App | Licence | Price | Offline | Speech engine | Cleanup | Stars (Nov 13) |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -384,7 +384,7 @@ example", "I guess") and barely touched restarts. It also took seconds per sente
 burst, macOS refused it for about 20 minutes. So the rewrite stays where it is (spoken corrections in mail and
 messages), and restarts need something else.
 
-## Second opinion on doubtful words (PLAN-v1 B4, Nov 11)
+## Second opinion on doubtful words (Nov 11)
 
 The speech model's per-word confidence (lowest token confidence in the word) against what was really said, on the
 golden set with Parakeet Ultra: 842 right words, 17 wrong.

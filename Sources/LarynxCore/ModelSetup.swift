@@ -1,6 +1,6 @@
 import Foundation
 
-/// Where the speech model is on its way to being usable, for the setup window (PLAN-launch L0.7): every wait a new
+/// Where the speech model is on its way to being usable, for the setup window: every wait a new
 /// user sits through gets a bar, plain words and a time. FluidAudio reports no download progress, so the fraction is
 /// the model folder's size on disk against the size it ends up at.
 public enum ModelSetup {

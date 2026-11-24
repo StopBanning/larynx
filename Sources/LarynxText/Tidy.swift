@@ -1,7 +1,7 @@
 import Foundation
 
 /// How much to polish, chosen from the app you are dictating into.
-/// How the text should read (PLAN-v1 section P). `CleanupMode` is where it is going (an AI chat, a message, an
+/// How the text should read. `CleanupMode` is where it is going (an AI chat, a message, an
 /// email); the style is the register. Casual is everything Larynx did before; professional also removes what you'd
 /// leave out when writing to a client: discourse fillers, "dude", swearing used for emphasis, spoken forms like
 /// "gonna", and turns spoken lists into real ones.
@@ -86,7 +86,7 @@ public enum Tidy {
 
     /// Experimental rules that run on every dictation but change nothing: each proposal is recorded in history as a
     /// `shadow:<name>` step, and `larynx mine --shadow` lists them. A rule moves into `apply` once its proposals on
-    /// real dictations have been read and are right (PLAN-v1 B1: every risky rule goes through here first).
+    /// real dictations have been read and are right (every risky rule goes through here first).
     public static let shadowRules: [(name: String, apply: (String) -> String)] = [
         ("spoken-list", spokenList),
         ("counted-list", countedList),
@@ -375,8 +375,8 @@ public enum Tidy {
         s = CodeWords.apply(s)
         // 2f. "like" as a filler, only where it cannot be the verb or a comparison.
         s = fillerLike(s)
-        // 2g. The professional style's extra cleanup (PLAN-v1 P2). In the AI mode, the part of it that is only noise
-        // ("you know", "I mean", filler "like") runs in casual too: AI mode cleans noise, not voice (Colin, Nov 14).
+        // 2g. The professional style's extra cleanup. In the AI mode, the part of it that is only noise
+        // ("you know", "I mean", filler "like") runs in casual too: AI mode cleans noise, not voice.
         if style == .professional { s = professional(s, keepSwearing: keepSwearing) }
         else if mode == .ai { s = professional(s, keepSwearing: true, voice: false) }
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
@@ -531,7 +531,7 @@ public enum Tidy {
         return out
     }
 
-    /// The professional style's rules (PLAN-v1 P2). Each was read against every match in 677 real dictations before
+    /// The professional style's rules. Each was read against every match in 677 real dictations before
     /// it was turned on; the misses that reading found are the exclusions written into the patterns.
     /// `voice: false` runs only the rules that remove noise ("you know", "I mean", filler "like") and leaves the
     /// speaker's voice alone: forms of address, spoken forms like "gonna", swearing, openers like "Yeah,", grammar.

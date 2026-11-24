@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The accents set: real conversational English from speakers of many first languages (PLAN-launch L0.5 follow-up).
+"""The accents set: real conversational English from speakers of many first languages.
 
     python3 bench/accents.py [--per-accent 6] [--max 300]
 

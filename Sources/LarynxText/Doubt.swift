@@ -1,6 +1,6 @@
 import Foundation
 
-/// Words the speech model probably misheard, from its own confidence (PLAN-v1 B4). Calibrated on the author's golden
+/// Words the speech model probably misheard, from its own confidence. Calibrated on the author's golden
 /// set (docs/BENCHMARKS.md): under 0.4 caught "Robus" (0.34) and "Presume" (0.36) with 1 false alarm in 842 right
 /// words. A word no dictionary knows is doubtful a little earlier (under 0.8), unless it is capitalized (a name).
 public enum Doubt {

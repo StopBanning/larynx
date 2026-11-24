@@ -1,12 +1,10 @@
 # Roadmap
 
-The short version. The working plans, with the evidence for each finished task, are
-[docs/PLAN-launch.md](docs/PLAN-launch.md) (getting Larynx to more people) and [docs/PLAN-v1.md](docs/PLAN-v1.md)
-(the road to 1.0).
+Where Larynx is headed. Dates aren't promised; the order is.
 
 **Now**
 - A signed download with automatic updates, so installing doesn't need Terminal.
-- A landing page, and a measured comparison with the Mac's built-in dictation.
+- A measured comparison with the Mac's built-in dictation.
 - Fewer leftovers: cut-off words ("defin- really") and "actually no" as a change of mind.
 
 **Next**

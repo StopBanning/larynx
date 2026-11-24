@@ -3,7 +3,7 @@ import CoreAudio
 import Foundation
 import LarynxCore
 
-/// The two sides of a meeting as 16 kHz mono audio (docs/dev/MEETING.md): the microphone ("You") through its own audio
+/// The two sides of a meeting as 16 kHz mono audio (docs/MEETINGS.md): the microphone ("You") through its own audio
 /// engine, so dictation keeps working during a meeting, and the call's audio through macOS's process tap (macOS 14.4+):
 /// no driver, one "System Audio Recording" permission the first time. Both are written to the meeting's spool files as
 /// they arrive, so a crash or a closed lid loses nothing.

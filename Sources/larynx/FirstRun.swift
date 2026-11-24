@@ -3,7 +3,7 @@ import AVFoundation
 import LarynxCore
 import SwiftUI
 
-/// First run (PLAN-v1 D2): the three permissions with live status, a microphone level test, the speech model's
+/// First run: the three permissions with live status, a microphone level test, the speech model's
 /// state, the talk key, and a box to try a dictation. Larynx never flips a permission itself: each button opens the
 /// right pane of System Settings. Shown at launch only on a fresh install or when something is missing; the menu's
 /// Setup… opens it any time.
@@ -48,7 +48,7 @@ final class FirstRunModel: ObservableObject {
     @Published var accessibility = false
     @Published var inputMonitoring = false
     @Published var modelReady = false
-    /// Downloading with a fraction, preparing, or ready: every wait gets a bar and a time (PLAN-launch L0.7).
+    /// Downloading with a fraction, preparing, or ready: every wait gets a bar and a time.
     @Published var modelState: ModelSetup.State = .preparing
     @Published var preparingSeconds = 0
     private var samples: [(time: Date, bytes: Int64)] = []

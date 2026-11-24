@@ -78,7 +78,7 @@ public enum Golden {
         return true
     }
 
-    // MARK: Random set (R4)
+    // MARK: Random set
 
     /// A clip picked at random for labelling: what each speech model heard, and the label if they all agree.
     /// Kept in `golden/pending.jsonl` (private, never in git) until `larynx golden label` accepts or corrects it.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Latency gate (PLAN-v1 B9): 50 clips through the full pipeline (speech model, your dictionary and vocabulary,
+"""Latency gate: 50 clips through the full pipeline (speech model, your dictionary and vocabulary,
 cleanup; AI-app mode, so no AI rewrite) in one `larynx serve`, timed from "audio in" to "text out", which is what
 key-up to text costs. Writes bench/results/latency-<date>-<commit>.json and exits 1 if invariant 2 is broken
 (p50 > 150 ms or p90 > 350 ms). Run before every release.

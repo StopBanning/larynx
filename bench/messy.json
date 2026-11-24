@@ -1,5 +1,5 @@
 {
-  "_about": "The messy set (PLAN-launch L0.5): 40 sentences written for this comparison on Nov 13, 2026, after the cleanup rules, and never used to tune them. 'say' is what is spoken (fillers, stutters, false starts, spoken numbers); 'meant' is what the speaker wanted on the page. Scored by bench/compare.py on edits needed: the words a person would still have to change to get from the output to 'meant'.",
+  "_about": "The messy set: 40 sentences written for this comparison on Nov 13, 2026, after the cleanup rules, and never used to tune them. 'say' is what is spoken (fillers, stutters, false starts, spoken numbers); 'meant' is what the speaker wanted on the page. Scored by bench/compare.py on edits needed: the words a person would still have to change to get from the output to 'meant'.",
   "sentences": [
     {"cat": "fillers", "say": "Um, could you check whether the invoice went out this morning?", "meant": "Could you check whether the invoice went out this morning?"},
     {"cat": "fillers", "say": "So, uh, the plumber is coming between noon and two.", "meant": "So the plumber is coming between noon and two."},

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-labels the random golden clips (R4): every downloaded engine transcribes each waiting clip.
+"""Pre-labels the random golden clips: every downloaded engine transcribes each waiting clip.
 
     larynx golden sample --n 60      # picks the clips (golden/pending.jsonl)
     python3 bench/prelabel.py        # this: fills in what each engine heard, and the label where they all agree

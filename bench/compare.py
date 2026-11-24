@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Larynx against what a Mac already has (PLAN-launch L0.5), on the same audio.
+"""Larynx against what a Mac already has, on the same audio.
 
     python3 bench/compare.py [--binary path] [--limit N]
 

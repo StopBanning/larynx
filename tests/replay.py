@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Replay the tidy stage over every dictation in your history with two builds and print each line that changes.
-Use it before shipping any text rule (HANDOFF: "run it over his real dictations and read every line").
+Use it before shipping any text rule.
 
     cp .build/release/larynx /tmp/larynx-old      # before the change
     swift build -c release                         # after the change

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agents test (L0.11): the examples in docs/AGENTS.md do what the page says.
+"""Agents test: the examples in docs/AGENTS.md do what the page says.
 
     python3 tests/agents.py [--binary path]
 

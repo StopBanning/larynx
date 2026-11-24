@@ -1,5 +1,5 @@
 {
- "_about": "The third messy set (PLAN-launch L0.5, held out): 40 new sentences written on Nov 18, 2026, after the run-3 fixes, without rereading the rules, and never used to tune them. Same five kinds, mix and scoring as bench/messy.json and messy2.json. 'say' is what is spoken; 'meant' is what the speaker wanted on the page.",
+ "_about": "The third messy set (held out): 40 new sentences written on Nov 18, 2026, after the run-3 fixes, without rereading the rules, and never used to tune them. Same five kinds, mix and scoring as bench/messy.json and messy2.json. 'say' is what is spoken; 'meant' is what the speaker wanted on the page.",
  "sentences": [
   {"cat": "fillers", "say": "Um, the library books are due on Saturday.", "meant": "The library books are due on Saturday."},
   {"cat": "fillers", "say": "I think the, uh, printer needs new toner.", "meant": "I think the printer needs new toner."},

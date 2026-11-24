@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Metrics script test (L0.12): counts come out right and running it twice never counts a day twice.
+"""Metrics script test: counts come out right and running it twice never counts a day twice.
 
     python3 tests/metrics.py
 

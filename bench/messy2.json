@@ -1,5 +1,5 @@
 {
- "_about": "The second messy set (PLAN-launch L0.5, the held-out run): 40 new sentences written on Nov 16, 2026, after the fixes that run 2 measured, and never used to tune them. Same five kinds and the same scoring as bench/messy.json. 'say' is what is spoken; 'meant' is what the speaker wanted on the page.",
+ "_about": "The second messy set (the held-out run): 40 new sentences written on Nov 16, 2026, after the fixes that run 2 measured, and never used to tune them. Same five kinds and the same scoring as bench/messy.json. 'say' is what is spoken; 'meant' is what the speaker wanted on the page.",
  "sentences": [
   {"cat": "fillers", "say": "Um, the dentist moved my cleaning to Thursday.", "meant": "The dentist moved my cleaning to Thursday."},
   {"cat": "fillers", "say": "Can you, uh, grab some oat milk on the way home?", "meant": "Can you grab some oat milk on the way home?"},

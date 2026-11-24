@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build the landing page (PLAN-launch L0.10): site/template.html -> site/index.html.
+"""Build the landing page: site/template.html -> site/index.html.
 
     python3 scripts/make-site.py           # write site/index.html
     python3 scripts/make-site.py --check   # fail if index.html is out of date with the template or the numbers
 
-Every number on the page is read from the README or docs/BENCHMARKS.md, so the page and the README cannot drift:
+Every number on the page is read from the README, docs/TESTING.md or docs/BENCHMARKS.md, so the page and the README cannot drift:
 change a number there, run this, and the page follows. If a number can't be found, this fails instead of guessing.
 GitHub Pages serves the site/ folder (.github/workflows/pages.yml).
 """
@@ -25,13 +25,14 @@ def find(pattern, text, what):
 
 def numbers():
     readme = (ROOT / "README.md").read_text()
+    testing = (ROOT / "docs/TESTING.md").read_text()
     bench = (ROOT / "docs/BENCHMARKS.md").read_text()
     random_set = find(r"## Real voice, picked at random(.*?)(?:\n## |\Z)", bench, "the random-dictation section of BENCHMARKS.md")
     return {
         "SPEED": find(r"<b>([\d.]+) s</b> from letting go", readme, "the speed in the README"),
         "MODEL_MB": find(r"speech model \(about (\d+) MB\)", readme, "the model size in the README"),
         "INSTALL": find(r"```bash\n(curl -fsSL \S+/install\.sh \| zsh)\n```", readme, "the install line in the README"),
-        "TESTS": find(r"\| `swift test` \| (\d+) tests", readme, "the Swift test count in the README"),
+        "TESTS": find(r"\| `swift test` \| (\d+) tests", testing, "the Swift test count in docs/TESTING.md"),
         "WER": find(r"\n\| ultra \| ([\d.]+%) \|", random_set, "Ultra's WER on the random set"),
         "WER_CLIPS": find(r"This set is (\d+) dictations", random_set, "the size of the random set"),
         "SITE": SITE,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real-voice check (PLAN-v1 A1): run every kept recording of your own dictations through several engines and count
+"""Real-voice check: run every kept recording of your own dictations through several engines and count
 how often each engine is the odd one out, i.e. it disagrees while all the others agree with each other.
 
     python3 bench/realvoice.py                     # counts only (safe to paste anywhere)

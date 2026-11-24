@@ -1,7 +1,7 @@
 import AppKit
 import ApplicationServices
 
-/// What's around the cursor and on screen when a dictation starts (PLAN-v1 C1, master 2.1), used to spell names the
+/// What's around the cursor and on screen when a dictation starts, used to spell names the
 /// speech model has never heard ("Claude", "Dock") the way they appear on screen. Gathered at key-down on a
 /// background thread within a time budget; late context is dropped, never waited for. Lives in memory for one
 /// dictation; never logged or stored. Nothing is read from password fields or private apps.

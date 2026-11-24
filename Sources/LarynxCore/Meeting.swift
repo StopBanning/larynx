@@ -1,7 +1,7 @@
 import Foundation
 import LarynxText
 
-/// Meeting mode (docs/dev/MEETING.md): a meeting is two tracks of audio, the microphone ("You") and the call ("Them"),
+/// Meeting mode (docs/MEETINGS.md): a meeting is two tracks of audio, the microphone ("You") and the call ("Them"),
 /// cut into utterances where each side speaks, transcribed piece by piece and summarized at the end.
 
 public struct MeetingSegment: Codable, Sendable, Equatable {
@@ -347,7 +347,7 @@ extension Meeting {
     }
 }
 
-/// Who spoke when on the call side, and their names (docs/dev/MEETING.md). Speaker separation gives "Person 1",
+/// Who spoke when on the call side, and their names (docs/MEETINGS.md). Speaker separation gives "Person 1",
 /// "Person 2"...; names come from how "You" addressed people: whoever speaks right after "Go ahead, Dana" is Dana,
 /// decided by vote over the whole meeting, and only when the vote is clear.
 public enum MeetingSpeakers {

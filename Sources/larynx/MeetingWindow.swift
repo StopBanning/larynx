@@ -2,7 +2,7 @@ import AppKit
 import LarynxCore
 import SwiftUI
 
-/// Meeting mode's visible side (docs/dev/MEETING.md). Built for someone who should never have to wonder what is going
+/// Meeting mode's visible side (docs/MEETINGS.md). Built for someone who should never have to wonder what is going
 /// on: one big button to start, a panel that always says what is happening in plain words, and the notes opening by
 /// themselves when they are ready.
 @MainActor

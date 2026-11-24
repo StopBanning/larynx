@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Writes a meeting's notes with Claude through the Anthropic API (docs/dev/MEETING.md, "Claude writes the notes").
+/// Writes a meeting's notes with Claude through the Anthropic API (docs/MEETINGS.md, "Claude writes the notes").
 /// The audio and the transcript are made on the computer; only the finished transcript is sent, for the notes. One
 /// request reads the whole meeting (Claude's context is far larger than any meeting), and structured output returns
 /// the notes in a fixed shape, so the layout never breaks. Swift has no official SDK, so this is the plain HTTP API.

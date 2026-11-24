@@ -1,4 +1,4 @@
-# Homebrew formula that builds Larynx from source (PLAN-v1 D5, the no-cost path). To publish it, put this file in a
+# Homebrew formula that builds Larynx from source (the no-cost path). To publish it, put this file in a
 # tap repository named homebrew-larynx; then: brew install stopbanning/larynx/larynx
 class Larynx < Formula
   desc "Free, offline dictation for macOS: hold a key, speak, text appears where you type"

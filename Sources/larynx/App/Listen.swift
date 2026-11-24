@@ -43,7 +43,7 @@ extension Hotkey.Key {
 }
 
 /// Professional when the professional key started this dictation, or when the menu's Professional Style is on
-/// (PLAN-v1 P1). Fixed at key-down, like the target app.
+///. Fixed at key-down, like the target app.
 func dictationStyle(key: Hotkey.Key?, settings: Settings = .shared) -> Style {
     if let key, settings.string(.professionalKey) == key.rawValue { return .professional }
     return Style(rawValue: settings.string(.style)) ?? .casual
@@ -101,7 +101,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         if let last = ListenSession.lastDelivered { session.timing.gapSeconds = Int(Date().timeIntervalSince(last)) }
         ListenSession.current = session
         session.privateField = Privacy.isPrivate(app: session.target)
-        // Have the app build its accessibility tree while you speak, so the paste can be checked (R2).
+        // Have the app build its accessibility tree while you speak, so the paste can be checked.
         if inApp, !session.privateField {
             let target = session.target
             DispatchQueue.global(qos: .userInitiated).async { Inserter.wake(target) }
@@ -312,7 +312,7 @@ func logNote(_ note: String) -> String {
 func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? = nil) {
     guard Settings.shared.string(.learn) != "off" else { return }
     Task { @MainActor in
-        // "edit watch:" lines count outcomes without any text (PLAN-v1 B7: prove learning from edits fires).
+        // "edit watch:" lines count outcomes without any text (proves learning from edits fires).
         guard let field = Learner.focusedTextElement(in: app) else { log("edit watch: field not readable"); return }
         // Look every second for 20 s and keep the last version that still holds the pasted words: people fix a word
         // and hit send within seconds, and after sending the field is empty.

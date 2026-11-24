@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Meeting mode test (docs/dev/MEETING.md): scripted meetings in, checked notes out.
+"""Meeting mode test (docs/MEETINGS.md): scripted meetings in, checked notes out.
 
     scripts/when-idle.sh python3 tests/meeting.py [--summary both|on-device|private-cloud] [--only weekly-sync]
 

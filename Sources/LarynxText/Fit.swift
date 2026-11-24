@@ -1,6 +1,6 @@
 import Foundation
 
-/// Fits a dictation to the text already in the field, just before it is pasted (PLAN-v1 C4, master 2.3): a space
+/// Fits a dictation to the text already in the field, just before it is pasted: a space
 /// after the previous text when one is missing ("time." + "Are we" -> "time. Are we"), and a lowercase first word
 /// when the dictation lands mid-sentence ("Hey Sam," + "Can you" -> "Hey Sam, can you"). Unreadable fields, empty
 /// fields, a new line and a selection being replaced all leave the text exactly as it is.

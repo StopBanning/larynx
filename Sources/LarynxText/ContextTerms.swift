@@ -1,6 +1,6 @@
 import Foundation
 
-/// Names and terms worth listening for, taken from text on screen (PLAN-v1 C2, master 2.2): capitalized words that
+/// Names and terms worth listening for, taken from text on screen: capitalized words that
 /// aren't at the start of a sentence ("ask Claude", "the Dock"), identifiers (camelCase, snake_case, file.names) and
 /// words no dictionary knows. Pass the text nearest the cursor first: the first `limit` distinct terms win.
 public enum ContextTerms {

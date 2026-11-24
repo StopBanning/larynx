@@ -69,7 +69,7 @@ public struct Heard: Sendable {
     public init(text: String, confidence: Float, words: [WordConfidence]) { self.text = text; self.confidence = confidence; self.words = words }
 }
 
-/// A vocabulary built for one dictation from what's on screen (PLAN-v1 C2): the standing terms plus context terms.
+/// A vocabulary built for one dictation from what's on screen: the standing terms plus context terms.
 public struct ContextVocabulary: @unchecked Sendable {
     let session: VocabularyBoostingSession
     public let terms: [String]

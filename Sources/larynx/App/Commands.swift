@@ -26,7 +26,7 @@ let usage = """
 
     larynx transcribe <audio file> [--clean]   print the transcript of a file
     larynx meeting --you mic.wav [--them call.wav] [--summary on-device|private-cloud|both|none] [--json] [--save]
-                                               meeting notes from recordings (docs/dev/MEETING.md)
+                                               meeting notes from recordings (docs/MEETINGS.md)
     larynx listen [--key fn|rightOption|rightCommand|rightControl] [--clean]
                                               hold the key, speak, release: text pastes where your cursor is
     larynx history [--search words] [--json]   your recent dictations (kept on this Mac, 30 days by default)
@@ -309,7 +309,7 @@ case "numbers":
     }
     exit(0)
 case "review":
-    // The daily read (PLAN-v1 B8): larynx review [--hours 24] [--text]. Counts only unless --text.
+    // The daily read: larynx review [--hours 24] [--text]. Counts only unless --text.
     let hours = Double(option("--hours") ?? "") ?? 24
     let showText = args.contains("--text")
     let since = Date().addingTimeInterval(-hours * 3600)

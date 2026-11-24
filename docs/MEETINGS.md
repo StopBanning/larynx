@@ -1,6 +1,6 @@
 # Meeting mode: design
 
-Written Nov 14, 2026, at Colin's ask, with a high bar for polish. For people who sit in meetings all day and want to
+For people who sit in meetings all day and want to
 walk out with the summary already written. The bar is the rest of Larynx: no setup, instant, private, and nothing to
 fix afterwards.
 
@@ -44,7 +44,7 @@ The key is saved in the Keychain from Settings → Meetings; without one, `auto`
 the request fails (no internet, no credit), the transcript is saved and the meeting shows "Write the summary now".
 The Windows app uses the same request and schema, so both write the same notes.
 
-**Added (Nov 16, Colin): Claude Code first, on the person's own Claude plan.** A Claude subscription can't be used by
+**Claude Code first, on the person's own Claude plan.** A Claude subscription can't be used by
 an app through the API, but Claude Code, signed in to the plan, can be run headless. When it is installed, Larynx runs
 `claude -p` with the same instructions and schema (`ClaudeCode` in `ClaudeNotes.swift`, `claude_code_notes` in
 `windows/src/meeting.rs`): `--json-schema` for the shape, `--model opus`, `--tools ""` (no tools at all),
@@ -54,7 +54,7 @@ an app through the API, but Claude Code, signed in to the plan, can be run headl
 Code isn't installed, or fails (not signed in, offline) and a key is saved, the API key is used; with neither, the
 Mac's own model. Not `--bare`: it skips reading the keychain, where the plan's sign-in is kept. On Windows only the
 native install (`claude.exe`) is found, not the npm one.
-First real run (Nov 16, `tests/meeting.py --summary claude`, on Colin's plan): notes in 9 to 11 seconds. The weekly sync
+First real run (Nov 16, `tests/meeting.py --summary claude`, on a real Claude plan): notes in 9 to 11 seconds. The weekly sync
 passes; the client call names "Kriya" throughout, because the speech model heard "Priya" that way and Claude used the
 name as heard (a speech error, not a notes error). The test now accepts any task that fits when one sentence holds
 two ("tell the printer today, a new proof by Thursday").
@@ -69,13 +69,13 @@ The comparison that led there:
 | Quality | Good on short meetings | Expected to be clearly better: a larger model |
 | Promise | "Nothing leaves your Mac" stays true | "Your audio never leaves your Mac" |
 
-The plan: build both behind one switch, run both on the same test meetings, and put the two summaries side by side for
-Colin before picking the default.
+The plan: build both behind one switch, run both on the same test meetings, and read the two summaries side by side before
+picking the default.
 
-## For the person it is for
+## Who it is for
 
-The first person who will use this is 75, sharp, and busy (Colin, Nov 14). Every screen is judged by: would he know
-what is happening, and what to do next, without asking anyone?
+Someone busy who is not a computer person. Every screen is judged by: would they know what is happening, and
+what to do next, without asking anyone?
 
 - **One big button that says what it does:** "Start recording this meeting". The shortcut exists, but nothing needs it.
 - **Always say what is happening, in plain words, big enough to read at a glance:** "Recording · 12:04" with a steady
@@ -85,7 +85,7 @@ what is happening, and what to do next, without asking anyone?
 - **Large type, high contrast, generous click targets;** follows the Mac's text size and contrast settings.
 - **Hard to get wrong:** stopping asks nothing (it is never destructive); discarding a meeting asks first and can be
   undone from the Meetings list; closing the window never loses a meeting.
-- **The obvious next step is a button:** "Email this to me" (one click, his own address filled in), "Copy", "Print".
+- **The obvious next step is a button:** "Email this to me" (one click, their own address filled in), "Copy", "Print".
 - **If something is wrong, say it plainly with what to do:** "I can't hear the microphone. Check it isn't muted."
 
 ## Refinement: the details that make it feel finished
@@ -107,12 +107,12 @@ what is happening, and what to do next, without asking anyone?
   is in the summary, nothing invented is, and the timings hold.
 - **Two-sided audio**: a "you" track and a "call" track fed as files, so the you/them split is checked without a real
   call or permission prompt.
-- **A real meeting** recorded by Colin (or a public meeting recording with permission to use it) before the demo.
-- Summaries from both models read side by side by Colin.
+- **A real meeting** (or a public meeting recording with permission to use it).
+- Summaries from both models read side by side.
 
 ## On Windows
 
-The first person this is for uses Windows, so the Windows app has meeting mode too (`windows/src/meeting.rs`, portable
+The Windows app has meeting mode too (`windows/src/meeting.rs`, portable
 and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
 
 - **Right-click the Larynx icon → Start recording this meeting.** The microphone is "You"; the computer's sound (WASAPI
@@ -127,8 +127,7 @@ and unit-tested; `windows/src/win/meeting.rs`, the recording and the window):
 - The notes are the Mac's: the same Claude request, schema and `verify()`, through Windows' own `curl.exe` (the tool
   `larynx setup` already uses), with the key going in on standard input. The key lives in Windows Credential Manager:
   right-click → **Set Claude key…**. Claude Code (`claude.exe`, signed in to a Claude plan) is used first when it is
-  installed, the same as on the Mac. **Gemini** (added Nov 23, for a tester whose work allows Gemini or Copilot, not
-  Claude): right-click → **Set Gemini key…** (a free key from aistudio.google.com) and Gemini writes the notes with the
+  installed, the same as on the Mac. **Gemini**, for workplaces that allow Gemini or Copilot but not Claude: right-click → **Set Gemini key…** (a free key from aistudio.google.com) and Gemini writes the notes with the
   same instructions, schema and `verify()` (`gemini_notes`, generateContent with `responseJsonSchema`; model
   `gemini-flash-latest`, or `LARYNX_GEMINI_MODEL`). The order is Claude Code, the Claude key, then Gemini; Gemini also
   steps in when Claude fails (a plan's 5-hour limit, say). Copilot has no API for this, so every meeting page has
@@ -151,7 +150,7 @@ once the core is right.
 
 1. Meeting recorder: start/stop, mic plus call audio into the spool, the pill. Tested with files.
 2. Chunked transcription while recording, you/them labels.
-3. The summary: guided generation on both models; the test meetings; side-by-side for Colin.
+3. The summary: guided generation on both models; the test meetings; the two read side by side.
 4. The Meeting window and the Meetings list; Copy, Email, Notes, Export.
 5. Speaker separation inside the call (after the model download is approved).
 6. Polish pass: timings, the reminder, the consent note, the empty and error states, the first run.

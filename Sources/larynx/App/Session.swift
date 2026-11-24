@@ -11,11 +11,11 @@ import LarynxCore
     var previewTimer: Timer?
     /// A password field or an app on the privacy list: the words never touch the disk.
     var privateField = false
-    /// Names and terms on screen for this dictation, if they were gathered in time (PLAN-v1 C1-C3; shadow for now).
+    /// Names and terms on screen for this dictation, if they were gathered in time (shadow for now).
     var contextTerms: [String]?
     /// Hands-free: recording with no key held.
     var locked = false
-    /// Where this dictation's time goes, filled in as it happens (R1); saved with it in history.
+    /// Where this dictation's time goes, filled in as it happens; saved with it in history.
     var timing = History.Timing()
     /// Casual or professional, fixed when the key goes down.
     var style: Style = .casual

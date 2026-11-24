@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Privacy proof (R7): Larynx turns speech into text with every network connection denied.
+"""Privacy proof: Larynx turns speech into text with every network connection denied.
 
     python3 tests/privacy.py            # transcribe, one serve request and listen --feed, all with no network
     python3 tests/privacy.py --prove    # also shows the sandbox really blocks: a deliberate network call must fail

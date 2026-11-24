@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live paste test (PLAN-v1 B2): a recording goes through the real listen path and is pasted into Larynx's own
+"""Live paste test: a recording goes through the real listen path and is pasted into Larynx's own
 capture window, never into another app. It brings a window to the front, so it only runs under
 scripts/when-idle.sh (keyboard and mouse idle; stops the moment you touch them):
 

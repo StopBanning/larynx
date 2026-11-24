@@ -5,7 +5,7 @@
     python3 bench/run.py --engines clean,unified --sets jargon,noise5 --limit 20
     python3 bench/run.py --write-doc                       # also rewrite docs/BENCHMARKS.md
     python3 bench/run.py --sets golden                     # your own recordings (larynx golden), full pipeline
-    python3 bench/run.py --sets random                     # the golden clips picked at random (R4), kept apart
+    python3 bench/run.py --sets random                     # the golden clips picked at random, kept apart
 
 Audio comes from bench/make_sets.py (~/work/scratch/larynx-bench). Each engine runs in one `larynx serve`
 process with cleanup off (verbatim), vocabulary off and the AI rewrite off, so this measures the speech model.

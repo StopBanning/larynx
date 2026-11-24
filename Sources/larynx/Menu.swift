@@ -49,7 +49,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         hint.isEnabled = false
         menu.addItem(hint)
 
-        // Meeting mode (docs/dev/MEETING.md): near the top and in plain words, so it is easy to find. Hidden until it is
+        // Meeting mode (docs/MEETINGS.md): near the top and in plain words, so it is easy to find. Hidden until it is
         // ready (meetingMode: on in settings.json shows it).
         if LarynxCore.Settings.shared.string(.meetingMode) == "on" || MainActor.assumeIsolated({ MeetingController.shared.isRecording }) {
         menu.addItem(.separator())
@@ -115,7 +115,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(toggle("Live Preview", on: Pill.enabled, #selector(togglePreview)))
         menu.addItem(glassSliderItem())
         menu.addItem(toggle("AI Cleanup", on: autoRewrite, #selector(toggleRewrite)))
-        // Professional (PLAN-v1 P): every dictation, or only while the professional key is held.
+        // Professional: every dictation, or only while the professional key is held.
         let professional = toggle("Professional Style", on: settings.string(.style) == "professional", #selector(toggleProfessional))
         professional.toolTip = "Cleaner text for work: no \u{201C}you know\u{201D}, \u{201C}dude\u{201D}, swearing or \u{201C}gonna\u{201D}, and spoken lists become lists"
         menu.addItem(professional)
@@ -216,7 +216,7 @@ final class MenuController: NSObject, NSMenuDelegate {
     /// A text file for whoever helps you, with no words you said in it (Report.swift, BugReport).
     @objc func sendReport() { MainActor.assumeIsolated { ReportSender.send() } }
 
-    /// Opens the releases page. A signed download with automatic updates is PLAN-launch L2.2.
+    /// Opens the releases page. A signed download with automatic updates is planned.
     @objc func checkForUpdates() { NSWorkspace.shared.open(Links.releases) }
 
     @objc func showAbout() {

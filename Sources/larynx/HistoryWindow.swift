@@ -4,7 +4,7 @@ import LarynxCore
 import LarynxText
 import SwiftUI
 
-/// The History window (PLAN-v1 R5): everything you dictated in the last 30 days, on this Mac only. Search it, copy
+/// The History window: everything you dictated in the last 30 days, on this Mac only. Search it, copy
 /// a dictation again, hear the recording when one was kept, and fix one that came out wrong: the fix is saved, and
 /// a changed word that sounds like what was typed is learned for next time.
 @MainActor

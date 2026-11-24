@@ -1,7 +1,7 @@
 import FluidAudio
 import Foundation
 
-/// Speaker separation for the call side of a meeting (docs/dev/MEETING.md), with FluidAudio's on-device diarizer
+/// Speaker separation for the call side of a meeting (docs/MEETINGS.md), with FluidAudio's on-device diarizer
 /// (pyannote community-1, WeSpeaker and BUT Speech@FIT models, CC BY 4.0, converted to Core ML by FluidInference).
 /// The models (about 129 MB) download once into Larynx's models folder.
 public actor MeetingDiarizer {

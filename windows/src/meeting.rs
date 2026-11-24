@@ -1,4 +1,4 @@
-//! Meeting mode (docs/dev/MEETING.md): a meeting's transcript, the notes Claude writes for it, the check of those notes
+//! Meeting mode (docs/MEETINGS.md): a meeting's transcript, the notes Claude writes for it, the check of those notes
 //! against what was said, and the page the notes are shown on. Everything here is portable and tested on any machine;
 //! the recording itself lives in `win/meeting.rs`.
 //!

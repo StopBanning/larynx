@@ -3,7 +3,7 @@ import Foundation
 import FoundationModels
 #endif
 
-/// Writes a meeting's notes with Apple's Foundation Models (docs/dev/MEETING.md). Guided generation returns a typed
+/// Writes a meeting's notes with Apple's Foundation Models (docs/MEETINGS.md). Guided generation returns a typed
 /// structure, so the layout never breaks. Two models behind one switch:
 /// - `.onDevice`: Apple's on-device model; nothing leaves the Mac. 8,192 tokens of context, so a long meeting is summarized
 ///   in parts and the parts combined.
@@ -60,7 +60,7 @@ public enum MeetingSummarizer {
             if #available(macOS 26.0, *) { if case .available = SystemLanguageModel.default.availability { return true } }
         case .privateCloud:
             // Needs Apple's private-cloud-compute entitlement (Larynx doesn't have it) and the macOS 27 SDK (CI's macOS
-            // 26 machines don't have it), so it is left out; notes come from Claude (docs/dev/MEETING.md).
+            // 26 machines don't have it), so it is left out; notes come from Claude (docs/MEETINGS.md).
             break
         }
         #endif

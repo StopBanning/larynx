@@ -3,7 +3,7 @@ import LarynxCore
 import ServiceManagement
 import SwiftUI
 
-/// The settings window (PLAN-v1 D1): everything the menu and settings.json offer, in one place. Every control writes
+/// The settings window: everything the menu and settings.json offer, in one place. Every control writes
 /// the same settings.json the menu does and takes effect at once; the menu keeps the quick toggles.
 @MainActor
 final class SettingsWindow {
@@ -293,7 +293,7 @@ private struct WordsPane: View {
 }
 
 /// Who writes meeting notes, and the Claude key (kept in the Keychain, never in settings.json). Shown while meeting
-/// mode is on (docs/dev/MEETING.md). An ObservableObject, not @State: the command-line tools the installer builds with
+/// mode is on (docs/MEETINGS.md). An ObservableObject, not @State: the command-line tools the installer builds with
 /// have no SwiftUI macro plugin.
 @MainActor private final class ClaudeKeyModel: ObservableObject {
     @Published var hasKey = ClaudeKey.isSet

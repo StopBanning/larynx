@@ -1,5 +1,5 @@
 {
-  "_about": "A synthetic weekly team sync (meeting mode tests, docs/dev/MEETING.md). Written for the test, said by macOS voices. 'side' is which track the line is on: 'you' (the microphone) or 'call'. 'expect' lists what the notes must contain: each entry is a set of words that must all appear in one item.",
+  "_about": "A synthetic weekly team sync (meeting mode tests, docs/MEETINGS.md). Written for the test, said by macOS voices. 'side' is which track the line is on: 'you' (the microphone) or 'call'. 'expect' lists what the notes must contain: each entry is a set of words that must all appear in one item.",
   "speakers": {"You": {"voice": "Samantha", "side": "you"}, "Dana": {"voice": "Karen", "side": "call"}, "Marcus": {"voice": "Daniel", "side": "call"}},
   "lines": [
     ["You", "Morning everyone. Let's get going, we've got three things today: the spring catalog, the warehouse move, and hiring."],

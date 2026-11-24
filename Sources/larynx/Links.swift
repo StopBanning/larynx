@@ -1,6 +1,6 @@
 import AppKit
 
-/// Where Larynx lives on the web, in one place (PLAN-launch LQ2 may move the repository).
+/// Where Larynx lives on the web, in one place.
 enum Links {
     static let repo = "https://github.com/StopBanning/larynx"
     static var releases: URL { URL(string: repo + "/releases")! }

@@ -1,7 +1,7 @@
 import Foundation
 import LarynxText
 
-/// A fix made in the History window (PLAN-v1 R5): "this came out wrong, here is what I said". The fix is saved as a
+/// A fix made in the History window: "this came out wrong, here is what I said". The fix is saved as a
 /// correction, the recording (when kept) joins the golden set with the fixed text, and a changed word that sounds
 /// like the one typed becomes a lesson under the same rules as learning from a repeat (`Corrections.lessons`).
 public enum HistoryFix {

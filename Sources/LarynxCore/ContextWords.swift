@@ -1,7 +1,7 @@
 import Foundation
 import NaturalLanguage
 
-/// Homophones settled by what's on screen (PLAN-v1 C3, generalized): a noun in the dictation that sounds exactly
+/// Homophones settled by what's on screen (generalized): a noun in the dictation that sounds exactly
 /// like a name on screen takes the screen's spelling ("ask the clod" + "Claude" on screen -> "ask the Claude";
 /// "pin it to the doc" + "Dock" -> "pin it to the Dock"). Audio can't tell these apart, only context can. A word that
 /// isn't a noun where it stands ("make it so", "the real reason") never changes. Runs in shadow until proven.

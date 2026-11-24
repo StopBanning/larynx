@@ -111,7 +111,7 @@ read-back.
 | Insertion into apps beyond Notepad and Edge: Word, Slack/Teams (Electron), Windows Terminal, elevated windows | only Notepad and Edge are scripted |
 | Antivirus and SmartScreen reactions to an unsigned app with a keyboard hook | CI has no third-party antivirus |
 
-The plan for these is a cheap laptop left on as a test PC: [dev/TEST-PC.md](dev/TEST-PC.md).
+These need a real Windows PC, which is the next step.
 
 **The Windows beta**, for testers: the Actions tab → `windows` → Run workflow on main with "Publish this build as the
 Windows beta" ticked. If every test passes, the build replaces the one pre-release tagged `windows-beta`, so a
@@ -135,13 +135,11 @@ and start `larynx.exe`; the first start downloads the model (about 670 MB) into 
 | W9 | ARM64 build (`ort` ships an `aarch64-pc-windows-msvc` DirectML build; Swift supports ARM64 Windows) | the CI matrix builds it |
 | W10 | `serve` JSON protocol (INTEGRATION.md) so Locust can drive it | `tests/protocol.py` passes against it |
 
-## Decisions for Colin
+## Open decisions
 
-| # | Decision | Default until answered |
+| # | Decision | For now |
 | --- | --- | --- |
-| W-a | The stack above (native Rust + ONNX Runtime + Swift cleanup process), instead of the Nov 11 plan's Electron shell | Go with it |
-| W-b | A real Windows machine for W7 and the pill (not the old PC's failing D: drive) | Colin, Nov 18: a cheap used laptop as the test PC ([dev/TEST-PC.md](dev/TEST-PC.md)) |
-| W-c | Code signing: unsigned shows a SmartScreen warning, and antivirus is wary of keyboard hooks in unsigned apps; Azure Trusted Signing is about $10/month | Unsigned, with instructions |
+| W-c | Code signing: an unsigned app shows a SmartScreen warning, and antivirus is wary of keyboard hooks in unsigned apps. Azure Trusted Signing costs about $10 a month | Unsigned, with instructions |
 | W-d | ARM64 (Snapdragon) in the first release | x64 first, ARM64 right after |
 
 ## Risks
