@@ -7,7 +7,8 @@ Your voice stays on this computer. Only the meeting's written words go to the AI
 
 1. OPEN IT
 ----------
-Open the Larynx folder and double-click  larynx.exe
+Right-click the zip you downloaded, choose  Extract All , then open the folder it makes
+and double-click  larynx.exe
 
 Windows will warn you that the publisher is unknown (Larynx isn't signed yet).
 Click  More info , then  Run anyway . This happens only the first time.

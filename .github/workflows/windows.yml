@@ -268,7 +268,7 @@ jobs:
           (cd dist && zip -qr ../larynx-windows-x64.zip .)
           notes="Larynx for Windows, beta: built from ${GITHUB_SHA::7} on $(date -u +%F), after every Windows test passed (run ${GITHUB_RUN_ID}).
 
-          For testers. It isn't signed yet, so Windows will say the publisher is unknown: choose More info, then Run anyway. Unzip it anywhere and run larynx.exe; the first start downloads the speech model (about 670 MB). If something goes wrong, right-click the tray icon, choose Send a report…, and send the file it saves.
+          For testers. It isn't signed yet, so Windows will say the publisher is unknown: choose More info, then Run anyway. Unzip it anywhere, open Start here.txt, and run larynx.exe; the first start downloads the speech model (about 670 MB). If something goes wrong, right-click the tray icon, choose Send a report…, and send the file it saves.
 
           What CI checks before a beta goes out, and what it can't: docs/WINDOWS.md."
           gh release delete windows-beta -R "$GITHUB_REPOSITORY" --cleanup-tag -y || true
