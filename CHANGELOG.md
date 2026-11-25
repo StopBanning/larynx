@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The talk key can't go dead after an audio change.** If a USB microphone or webcam reconnected, macOS's audio engine could raise an error that Swift can't catch when the microphone opened, and from then on every press did nothing until Larynx restarted. Larynx now notices audio changes and opens the microphone on a fresh engine, catches that error if it still happens, and tries once more.
+
 - **Windows: a second computer can record a meeting held on another.** When nothing plays on the recording computer (it sits by the speakers of the one the call is on, or by people in a room), every line is "In the room" instead of "You", and the AI is told one microphone heard everyone, so it doesn't credit everything to you. New in the tray: **Start Larynx with Windows**. The download now has a plain **Start here.txt**: opening it past the unsigned-app warning, recording a meeting, and getting the notes from Gemini or Copilot.
 
 - **Mac meeting notes no longer fail when Claude can't write them.** If Claude Code hits its plan's limit (or is offline) and no key is saved, the Mac's own model writes the notes, and the page says so. A used-up plan now says plainly that the limit was reached and when it resets. The privacy page and README now say that meeting notes send the transcript text (never audio) to the AI you set up.

@@ -18,9 +18,10 @@ let package = Package(
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .target(name: "LarynxObjC"),
         .target(
             name: "LarynxCore",
-            dependencies: ["LarynxText", .product(name: "FluidAudio", package: "FluidAudio")],
+            dependencies: ["LarynxText", "LarynxObjC", .product(name: "FluidAudio", package: "FluidAudio")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
@@ -32,7 +33,7 @@ let package = Package(
         ),
         .testTarget(
             name: "LarynxCoreTests",
-            dependencies: ["LarynxCore"],
+            dependencies: ["LarynxCore", "LarynxObjC"],
             path: "tests/LarynxCoreTests",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

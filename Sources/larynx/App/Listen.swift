@@ -96,6 +96,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
             return
         }
         let micMs = ms(since: micStart)
+        if let problem = recorder.lastStartProblem { log("microphone: \(problem)"); recorder.lastStartProblem = nil }
         session.timing.micMs = micMs
         if let pid = session.target?.processIdentifier { session.timing.accessibilityWasOff = !AccessibilityModes.isHeld(pid: pid) }
         if let last = ListenSession.lastDelivered { session.timing.gapSeconds = Int(Date().timeIntervalSince(last)) }

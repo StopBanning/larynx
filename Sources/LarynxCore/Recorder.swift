@@ -1,10 +1,16 @@
 import AVFoundation
+import LarynxObjC
 
 /// Captures the default microphone and keeps 16 kHz mono Float32 samples, the format Parakeet expects.
 public final class Recorder: @unchecked Sendable {
     public static let sampleRate: Double = 16_000
 
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
+    /// The audio hardware changed under the engine (a USB microphone or webcam reconnected, the default input
+    /// switched). A stale engine can raise an exception when the microphone is opened, so the next start uses a
+    /// fresh one.
+    private var stale = false
+    private var changeObserver: NSObjectProtocol?
     private let lock = NSLock()
     private var samples: [Float] = []
     private var converter: AVAudioConverter?
@@ -33,7 +39,24 @@ public final class Recorder: @unchecked Sendable {
         return isRecording ? lastLevel : 0
     }
 
-    public init() {}
+    public init() { watch() }
+
+    private func watch() {
+        if let changeObserver { NotificationCenter.default.removeObserver(changeObserver) }
+        changeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
+            self?.lock.withLock { self?.stale = true }
+        }
+    }
+
+    /// A new engine in place of one the hardware changed under.
+    private func freshEngine() {
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        engine = AVAudioEngine()
+        lock.withLock { stale = false }
+        watch()
+    }
 
     public func start() throws {
         if isRecording {
@@ -52,6 +75,22 @@ public final class Recorder: @unchecked Sendable {
             return
         }
         lock.lock(); samples.removeAll(keepingCapacity: true); ring.removeAll(); lock.unlock()
+        if lock.withLock({ stale }) { freshEngine() }
+        do {
+            try open()
+        } catch {
+            // Once more on a fresh engine before giving up: that clears a microphone whose format changed.
+            lastStartProblem = "\(error.localizedDescription); retried on a fresh audio engine"
+            freshEngine()
+            try open()
+        }
+        lock.withLock { isRecording = true }
+    }
+
+    /// What went wrong the last time the microphone needed a second try (for the log), or nil.
+    public var lastStartProblem: String?
+
+    private func open() throws {
         let input = engine.inputNode
         // Point the input at the chosen microphone before reading its format (system default if it's gone).
         let uid = deviceUID()
@@ -62,14 +101,19 @@ public final class Recorder: @unchecked Sendable {
         activeUID = uid
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0 else { throw LarynxError.noMicrophone }
+        guard format.channelCount > 0 else { throw LarynxError.noMicrophone }
         converter = AVAudioConverter(from: format, to: target)
-        input.removeTap(onBus: 0)  // a warm engine the system stopped (device change) may still hold the old tap
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.append(buffer)
+        var started: Error?
+        let raised = LarynxCatch {
+            input.removeTap(onBus: 0)  // a warm engine the system stopped (device change) may still hold the old tap
+            input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+                self?.append(buffer)
+            }
+            engine.prepare()
+            do { try engine.start() } catch { started = error }
         }
-        engine.prepare()
-        try engine.start()
-        lock.withLock { isRecording = true }
+        if let raised { throw raised }
+        if let started { throw started }
     }
 
     /// Stops capture and returns everything recorded since `start()`.
