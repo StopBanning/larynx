@@ -316,12 +316,19 @@ func watchForFixes(_ pasted: String, in app: NSRunningApplication?, id: String? 
         // "edit watch:" lines count outcomes without any text (proves learning from edits fires).
         guard let field = Learner.focusedTextElement(in: app) else { log("edit watch: field not readable"); return }
         // Look every second for 20 s and keep the last version that still holds the pasted words: people fix a word
-        // and hit send within seconds, and after sending the field is empty.
+        // and hit send within seconds, and after sending the field is empty. A fix that reads the same two seconds in a
+        // row is learned at once, so "Learned" shows while you're still looking at the word (not halfway through typing
+        // it, and not up to 20 seconds later).
         var latest: String?
+        var seen = ""
         for _ in 0..<20 {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             guard let now = Learner.text(of: field) else { break }
             if Learner.stillHolds(pasted, in: now) { latest = now } else if latest != nil { break }
+            guard let latest else { continue }
+            let found = Learner.fixes(pasted: pasted, now: latest).map { "\($0.heard)>\($0.fixed)" }.joined(separator: "|")
+            if !found.isEmpty, found == seen { break }
+            seen = found
         }
         guard let now = latest else { log("edit watch: readable, dictation not found in it"); return }
         let fixes = Learner.fixes(pasted: pasted, now: now)

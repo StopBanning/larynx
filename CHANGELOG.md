@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **"Learned" shows while you're still looking.** When you fix a word Larynx typed, it now learns the fix as soon as it has read the same for two seconds, instead of at the end of its 20-second watch, so the Learned message appears right after your edit.
+
 - **The talk key can't go dead after an audio change.** If a USB microphone or webcam reconnected, macOS's audio engine could raise an error that Swift can't catch when the microphone opened, and from then on every press did nothing until Larynx restarted. Larynx now notices audio changes and opens the microphone on a fresh engine, catches that error if it still happens, and tries once more.
 
 - **Windows: a second computer can record a meeting held on another.** When nothing plays on the recording computer (it sits by the speakers of the one the call is on, or by people in a room), every line is "In the room" instead of "You", and the AI is told one microphone heard everyone, so it doesn't credit everything to you. New in the tray: **Start Larynx with Windows**. The download now has a plain **Start here.txt**: opening it past the unsigned-app warning, recording a meeting, and getting the notes from Gemini or Copilot.
