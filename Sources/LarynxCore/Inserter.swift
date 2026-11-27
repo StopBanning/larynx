@@ -158,6 +158,12 @@ public enum Inserter {
             }
         }
         if case .unchanged = await outcome(element, in: app, from: before, text: text, within: 0) {
+            // Typed keys take on any modifier held at that moment. With the talk key (Right Command) already down
+            // for the next dictation, the words arrived as ⌘-shortcuts (Claude's sidebar closed, a folder opened).
+            // Type only once every modifier is let go; otherwise leave the words on the clipboard.
+            guard await modifiersReleased(within: 1.0) else {
+                copyOnly(text); return .copied("a key was held down, so the words were not typed")
+            }
             typeUnicode(text)
             if case .changed = await outcome(element, in: app, from: before, text: text, within: 0.5) { return .insertedBy("typing") }
         }
@@ -248,7 +254,20 @@ public enum Inserter {
         return false
     }
 
+    static let modifierKeys: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift, .maskSecondaryFn]
+
+    /// True once no modifier key is physically held, waiting up to `seconds`.
+    static func modifiersReleased(within seconds: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while true {
+            if CGEventSource.flagsState(.hidSystemState).intersection(modifierKeys).isEmpty { return true }
+            if Date() >= deadline { return false }
+            try? await Task.sleep(nanoseconds: 30_000_000)
+        }
+    }
+
     /// Types `text` as Unicode key events, a few characters at a time: the fallback for fields that ignore ⌘V.
+    /// Each event says outright that no modifier is held, so it can never be read as a shortcut.
     static func typeUnicode(_ text: String) {
         let source = CGEventSource(stateID: .combinedSessionState)
         let units = Array(text.utf16)
@@ -258,6 +277,7 @@ public enum Inserter {
             for down in [true, false] {
                 let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down)
                 chunk.withUnsafeBufferPointer { event?.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: $0.baseAddress) }
+                event?.flags = []
                 event?.post(tap: .cghidEventTap)
             }
             usleep(4000)

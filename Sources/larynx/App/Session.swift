@@ -6,6 +6,8 @@ import LarynxCore
     static var current: ListenSession?
     // Preserve the single outstanding preview request shared across successive recordings.
     static var previewBusy = false
+    /// The preview waits until then: it backs off on a slow Mac (see the preview timer in Listen.swift).
+    static var nextPreview = Date.distantPast
     let target: NSRunningApplication?
     var state = SessionState()
     var previewTimer: Timer?

@@ -96,11 +96,14 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
             return
         }
         let micMs = ms(since: micStart)
+        // Wake the speech model while you talk: after a pause it sleeps, and a short dictation would wait for it.
+        if inApp { Task.detached(priority: .userInitiated) { await transcriber.warmUp() } }
         if let problem = recorder.lastStartProblem { log("microphone: \(problem)"); recorder.lastStartProblem = nil }
         session.timing.micMs = micMs
         if let pid = session.target?.processIdentifier { session.timing.accessibilityWasOff = !AccessibilityModes.isHeld(pid: pid) }
         if let last = ListenSession.lastDelivered { session.timing.gapSeconds = Int(Date().timeIntervalSince(last)) }
         ListenSession.current = session
+        ListenSession.nextPreview = .distantPast
         session.privateField = Privacy.isPrivate(app: session.target)
         // Have the app build its accessibility tree while you speak, so the paste can be checked.
         if inApp, !session.privateField {
@@ -126,14 +129,19 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
                            field: Inserter.focusedFieldFrame(in: session.target), level: { recorder.level })
         session.previewTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak session] _ in
             Task { @MainActor in
-                guard let session, session.isCurrentRecording, !ListenSession.previewBusy, recorder.isRecording else { return }
+                guard let session, session.isCurrentRecording, !ListenSession.previewBusy, recorder.isRecording,
+                      Date() >= ListenSession.nextPreview else { return }
                 let all = recorder.snapshot()
                 guard Double(all.count) / Recorder.sampleRate >= 0.5 else { return }
                 let window = Int(Recorder.sampleRate * 12)
                 let trimmed = all.count > window
                 let snap = trimmed ? Array(all.suffix(window)) : all
                 ListenSession.previewBusy = true
+                let previewStart = Date()
                 var words = (try? await transcriber.transcribe(snap)) ?? ""
+                // On a slow or busy Mac the preview backs off (three times its own last run, never under the 0.8 s
+                // tick), so the final transcription gets the machine. On a fast Mac nothing changes.
+                ListenSession.nextPreview = previewStart.addingTimeInterval(max(0.8, 3 * Date().timeIntervalSince(previewStart)))
                 if trimmed, let cut = words.firstIndex(of: " ") { words = "…" + words[words.index(after: cut)...] }
                 ListenSession.previewBusy = false
                 if session.isCurrentRecording, recorder.isRecording, !words.isEmpty { Pill.shared.words(words) }
@@ -164,7 +172,8 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         Task {
             defer { session.reset() }
             do {
-                let result = try await finish(samples, clean: wantsClean, mode: mode, style: session.style, screen: session.contextTerms)
+                let screen = session.contextTerms
+                var result = try await finish(samples, clean: wantsClean, mode: mode, style: session.style)
                 session.timing.asrMs = result.asrMs
                 session.timing.cleanMs = result.totalMs - result.asrMs
                 let text = result.text
@@ -190,6 +199,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
                 if let sent = Inserter.lastPasteSent { session.timing.keyUpToPasteMs = Int(sent.timeIntervalSince(keyUp) * 1000) }
                 session.timing.reason = delivery.reason
                 ListenSession.lastDelivered = Date()
+                await addContextShadow(&result, screen: screen)
                 let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label,
                                                     flags: session.style == .professional ? ["professional"] : [], timing: session.timing)
                 if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }

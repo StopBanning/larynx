@@ -17,8 +17,10 @@ public enum Doubt {
             let word = raw.trimmingCharacters(in: CharacterSet.punctuationCharacters.subtracting(CharacterSet(charactersIn: "'")))
             let key = word.lowercased()
             guard !word.isEmpty, !fillers.contains(key), typed.contains(key), !out.contains(word) else { continue }
-            let unknown = word.first.map { !$0.isUppercase } ?? false && !isKnown(key)
-            if confidence < lowConfidence || (unknown && confidence < unknownWordConfidence) { out.append(word) }
+            // Confidence first: the dictionary lookup is slow and only matters between the two thresholds.
+            if confidence < lowConfidence { out.append(word); continue }
+            guard confidence < unknownWordConfidence, word.first?.isUppercase == false, !isKnown(key) else { continue }
+            out.append(word)
         }
         return out
     }

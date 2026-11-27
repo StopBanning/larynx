@@ -73,8 +73,7 @@ func requestMicrophone() async -> Bool {
 }
 
 /// Transcribes, optionally cleans, and reports timing for one utterance.
-func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, style: Style = .casual, tidy: Bool = !verbatim,
-            screen: [String]? = nil) async throws -> Transcript {
+func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, style: Style = .casual, tidy: Bool = !verbatim) async throws -> Transcript {
     let started = Date()
     try await Loader.shared.task.value
     if !inApp { await Loader.shared.vocabulary.value }  // command line: results should be repeatable
@@ -90,10 +89,6 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, styl
                                    snippets: tidy ? Snippets.load() : [:], dictionary: tidy ? Dictionary.load() : [:],
                                    caseTerms: vocabularyCache.terms, settings: settings, style: style)
     var result = await Pipeline().run(input, context: context)
-    // Homophones settled by the names on screen ("doc" -> "Dock"), in shadow: recorded, not applied yet.
-    if let terms = screen, let proposal = ContextWords.proposal(result.text, screenTerms: terms) {
-        result.steps.append(Step(stage: "shadow:context", before: result.text, after: proposal, applied: false))
-    }
     result.confidence = (Double(heard.confidence) * 1000).rounded() / 1000
     let doubtful = Doubt.words(heard.words.map { ($0.word, $0.confidence) }, finalText: result.text,
                                isKnown: { word in Vocabulary.isEnglish(word) || vocabularyCache.terms.contains { $0.lowercased() == word } })
@@ -109,5 +104,16 @@ func finish(_ samples: [Float], clean: Bool, mode: CleanupMode = .standard, styl
     result.doubtful = stillDoubtful.isEmpty ? nil : stillDoubtful
     result.totalMs = ms(since: started)
     return result
+}
+
+/// Homophones settled by the names on screen ("doc" -> "Dock"), in shadow: recorded, not applied yet. Worked out
+/// after the paste, since the tagger costs 8-17 ms, on the text as it stood before any cut-off word was removed,
+/// and recorded where it used to be (before the cut-off step).
+func addContextShadow(_ result: inout Transcript, screen: [String]?) async {
+    guard let terms = screen else { return }
+    let cutAt = result.steps.firstIndex { $0.stage == "cutOff" }
+    let text = cutAt.map { result.steps[$0].before } ?? result.text
+    guard let proposal = await Task.detached(priority: .utility, operation: { ContextWords.proposal(text, screenTerms: terms) }).value else { return }
+    result.steps.insert(Step(stage: "shadow:context", before: text, after: proposal, applied: false), at: cutAt ?? result.steps.count)
 }
 

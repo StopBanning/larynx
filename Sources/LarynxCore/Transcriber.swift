@@ -92,6 +92,23 @@ public actor Transcriber {
     private var personal: Set<String> = []
     private var standingTerms: [String] = []
     private var ctcModels: CtcModels?
+    /// The same vocabulary pass in two halves, so the audio half runs beside the speech model instead of after it.
+    private var sideBySide: SideBySidePass?
+    /// When a model last ran: after a few idle seconds the Neural Engine sleeps and the next run costs up to a second.
+    private var lastRun = Date.distantPast
+    /// Set LARYNX_VOCAB_PASS=after to run the vocabulary pass the old way, one after the other (for comparisons).
+    private let sideBySideOff = ProcessInfo.processInfo.environment["LARYNX_VOCAB_PASS"] == "after"
+
+    /// What `VocabularyBoostingSession.rescore` does inside (FluidAudio 0.18.3): the keyword model's pass over the
+    /// audio, which doesn't need the transcript, then the comparison, with the session's own thresholds.
+    struct SideBySidePass: Sendable {
+        let spotter: CtcKeywordSpotter
+        let rescorer: VocabularyRescorer
+        let vocabulary: CustomVocabularyContext
+        let cbw: Float
+        let minSimilarity: Float
+        let marginSeconds: Double
+    }
 
     public init() {}
 
@@ -123,8 +140,20 @@ public actor Transcriber {
         ctcModels = ctc
         standingTerms = terms
         let context = CustomVocabularyContext(terms: terms.map { CustomVocabularyTerm(text: $0) })
-        boosting = try await VocabularyBoostingSession(vocabulary: context, ctcModels: ctc)
-        vocabularySize = boosting?.vocabulary.terms.count ?? 0
+        let session = try await VocabularyBoostingSession(vocabulary: context, ctcModels: ctc)
+        boosting = session
+        vocabularySize = session.vocabulary.terms.count
+        sideBySide = nil
+        if let dir = ctc.directory {
+            let spotter = CtcKeywordSpotter(models: ctc, blankId: ctc.vocabulary.count)
+            let size = ContextBiasingConstants.rescorerConfig(forVocabSize: session.vocabulary.terms.count)
+            if let rescorer = try? await VocabularyRescorer.create(spotter: spotter, vocabulary: session.vocabulary, ctcModelDirectory: dir) {
+                sideBySide = SideBySidePass(spotter: spotter, rescorer: rescorer, vocabulary: session.vocabulary,
+                                            cbw: session.thresholds.cbw ?? size.cbw,
+                                            minSimilarity: max(session.thresholds.minSimilarity ?? size.minSimilarity, session.vocabulary.minSimilarity),
+                                            marginSeconds: session.thresholds.marginSeconds)
+            }
+        }
     }
 
     /// The alphabet the speaker writes in (`alphabet` setting), as the decoder's script hint: a token in another
@@ -148,19 +177,39 @@ public actor Transcriber {
     public func transcribeDetailed(_ samples: [Float]) async throws -> Heard {
         guard manager != nil || unified != nil else { throw LarynxError.notLoaded }
         guard samples.count >= Int(Recorder.sampleRate / 4) else { return Heard(text: "", confidence: 1, words: []) }
+        lastRun = Date()
+        defer { lastRun = Date() }
         let result: ASRResult
+        var replacements: [VocabularyRescorer.RescoringResult] = []
         if let unified {
             result = try await unified.transcribeDetailed(samples)
+            replacements = await rescoredOneAfterTheOther(result, samples: samples)
+        } else if let pass = sideBySide, !sideBySideOff {
+            // The keyword model's audio pass runs while the speech model works: the same two computations, about
+            // half the wait (Big Brother's bench, Nov 27: 132 -> 77 ms median).
+            async let spotted = try? pass.spotter.spotKeywordsWithLogProbs(audioSamples: samples, customVocabulary: pass.vocabulary, minScore: nil)
+            var state = try TdtDecoderState()
+            result = try await manager!.transcribe(samples, decoderState: &state, language: Transcriber.alphabetHint())
+            let spot = await spotted
+            if spot == nil {
+                // The audio half failed (never seen): do it the old way rather than skip the vocabulary.
+                replacements = await rescoredOneAfterTheOther(result, samples: samples)
+            } else if let spot, !spot.logProbs.isEmpty, let timings = result.tokenTimings, !timings.isEmpty {
+                let out = pass.rescorer.ctcTokenRescore(transcript: result.text, tokenTimings: timings, logProbs: spot.logProbs,
+                                                        frameDuration: spot.frameDuration, cbw: pass.cbw,
+                                                        marginSeconds: pass.marginSeconds, minSimilarity: pass.minSimilarity)
+                if out.wasModified { replacements = out.replacements }
+            }
         } else {
             var state = try TdtDecoderState()
             result = try await manager!.transcribe(samples, decoderState: &state, language: Transcriber.alphabetHint())
+            replacements = await rescoredOneAfterTheOther(result, samples: samples)
         }
         var text = result.text
-        if let boosting, let timings = result.tokenTimings, !timings.isEmpty,
-           let out = await boosting.rescore(text: text, tokenTimings: timings, audioSamples: samples), out.wasModified {
+        if !replacements.isEmpty {
             // FluidAudio's own rewritten text is far too eager with a short word list ("update to GitHub" -> "update to Govee"),
             // so take only its one-word swaps where the heard word looks like the term ("Gavy" -> "Govee").
-            for r in out.replacements where r.shouldReplace {
+            for r in replacements where r.shouldReplace {
                 guard let term = r.replacementWord else { continue }
                 text = Transcriber.swap(r.originalWord, for: term, in: text, personal: personal)
             }
@@ -170,6 +219,31 @@ public actor Transcriber {
         heard.modelText = result.text
         heard.timings = result.tokenTimings ?? []
         return heard
+    }
+
+    /// The vocabulary pass after the speech model, through FluidAudio's own session.
+    private func rescoredOneAfterTheOther(_ result: ASRResult, samples: [Float]) async -> [VocabularyRescorer.RescoringResult] {
+        guard let boosting, let timings = result.tokenTimings, !timings.isEmpty,
+              let out = await boosting.rescore(text: result.text, tokenTimings: timings, audioSamples: samples), out.wasModified else { return [] }
+        return out.replacements
+    }
+
+    /// Wakes both models on half a second of near-silence and throws the result away, so the dictation that just
+    /// started doesn't pay for a sleeping Neural Engine (up to a second on a short dictation after a pause).
+    /// Skipped when a model ran in the last few seconds.
+    public func warmUp() async {
+        guard manager != nil || unified != nil, Date().timeIntervalSince(lastRun) > 4 else { return }
+        lastRun = Date()
+        let quiet = [Float](repeating: 0.0005, count: Int(Recorder.sampleRate / 2))
+        let pass = sideBySide
+        async let keyword: Void = { _ = try? await pass?.spotter.spotKeywordsWithLogProbs(audioSamples: quiet, customVocabulary: CustomVocabularyContext(terms: []), minScore: nil) }()
+        if let unified {
+            _ = try? await unified.transcribeDetailed(quiet)
+        } else if let manager, var state = try? TdtDecoderState() {
+            _ = try? await manager.transcribe(quiet, decoderState: &state, language: Transcriber.alphabetHint())
+        }
+        await keyword
+        lastRun = Date()
     }
 
     /// The standing terms plus `extra` (names from the screen), ready to rescore with. Built outside the actor's

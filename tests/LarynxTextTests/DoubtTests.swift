@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import LarynxText
 
@@ -47,4 +48,30 @@ private func known(_ w: String) -> Bool { english.contains(w) }
     #expect(Doubt.cutOffs(["dum"], in: "dum dum dum", isKnown: known, startsAWord: starts).isEmpty)
     #expect(Doubt.cutOffs(["frobnicat"], in: "we frobnicat it", isKnown: known, startsAWord: starts).isEmpty)
     #expect(words.startsAWord("tra") && !words.startsAWord("zzq"))
+}
+
+/// The order the checks ran in before the dictionary lookup moved after the confidence test.
+private func doubtfulBefore(_ words: [(word: String, confidence: Float)], finalText: String, isKnown: (String) -> Bool) -> [String] {
+    let typed = Set(finalText.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "'" }).map(String.init))
+    var out: [String] = []
+    for (raw, confidence) in words {
+        let word = raw.trimmingCharacters(in: CharacterSet.punctuationCharacters.subtracting(CharacterSet(charactersIn: "'")))
+        let key = word.lowercased()
+        guard !word.isEmpty, !Doubt.fillers.contains(key), typed.contains(key), !out.contains(word) else { continue }
+        let unknown = word.first.map { !$0.isUppercase } ?? false && !isKnown(key)
+        if confidence < Doubt.lowConfidence || (unknown && confidence < Doubt.unknownWordConfidence) { out.append(word) }
+    }
+    return out
+}
+
+@Test func confidenceFirstGivesTheSameDoubtfulWords() {
+    var rng = SystemRandomNumberGenerator()
+    let pool = ["the", "Robus", "lixi", "um", "Compaq", "trying", "tra", "it's", "bu,", "Swift", "zorp", "plan.", "''", "Go", "x"]
+    let known: (String) -> Bool = { ["the", "trying", "it's", "plan", "go", "swift"].contains($0) }
+    for _ in 0..<20_000 {
+        let n = Int.random(in: 0...8, using: &rng)
+        let words = (0..<n).map { _ in (word: pool.randomElement(using: &rng)!, confidence: Float.random(in: 0...1, using: &rng)) }
+        let text = (words.map(\.word) + pool.shuffled(using: &rng).prefix(Int.random(in: 0...4, using: &rng))).joined(separator: " ")
+        #expect(Doubt.words(words, finalText: text, isKnown: known) == doubtfulBefore(words, finalText: text, isKnown: known))
+    }
 }

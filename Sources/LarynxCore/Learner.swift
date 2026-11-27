@@ -10,6 +10,9 @@ public enum Learner {
     public static func focusedTextElement(in app: NSRunningApplication?) -> AXUIElement? {
         guard Inserter.isTrusted, let app else { return nil }
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        // These reads run on the main thread, where the talk key is heard: a slow app must not hold it (the default
+        // wait is 6 s). The same limit as every other screen read in the app.
+        AXUIElementSetMessagingTimeout(appElement, 0.25)
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &value) == .success,
               let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
@@ -25,6 +28,7 @@ public enum Learner {
     /// The field's text. Tries the plain value first, then asks for the text by character range (Messages and
     /// other SwiftUI/WebKit fields answer only that way), then for the attributed string.
     public static func text(of element: AXUIElement) -> String? {
+        AXUIElementSetMessagingTimeout(element, 0.25)
         var value: CFTypeRef?
         if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success {
             if let s = value as? String { return s }

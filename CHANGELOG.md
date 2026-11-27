@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Typed words can no longer turn into shortcuts.** When a paste doesn't show up, Larynx types the words instead. Typed keys take on any modifier key held at that moment, so with Right Command as the talk key, pressing it again for the next dictation while the words were still being typed turned them into ⌘-shortcuts in the app (a sidebar closing, a folder opening). Larynx now types only once every modifier key is let go, and otherwise leaves the words on the clipboard.
+
+- **Speech to text is about a fifth to a third faster.** The vocabulary pass, which listens for your own words and names, used to run after the speech model on the same audio. It now runs alongside it. In the last four comparisons over 355 recordings (one with every core of the Mac busy), the text was identical and the median fell by 20 to 30%, for example from 101 to 71 ms. In two earlier runs, made while the Mac was at its busiest and other work was changing files, 7 recordings came out differently; rerun on their own they matched both ways, and the difference never came back. If the side-by-side pass ever fails, Larynx falls back to the old order, and `LARYNX_VOCAB_PASS=after` turns it on for comparing.
+
+- **No wait after a pause.** After a few seconds without use, macOS takes back the speech model's memory, and the next run used to cost up to a second, which a short reply felt in full. Larynx now wakes the model the moment you press the talk key, on half a second of silence it throws away, so it should be ready by the time you let go. That was measured on test clips; real-use numbers come after a few days.
+
+- **Less work between your words and the paste, which counts most on a busy or slower Mac.** The check for words the model wasn't sure of now asks the spell checker only about the few words that need it, with identical results on 20,000 random cases. A trial feature that only records a suggestion now runs after the paste. The live preview backs off when a Mac is slow, so the final transcription gets the machine. The watch for your edits after a paste gives up on a frozen app after a quarter second instead of six.
+
 - **Cleanup is about 40 times faster.** The cleanup rules were rebuilding each of their text patterns on every dictation, which took longer than running them. They're now built once and reused. Over 1,013 test sentences in every mode and style, the output is identical, and the time went from 100.6 s to 2.1 s. Each dictation saves roughly 10 ms, more when the Mac is busy.
 
 - **"Learned" shows while you're still looking.** When you fix a word Larynx typed, it now learns the fix as soon as it has read the same for two seconds, instead of at the end of its 20-second watch, so the Learned message appears right after your edit.
