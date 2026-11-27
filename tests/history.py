@@ -2,6 +2,8 @@
 """Crash-recovery gate (master plan 0.6), file-only: no microphone, key presses or pasting.
 
 1. `listen --feed` spools the fixture, then is killed with SIGKILL while "transcribing" (LARYNX_TEST_DELAY_MS).
+   The recording is saved alongside transcription, so a second run is killed 0.2 s after key-up and must be
+   recovered too, and the save itself must finish well inside that.
 2. The spool must still hold the recording; `recover` (what the app runs at launch) must turn it into a
    history row flagged "recovered" with the right text, and empty the spool.
 3. A normal feed must save a row and leave the spool empty; `history --search` must find it.
@@ -41,6 +43,15 @@ def run(*args, **extra):
     return p.stdout
 
 
+def until_event(p, name):
+    while True:
+        line = p.stdout.readline()
+        assert line, f'no {name} event; stderr: {p.stderr.read()[-2000:]}'
+        event = json.loads(line)
+        if event['event'] == name:
+            return event
+
+
 def spool():
     d = data / 'history/spool'
     return sorted(x.name for x in d.iterdir()) if d.exists() else []
@@ -50,13 +61,31 @@ try:
     # 1. Kill mid-dictation.
     p = subprocess.Popen([a.binary, 'listen', '--feed', str(fixture), *common], stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True, env=env(LARYNX_TEST_DELAY_MS='60000'))
-    first = json.loads(p.stdout.readline())
-    assert first['event'] == 'spooled' and first['saved'], first
+    first = until_event(p, 'spooled')
+    assert first['saved'], first
     time.sleep(0.5)
     p.send_signal(signal.SIGKILL)
     p.wait(timeout=10)
     assert spool() == [first['id'] + '.json', first['id'] + '.wav'], spool()
     time.sleep(1.1)  # recovery only takes spool files older than its own launch
+
+    # 1b. Killed 0.2 s after key-up: the save runs alongside transcription and must already be on disk.
+    for x in spool(): (data / 'history/spool' / x).rename(data / x)  # set the first one aside
+    p = subprocess.Popen([a.binary, 'listen', '--feed', str(fixture), *common], stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True, env=env(LARYNX_TEST_DELAY_MS='60000'))
+    until_event(p, 'keyup')
+    time.sleep(0.2)
+    p.send_signal(signal.SIGKILL)
+    p.wait(timeout=10)
+    early = [json.loads(line) for line in p.stdout.read().splitlines() if line.strip()]
+    early = [e for e in early if e['event'] == 'spooled']
+    assert early and early[0]['saved'], ('the save was not done 0.2 s after key-up', early)
+    save_ms = early[0]['ms']
+    assert len(spool()) == 2, spool()
+    time.sleep(1.1)
+    rows = json.loads(run('recover', '--json'))
+    assert len(rows) == 1 and rows[0]['text'] == expected and rows[0]['id'] == early[0]['id'], rows
+    for x in [first['id'] + '.json', first['id'] + '.wav']: (data / x).rename(data / 'history/spool' / x)
 
     # 2. Next launch recovers it.
     rows = json.loads(run('recover', '--json'))
@@ -72,7 +101,7 @@ try:
     assert out[-1]['event'] == 'result' and out[-1]['text'] == expected, out
     assert spool() == [], spool()
     found = json.loads(run('history', '--search', 'repo', '--json'))
-    assert [r['id'] for r in found] == [out[-1]['id'], first['id']], found
+    assert [r['id'] for r in found] == [out[-1]['id'], early[0]['id'], first['id']], found
     assert all(r['steps'] for r in found), 'steps not stored'
 
     # 4. history: off writes nothing.
@@ -83,12 +112,14 @@ try:
                            timeout=240, env=dict(os.environ, LARYNX_DATA_DIR=str(off)))
         assert p.returncode == 0, p.stderr[-2000:]
         result = [json.loads(line) for line in p.stdout.splitlines()]
-        assert result[0]['saved'] is False and result[-1]['text'] == expected, result
+        spooled = [r for r in result if r['event'] == 'spooled']
+        assert spooled[0]['saved'] is False and result[-1]['text'] == expected, result
         assert sorted(x.name for x in off.iterdir()) == ['settings.json'], list(off.iterdir())
     finally:
         shutil.rmtree(off, ignore_errors=True)
 
-    print(f'PASS: killed mid-dictation, recovered "{row["text"]}" as {row["id"]}; normal dictation saved and '
-          'searchable; spool empty afterwards; history off wrote nothing')
+    print(f'PASS: killed mid-dictation, recovered "{row["text"]}" as {row["id"]}; killed 0.2 s after key-up, '
+          f'recovered too (the save took {save_ms} ms); normal dictation saved and searchable; spool empty '
+          'afterwards; history off wrote nothing')
 finally:
     shutil.rmtree(data, ignore_errors=True)

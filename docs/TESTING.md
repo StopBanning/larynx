@@ -11,7 +11,7 @@ of each.
 | `python3 tests/agents.py` | The examples in [docs/AGENTS.md](AGENTS.md): AI mode, the four MCP tools, the professional style, and your real dictionary untouched | 10/10 (Nov 13) |
 | `scripts/when-idle.sh python3 tests/live.py` | A recording goes through the real listen and paste path into Larynx's own capture window only (never another app), once you're idle and the screen is unlocked; your clipboard and history are left as they were | 4/4 (Nov 11): verified paste 238 ms; dropped paste inserted once by the fallback; space after a finished sentence; space and lowercase mid-sentence |
 | `python3 bench/latency.py` | The speed gate, run before each release: 50 clips through the full pipeline; fails over 150 ms median or 350 ms at the 90th percentile | 80 ms median, 144 ms p90 (Nov 12) |
-| `python3 tests/history.py` | Kills a dictation mid-transcription; the next launch must recover it word for word | pass |
+| `python3 tests/history.py` | Kills a dictation mid-transcription, and another 0.2 s after key-up; the next launch must recover each word for word (the save took 2 ms) | pass (Nov 27) |
 | `scripts/when-idle.sh python3 tests/privacy.py --prove` | Speech to text three ways inside a sandbox that denies every network connection; then a deliberate web request under the same sandbox, which must fail | 4/4 (Nov 12) |
 | `python3 tests/metrics.py` | The launch metrics script (`scripts/metrics.py`, GitHub's own counts, no telemetry): counts add up and a day is never counted twice. Offline | 7/7 (Nov 13) |
 | `python3 tests/site.py` | The landing page (`site/`, built by `scripts/make-site.py`): its numbers match this README and BENCHMARKS, the first load stays under 300 KB, and every link into the repo works | 9/9 (Nov 13) |

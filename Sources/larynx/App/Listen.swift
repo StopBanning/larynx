@@ -166,14 +166,20 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         setStatus("Transcribing...")
         Pill.shared.transcribing()
         let mode = CleanupMode.forApp(bundleID: app?.bundleIdentifier)
-        // On disk before transcription starts, so a crash from here on can't lose the words.
-        let pending = History.shared.begin(samples: samples, app: app?.bundleIdentifier, mode: mode, privateField: session.privateField)
+        // Written to disk alongside transcription, not before it: the save takes tens of milliseconds (now and then
+        // a second on a busy disk), and once it's done a crash can't lose the words. Only a crash in those first
+        // tens of milliseconds after key-up could, on top of the recording itself, which is only ever in memory.
+        let bundleID = app?.bundleIdentifier, privateField = session.privateField
+        let saving = Task.detached(priority: .userInitiated) {
+            History.shared.begin(samples: samples, app: bundleID, mode: mode, privateField: privateField)
+        }
         session.timing.waitMs = ms(since: keyUp)
         Task {
             defer { session.reset() }
             do {
                 let screen = session.contextTerms
                 var result = try await finish(samples, clean: wantsClean, mode: mode, style: session.style)
+                let pending = await saving.value
                 session.timing.asrMs = result.asrMs
                 session.timing.cleanMs = result.totalMs - result.asrMs
                 let text = result.text
@@ -240,6 +246,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
                 logTranscript("\(result.totalMs) ms [\(mode.rawValue) \(app?.bundleIdentifier ?? "?")] \(delivery.label), rewrite: \(logNote(result.rewrite)) (\(result.rewriteMs) ms), \(text.split(separator: " ").count) words, \(pending.persists ? pending.id : "not saved"); \(session.timing.summary)", text: text)
             } catch {
                 // The spool keeps the audio; the next launch transcribes it again.
+                let pending = await saving.value
                 if session.shouldPresent { Pill.shared.hide(); setStatus("Error: \(error)") }
                 log("\(error)\(pending.persists ? " (audio kept for recovery: \(pending.id))" : "")")
             }

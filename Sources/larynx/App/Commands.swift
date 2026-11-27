@@ -581,18 +581,26 @@ default: print(usage); exit(args.isEmpty || args.first == "--help" || args.first
 }
 
 /// `larynx listen --feed <audio>`: one dictation from a file through the listen path's spool, pipeline and history,
-/// with no microphone, key or paste. Prints the result as JSON. `LARYNX_TEST_DELAY_MS` waits between spooling and
-/// transcription, so a test can kill the process mid-dictation and check that the next launch recovers it.
+/// with no microphone, key or paste. Prints the result as JSON. Like the app, it saves the recording alongside
+/// transcription: "keyup" is printed when both start, "spooled" when the recording is on disk.
+/// `LARYNX_TEST_DELAY_MS` holds transcription back, so a test can kill the process mid-dictation and check that the
+/// next launch recovers it.
 func runFeed(_ path: String) async {
     do {
         let samples = try loadAudioFile(URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
         let mode = option("--mode").flatMap(CleanupMode.init(rawValue:)) ?? .standard
-        let pending = History.shared.begin(samples: samples, app: nil, mode: mode, privateField: false)
-        emit(["event": "spooled", "id": pending.id, "saved": pending.persists])
+        let keyUp = Date()
+        emit(["event": "keyup"])
+        let saving = Task.detached(priority: .userInitiated) {
+            let pending = History.shared.begin(samples: samples, app: nil, mode: mode, privateField: false)
+            emit(["event": "spooled", "id": pending.id, "saved": pending.persists, "ms": ms(since: keyUp)])
+            return pending
+        }
         if let delay = Int(ProcessInfo.processInfo.environment["LARYNX_TEST_DELAY_MS"] ?? "") {
             try await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000)
         }
         let result = try await finish(samples, clean: wantsClean, mode: mode)
+        let pending = await saving.value
         // --deliver: paste through the real delivery path, but only into the test capture window
         // (LARYNX_CAPTURE_PID), never into another app. The clipboard is put back afterwards whatever happens.
         var delivery = "none"

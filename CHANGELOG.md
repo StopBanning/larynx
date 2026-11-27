@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **No waiting for the disk.** Larynx used to save your recording before it started transcribing, about 35 ms on a typical dictation and now and then a second on a busy disk. It now saves while it transcribes. The crash test kills Larynx 0.2 s after you let go: the dictation comes back word for word, and the save took 2 ms.
+
 - **Typed words can no longer turn into shortcuts.** When a paste doesn't show up, Larynx types the words instead. Typed keys take on any modifier key held at that moment, so with Right Command as the talk key, pressing it again for the next dictation while the words were still being typed turned them into ⌘-shortcuts in the app (a sidebar closing, a folder opening). Larynx now types only once every modifier key is let go, and otherwise leaves the words on the clipboard.
 
 - **Speech to text is about a fifth to a third faster.** The vocabulary pass, which listens for your own words and names, used to run after the speech model on the same audio. It now runs alongside it. In the last four comparisons over 355 recordings (one with every core of the Mac busy), the text was identical and the median fell by 20 to 30%, for example from 101 to 71 ms. In two earlier runs, made while the Mac was at its busiest and other work was changing files, 7 recordings came out differently; rerun on their own they matched both ways, and the difference never came back. If the side-by-side pass ever fails, Larynx falls back to the old order, and `LARYNX_VOCAB_PASS=after` turns it on for comparing.
