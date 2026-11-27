@@ -31,7 +31,7 @@ public enum RewriteGuard {
     static func correctedWord(in text: String) -> String? {
         // "no wait" / "wait no" come first so ", no wait, three" never captures "wait".
         let pattern = #"(?i)(?:(?:[,.]\s+)?(?:no,? wait|wait,? no)|[,.]\s+no|sorry|i mean|actually|make that|or rather|scratch that),?\s+(?:the\s+|a\s+|an\s+)?([a-z']+)"#
-        guard let re = try? NSRegularExpression(pattern: pattern),
+        guard let re = Rx.cached(pattern: pattern),
               let m = re.matches(in: text, range: NSRange(text.startIndex..., in: text)).last,
               let r = Range(m.range(at: 1), in: text) else { return nil }
         let word = text[r].lowercased()

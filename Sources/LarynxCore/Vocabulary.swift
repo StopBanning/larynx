@@ -112,8 +112,8 @@ public enum Vocabulary {
     public static func fixCase(_ text: String, terms: [String]) -> String {
         var s = text
         for term in terms where !term.contains(" ") {
-            s = s.replacingOccurrences(of: "(?i)(?<![\\w.])" + NSRegularExpression.escapedPattern(for: term) + "(?![\\w])",
-                                       with: NSRegularExpression.escapedTemplate(for: term), options: .regularExpression)
+            guard let re = Rx.cached(pattern: "(?i)(?<![\\w.])" + NSRegularExpression.escapedPattern(for: term) + "(?![\\w])") else { continue }
+            s = re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: NSRegularExpression.escapedTemplate(for: term))
         }
         return s
     }

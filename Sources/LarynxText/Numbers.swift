@@ -27,8 +27,8 @@ public enum Numbers {
     static func idioms(_ text: String) -> String {
         let score = "(?:2020|twenty[- ]twenty)"
         var s = text.replacingOccurrences(of: "(?i)\\b(hindsight(?:'s|\\s+is|\\s+was|\\s+being)\\s+)\(score)\\b", with: "$120/20",
-                                          options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)\\b\(score)(\\s+(?:vision|eyesight|hindsight))\\b", with: "20/20$1", options: .regularExpression)
+                                          options: .cached)
+        s = s.replacingOccurrences(of: "(?i)\\b\(score)(\\s+(?:vision|eyesight|hindsight))\\b", with: "20/20$1", options: .cached)
         return s
     }
 
@@ -60,10 +60,10 @@ public enum Numbers {
         }
         var s = out.map { $0.lead + $0.core + $0.trail }.joined()
         // Digits the speech model already wrote: "3 percent" -> "3%", "20 dollars" -> "$20".
-        s = s.replacingOccurrences(of: "(?i)\\b(\\d+(?:\\.\\d+)?) percent\\b", with: "$1%", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)(?<![$\\d.,])\\b(\\d+(?:\\.\\d+)?) (?:dollars|bucks)\\b", with: "\\$$1", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(\\d+(?:\\.\\d+)?) percent\\b", with: "$1%", options: .cached)
+        s = s.replacingOccurrences(of: "(?i)(?<![$\\d.,])\\b(\\d+(?:\\.\\d+)?) (?:dollars|bucks)\\b", with: "\\$$1", options: .cached)
         // "Y two K" / "why two K" is the year-2000 thing.
-        s = s.replacingOccurrences(of: "(?i)\\b(?:y|why) 2K\\b", with: "Y2K", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(?:y|why) 2K\\b", with: "Y2K", options: .cached)
         return s
     }
 
@@ -196,7 +196,7 @@ public enum Numbers {
 
     /// Words with their leading and trailing punctuation and the space after them, so the text rebuilds exactly.
     static func tokenize(_ s: String) -> [Token] {
-        guard let re = try? NSRegularExpression(pattern: "\\S+\\s*") else { return [] }
+        guard let re = Rx.cached(pattern: "\\S+\\s*") else { return [] }
         return re.matches(in: s, range: NSRange(s.startIndex..., in: s)).compactMap { m in
             guard let r = Range(m.range, in: s) else { return nil }
             let piece = String(s[r])

@@ -46,7 +46,7 @@ public enum Dictionary {
         // Longest phrases first so "locust app" wins over "locust".
         for (heard, written) in map.sorted(by: { $0.key.count > $1.key.count }) {
             let pattern = "(?i)\\b" + NSRegularExpression.escapedPattern(for: heard) + "\\b"
-            s = s.replacingOccurrences(of: pattern, with: NSRegularExpression.escapedTemplate(for: written), options: .regularExpression)
+            s = s.replacingOccurrences(of: pattern, with: NSRegularExpression.escapedTemplate(for: written), options: .cached)
         }
         return s
     }

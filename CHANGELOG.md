@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Cleanup is about 40 times faster.** The cleanup rules were rebuilding each of their text patterns on every dictation, which took longer than running them. They're now built once and reused. Over 1,013 test sentences in every mode and style, the output is identical, and the time went from 100.6 s to 2.1 s. Each dictation saves roughly 10 ms, more when the Mac is busy.
+
 - **"Learned" shows while you're still looking.** When you fix a word Larynx typed, it now learns the fix as soon as it has read the same for two seconds, instead of at the end of its 20-second watch, so the Learned message appears right after your edit.
 
 - **The talk key can't go dead after an audio change.** If a USB microphone or webcam reconnected, macOS's audio engine could raise an error that Swift can't catch when the microphone opened, and from then on every press did nothing until Larynx restarted. Larynx now notices audio changes and opens the microphone on a fresh engine, catches that error if it still happens, and tries once more.

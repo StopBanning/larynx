@@ -42,10 +42,10 @@ public enum Doubt {
         var s = text
         for word in words {
             let pattern = "\\s*(?<![\\w'])" + NSRegularExpression.escapedPattern(for: word) + "(?![\\w'])"
-            if let r = s.range(of: pattern, options: .regularExpression) { s.replaceSubrange(r, with: "") }
+            if let r = s.range(of: pattern, options: .cached) { s.replaceSubrange(r, with: "") }
         }
-        s = s.replacingOccurrences(of: "\\s+([,.!?;:])", with: "$1", options: .regularExpression)
-        s = s.replacingOccurrences(of: ",\\s*,", with: ",", options: .regularExpression)
+        s = s.replacingOccurrences(of: "\\s+([,.!?;:])", with: "$1", options: .cached)
+        s = s.replacingOccurrences(of: ",\\s*,", with: ",", options: .cached)
         return s.trimmingCharacters(in: .whitespaces)
     }
 }

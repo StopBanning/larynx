@@ -71,15 +71,15 @@ public enum Tidy {
     /// "Thanks for the help." stays a sentence.
     static func emailLayout(_ text: String) -> String {
         var s = text
-        s = s.replacingOccurrences(of: "^((?:\(greetings))(?:\\s+[A-Z][\\w'-]*){0,3})[,.!]?\\s+(?=\\S)", with: "$1,\n\n", options: .regularExpression)
+        s = s.replacingOccurrences(of: "^((?:\(greetings))(?:\\s+[A-Z][\\w'-]*){0,3})[,.!]?\\s+(?=\\S)", with: "$1,\n\n", options: .cached)
         s = s.replacingOccurrences(of: "(?<=[.!?])\\s+((?:\(signOffs))(?: [a-z]+)?)[,.!]?\\s+([A-Z][\\w'-]*(?:\\s+[A-Z][\\w'-]*)?)[.!]?$",
-                                   with: "\n\n$1,\n$2", options: .regularExpression)
+                                   with: "\n\n$1,\n$2", options: .cached)
         return s
     }
 
     /// Ends in a sign-off and a name on its own line: no full stop after the name.
     static func emailSignedOff(_ text: String) -> Bool {
-        text.range(of: "\n(?:\(signOffs))(?: [a-z]+)?,\n[^\n]+$", options: .regularExpression) != nil
+        text.range(of: "\n(?:\(signOffs))(?: [a-z]+)?,\n[^\n]+$", options: .cached) != nil
     }
 
     // MARK: Shadow rules
@@ -102,7 +102,7 @@ public enum Tidy {
         var s = text
         for (name, mark) in marks {
             let pattern = "(?i)(?<![\\w'])(?!(?:the|a|an|this|that|one|two|three|every|each|no)\\s)([A-Za-z0-9']+)[,.]?\\s+" + name + "[.,!?]?(?=\\s|$)"
-            s = s.replacingOccurrences(of: pattern, with: "$1" + mark, options: .regularExpression)
+            s = s.replacingOccurrences(of: pattern, with: "$1" + mark, options: .cached)
         }
         return s
     }
@@ -113,21 +113,21 @@ public enum Tidy {
     static func countedList(_ text: String) -> String {
         let counts = ["two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6]
         guard let m = text.range(of: "(?i)\\b(two|three|four|five|six|[2-6])\\s+(?:\\w+\\s+)?(things|steps|items|points|tasks|questions|ideas|options)\\b[^.:!?]*[.:]",
-                                 options: .regularExpression),
+                                 options: .cached),
               let countWord = text[m].split(separator: " ").first,
               let n = counts[countWord.lowercased()] else { return text }
         let intro = String(text[..<m.upperBound])
         var body = String(text[m.upperBound...]).trimmingCharacters(in: .whitespaces)
         // The items run to the end of the next sentence.
         var after = ""
-        if let end = body.range(of: "[.!?](\\s|$)", options: .regularExpression) {
+        if let end = body.range(of: "[.!?](\\s|$)", options: .cached) {
             after = String(body[end.upperBound...]); body = String(body[..<end.lowerBound])
         }
         var lead = ""
-        if let l = body.range(of: "^(?i)(?:I want you to|I need you to|you need to|we need to|we should|please|you should)\\s+", options: .regularExpression) {
+        if let l = body.range(of: "^(?i)(?:I want you to|I need you to|you need to|we need to|we should|please|you should)\\s+", options: .cached) {
             lead = String(body[l]).trimmingCharacters(in: .whitespaces); body = String(body[l.upperBound...])
         }
-        let items = body.replacingOccurrences(of: ",?\\s+and\\s+(?=[^,]*$)", with: ", ", options: .regularExpression)
+        let items = body.replacingOccurrences(of: ",?\\s+and\\s+(?=[^,]*$)", with: ", ", options: .cached)
             .components(separatedBy: ", ").map { $0.trimmingCharacters(in: .whitespaces) }
         guard items.count == n, items.allSatisfy({ $0.split(separator: " ").count >= 2 }) else { return text }
         let list = items.enumerated().map { "\($0.offset + 1). " + $0.element.prefix(1).uppercased() + $0.element.dropFirst() }
@@ -151,7 +151,7 @@ public enum Tidy {
             let pattern = n == 0
                 ? "(?i)(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:number\\s+)?(?:\(words))[,.:]\\s+"
                 : "(?i)(?:(?:^|(?<=[.,;:!?])\\s+|\\s+)(?:and\\s+)?(?:number\\s+)?(?:\(words))[,.:]\\s+|(?<=[.,;:!?])\\s+(?:and\\s+)?(?:number\\s+)?(?:\(words))\\s+(?=[a-z]))"
-            guard let r = rest.range(of: pattern, options: .regularExpression) else { break }
+            guard let r = rest.range(of: pattern, options: .cached) else { break }
             if n == 0 { lead = String(rest[..<r.lowerBound]) } else { items.append(String(rest[..<r.lowerBound])) }
             rest = rest[r.upperBound...]
         }
@@ -171,7 +171,7 @@ public enum Tidy {
         // A stutter heard as "b as b biking" / "h as half": the letter, an "as", and the word it starts. Not after a
         // label ("plan b as backup").
         var text = text
-        if let stammer = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+as\\s+(?:\\1\\s+)?(?=\\1[a-z]{2,})") {
+        if let stammer = Rx.cached(pattern: "(?<![\\w'.-])([b-hj-z])\\s+as\\s+(?:\\1\\s+)?(?=\\1[a-z]{2,})") {
             for m in stammer.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
                 guard let whole = Range(m.range, in: text) else { continue }
                 let before = text[..<whole.lowerBound].split(whereSeparator: \.isWhitespace).last
@@ -180,7 +180,7 @@ public enum Tidy {
                 text.removeSubrange(whole)
             }
         }
-        guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+((?:[\\w']+\\s+){1,2})(?=\\1[a-z])") else { return text }
+        guard let re = Rx.cached(pattern: "(?<![\\w'.-])([b-hj-z])\\s+((?:[\\w']+\\s+){1,2})(?=\\1[a-z])") else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let letter = Range(m.range(at: 1), in: s) else { continue }
@@ -199,7 +199,7 @@ public enum Tidy {
         var s = text
         // A cut-off word said twice with the same words after it, never finished: "and cle to cle to leave" ->
         // "and to leave". The fragment is not a word but starts one, so it was a word abandoned twice.
-        if let re = try? NSRegularExpression(pattern: "(?i)(?<![\\w'-])([a-z]{2,6})\\s+((?:[\\w']+\\s+){0,2}[\\w']+)[,.]?\\s+\\1\\s+(?=\\2\\b)") {
+        if let re = Rx.cached(pattern: "(?i)(?<![\\w'-])([a-z]{2,6})\\s+((?:[\\w']+\\s+){0,2}[\\w']+)[,.]?\\s+\\1\\s+(?=\\2\\b)") {
             for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
                 guard let whole = Range(m.range, in: s), let frag = Range(m.range(at: 1), in: s) else { continue }
                 let word = String(s[frag])
@@ -210,7 +210,7 @@ public enum Tidy {
         // A phrase of two or three words said twice in a row: "ride on a on a bike" -> "ride on a bike". (The normal rules
         // leave doubles of two-word phrases with no comma between them, because some are meant.)
         // Not one word said over and over ("row row row row"): that is meant.
-        if let re = try? NSRegularExpression(pattern: "(?i)(?<![\\w'])((?:[\\w']+\\s+){1,2}[\\w']+)\\s+\\1(?![\\w'])") {
+        if let re = Rx.cached(pattern: "(?i)(?<![\\w'])((?:[\\w']+\\s+){1,2}[\\w']+)\\s+\\1(?![\\w'])") {
             for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
                 guard let whole = Range(m.range, in: s), let first = Range(m.range(at: 1), in: s) else { continue }
                 let phrase = String(s[first])
@@ -219,7 +219,7 @@ public enum Tidy {
                 // "knocks and knocks and knocks", "and so on and so on": said again on purpose.
                 if ["and", "or"].contains(words.last ?? "") || phrase.lowercased().hasSuffix("so on") { continue }
                 let around = (s[..<whole.lowerBound].split(whereSeparator: \.isWhitespace).last.map(String.init) ?? "") + " " + s[whole]
-                if around.range(of: "(?i)(?<![\\w'])([\\w']+)\\s+(?:and|or)\\s+\\1(?![\\w'])", options: .regularExpression) != nil { continue }
+                if around.range(of: "(?i)(?<![\\w'])([\\w']+)\\s+(?:and|or)\\s+\\1(?![\\w'])", options: .cached) != nil { continue }
                 s.replaceSubrange(whole, with: phrase)
             }
         }
@@ -234,7 +234,7 @@ public enum Tidy {
     /// A lone lowercase letter right before a word it starts: "that k kids" -> "that kids", "nearly t ten" -> "nearly
     /// ten". Not "a" or "I", not a capital, and not a label ("plan b because", "the c code").
     static func letterRestarts(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(?<![\\w'.-])([b-hj-z])\\s+(?=\\1[a-z]{2,})") else { return text }
+        guard let re = Rx.cached(pattern: "(?<![\\w'.-])([b-hj-z])\\s+(?=\\1[a-z]{2,})") else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let whole = Range(m.range, in: s) else { continue }
@@ -273,50 +273,50 @@ public enum Tidy {
         var s = text
         // 0a. "New paragraph." / "new line," said as its own phrase between sentence boundaries ("A new line of
         // shoes" stays). Marked now, turned into line breaks after the spacing rules.
-        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new paragraph[.,!?:;]*(?=\\s|$)", with: "$1 \(paragraphMark) ", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new line[.,!?:;]*(?=\\s|$)", with: "$1 \(lineMark) ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new paragraph[.,!?:;]*(?=\\s|$)", with: "$1 \(paragraphMark) ", options: .cached)
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?,;:]\\s*)new line[.,!?:;]*(?=\\s|$)", with: "$1 \(lineMark) ", options: .cached)
         // 0. A phrase restarted after a filler: "from your uh from our shared drive" -> "from our shared drive". The small
         // word said again right after the "uh" marks where the speaker started over; only one word is dropped with it.
         s = s.replacingOccurrences(of: "(?i)\\b(\(restartWords))\\s+[\\w']+,?\\s+(?:\(fillers)|er|ah)[,.]?\\s+(?=\\1\\s+\\w)", with: "",
-                                   options: .regularExpression)
+                                   options: .cached)
         // 0b. "I, uh, pressed that": the comma after a subject pronoun was only the pause before the filler.
         s = s.replacingOccurrences(of: "\\b(I|[Ww]e|[Yy]ou|[Tt]hey|[Hh]e|[Ss]he),\\s*(?i:\(fillers))[,.]?\\s+(?=[a-z])", with: "$1 ",
-                                   options: .regularExpression)
+                                   options: .cached)
         // 1. Leftover fillers, with the comma that came with them.
-        s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .cached)
         // 1b. "er", "ah", "eh" in the middle of a sentence are hesitations ("the total is, er, about"). Lowercase only,
         // so "the ER was packed" stays, and never at the start ("Ah, I see").
-        s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])(?:,?\\s+(?:er|ah|eh)(?=[,.\\s]|$))+[,]?", with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])(?:,?\\s+(?:er|ah|eh)(?=[,.\\s]|$))+[,]?", with: "", options: .cached)
         // 1b2. "The total is, are, about": "er" heard as "are" between commas after "is"/"was", which is never grammar.
-        s = s.replacingOccurrences(of: "(?<=\\b(?:is|was|Is|Was)),\\s+are,(?=\\s)", with: ",", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<=\\b(?:is|was|Is|Was)),\\s+are,(?=\\s)", with: ",", options: .cached)
         // "a the keys": a hesitation heard as "a" before "the".
-        s = s.replacingOccurrences(of: "\\b[Aa]n?\\s+(?=the\\b)", with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: "\\b[Aa]n?\\s+(?=the\\b)", with: "", options: .cached)
         // A leading "Ah," is a hesitation too when the speaker keeps hesitating ("Ah, I uh need uh the keys");
         // on its own it is a reaction and stays ("Ah, I see").
-        if text.range(of: "(?i)\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b", options: .regularExpression) != nil {
-            s = s.replacingOccurrences(of: "^(?:Ah|Eh),?\\s+", with: "", options: .regularExpression)
+        if text.range(of: "(?i)\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b.*\\b(?:uh|um|ah|er)\\b", options: .cached) != nil {
+            s = s.replacingOccurrences(of: "^(?:Ah|Eh),?\\s+", with: "", options: .cached)
         }
         // "Hum," and "Ham," starting a sentence are "hmm" as the speech model hears it.
-        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(?:Hum|Ham),\\s+", with: "$1", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(?:Hum|Ham),\\s+", with: "$1", options: .cached)
         // 1c. "Aye, I, I": a stuttered "I" written as "Aye".
-        s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)aye,?\\s+(?=i\\b)", with: "$1", options: .cached)
         // 1d. A false start: an unfinished clause ending on a small word, then the same speaker starts again.
         // "I went to the, I drove to the store" -> "I drove to the store". "I went to the store, I bought milk" stays.
         s = s.replacingOccurrences(of: "(?i)(^|[.!?]\\s+)(i|we|you|he|she|they|it)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|to|of|for|with|in|on|at|and|my|your|our|their),\\s+(?=\\2\\b)",
-                                   with: "$1", options: .regularExpression)
+                                   with: "$1", options: .cached)
         // Without the comma only after "the/a/my...": "I went to the I drove" (a determiner never comes before "I").
         s = s.replacingOccurrences(of: "(^|[.!?]\\s+)(I)\\s+(?:[\\w']+\\s+){0,3}(?:the|a|an|my|your|our|their)\\s+(?=I(?:'m|'ll|'ve|'d|\\s+(?:\(restartVerbs))\\b))",
-                                   with: "$1", options: .regularExpression)
+                                   with: "$1", options: .cached)
         // 1d2. A clause dropped after "going to be"/"trying to" and started again with the same subject: "We're going to be
         // we're stuck in traffic" -> "We're stuck in traffic". The first part ends on a word that cannot end a clause.
         s = s.replacingOccurrences(of: "(?i)(^|[.!?,]\\s+)(i'm|i|we're|we|you're|they're|it's|i'll|we'll)\\s+(?:[\\w']+\\s+){0,3}(?:be|to)\\s+(?=\\2\\s+\\w)",
-                                   with: "$1", options: .regularExpression)
+                                   with: "$1", options: .cached)
         // 1d3. A range said as two numbers: "15 20 minutes" -> "15 to 20 minutes" (the second larger, then a unit).
         s = numberRanges(s)
         // A clock time the speech model wrote with a dot: "opens at 8.30 tomorrow" -> "8:30". Only after a word that
         // introduces a time, with an hour of 1 to 12 and minutes under 60, and never before "percent" or a unit.
         s = s.replacingOccurrences(of: "(?i)(?<=\\b(?:at|by|until|till|around|before|after|from)\\s)(1[0-2]|[1-9])\\.([0-5]\\d)(?![\\d.,]\\d|\\s*(?:%|percent|per|times|miles|km|kg|pounds|dollars))\\b",
-                                   with: "$1:$2", options: .regularExpression)
+                                   with: "$1:$2", options: .cached)
         // 1e. A word cut off as the speaker starts the phrase again: "when we w when we finish" -> "when we when we finish"
         // (the repeat is removed next).
         s = cutOffRestarts(s)
@@ -332,7 +332,7 @@ public enum Tidy {
         if stutter == .strong { s = strongStutters(s) }
         // 1e2. A cut-off word the speech model writes with a hyphen ("J- yeah, just collaborate"). "pre- and post-war"
         // keeps its hyphen: before "and", "or" or "to" it is a word being shared, not a word abandoned.
-        s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<![\\w-])[A-Za-z]{1,4}-\\s+(?!(?:and|or|to)\\b)(?=\\w)", with: "", options: .cached)
         // 2. Words repeated as a false start: "we could, we could maybe" and "at the, the place". Until nothing changes,
         // so a stumble said three times ("we could, we could, we could try") ends as one copy, not two. A phrase said three
         // or more times that ends its sentence ("No way, no way, no way.") is meant, and is marked so this leaves it.
@@ -343,14 +343,14 @@ public enum Tidy {
         var before = ""
         while before != s {
             before = s
-            s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)\\b(\\w+(?:\\s+\\w+){1,2}),\\s+\\1\\b", with: "$1", options: .cached)
         }
         s = repeatedPhrases(s)
         s = restartedAroundAside(s)
         var previous = ""
         while previous != s {  // "I, I, I think" needs two passes
             previous = s
-            s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b(?!\\s+know\\b)", with: "$1", options: .regularExpression)  // "tell you, you know" keeps both
+            s = s.replacingOccurrences(of: "(?i)\\b(\(stutterWords)),?\\s+\\1\\b(?!\\s+know\\b)", with: "$1", options: .cached)  // "tell you, you know" keeps both
         }
         // 2a. Any word said twice in a row is a stutter ("please add add oat milk"), except the doubles that are meant:
         // "that that", "had had", emphasis ("really really"), set phrases ("bye bye") and numbers ("two two" in a code).
@@ -364,12 +364,12 @@ public enum Tidy {
         s = sameKindCorrections(s)
         // 2c. A question restarted with a different opener: "can you could you take a look" -> "could you take a look".
         s = s.replacingOccurrences(of: "(?i)\\b(?:\(questionOpeners))\\s+(?:you|i|we),?\\s+(?=(?:\(questionOpeners))\\s+(?:you|i|we)\\b)",
-                                   with: "", options: .regularExpression)
+                                   with: "", options: .cached)
         // 2d. "like" as filler between a form of "be" and an intensifier: "was like really big". "I like really spicy food" stays.
         s = s.replacingOccurrences(of: "(?i)\\b(was|is|are|were|it's|that's|they're|we're|you're|i'm)\\s+like,?\\s+(?=(?:really|so|very|super|totally|pretty|literally)\\b)",
-                                   with: "$1 ", options: .regularExpression)
+                                   with: "$1 ", options: .cached)
         // 2e. Trailing off: a sentence can't end on "and", "but" or "or" ("I'll call you later and, um.").
-        let trailed = s.replacingOccurrences(of: "(?i)[\\s,.]+(?:and|but|or|an)[\\s,.]*$", with: "", options: .regularExpression)
+        let trailed = s.replacingOccurrences(of: "(?i)[\\s,.]+(?:and|but|or|an)[\\s,.]*$", with: "", options: .cached)
         if trailed != s, !trailed.isEmpty { s = trailed + (mode == .ai ? "" : ".") }
         // 2f. Spoken code: case commands, file names, acronyms.
         s = CodeWords.apply(s)
@@ -382,26 +382,26 @@ public enum Tidy {
         // 3. Commas stranded after small words where a filler used to be: "meet on, Thursday".
         // "on" and "in" also end phrasal verbs ("Hold on, I'll check", "Log in, then click save", "come in, sit down"),
         // so they lose the comma only before a determiner, a number or a capitalized name.
-        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerPreps)),\\s+(?!\(tagWords))(?!\(phraseOpeners))(?=\\w)", with: "$1 ", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerWords)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .regularExpression)
-        s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerPreps)),\\s+(?!\(tagWords))(?!\(phraseOpeners))(?=\\w)", with: "$1 ", options: .cached)
+        s = s.replacingOccurrences(of: "(?i)\\b(\(joinerWords)),\\s+(?!\(tagWords))(?=\\w)", with: "$1 ", options: .cached)
+        s = s.replacingOccurrences(of: "\\b([Oo]n|[Ii]n),\\s+(?=\(clauseFollowers))", with: "$1 ", options: .cached)
         // "The thing is, we need more time": a be-verb keeps its comma before a new clause's subject.
         s = s.replacingOccurrences(of: "\\b([Ii]s|[Ww]as|[Aa]re|[Ww]ere|[Bb]e),\\s+(?!\(clauseStarts))(?=\\w)", with: "$1 ",
-                                   options: .regularExpression)
+                                   options: .cached)
         // 3b. "if, Opus did it": a comma after "if" is a pause, not punctuation, unless it opens an aside ("if, say, it rains").
-        s = s.replacingOccurrences(of: "(?i)\\bif,\\s+(?!(?:\(ifAsides))\\b)", with: "if ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?i)\\bif,\\s+(?!(?:\(ifAsides))\\b)", with: "if ", options: .cached)
         // 4. Spacing and doubled punctuation.
-        s = s.replacingOccurrences(of: "\\s*,\\s*,+", with: ",", options: .regularExpression)
-        s = s.replacingOccurrences(of: "\\s+([,!?;:]|\\.(?![A-Za-z]))", with: "$1", options: .regularExpression)  // but not ".env"
-        s = s.replacingOccurrences(of: "^[\\s,.;:]+", with: "", options: .regularExpression)
-        s = s.replacingOccurrences(of: "[ \\t]{2,}", with: " ", options: .regularExpression)
+        s = s.replacingOccurrences(of: "\\s*,\\s*,+", with: ",", options: .cached)
+        s = s.replacingOccurrences(of: "\\s+([,!?;:]|\\.(?![A-Za-z]))", with: "$1", options: .cached)  // but not ".env"
+        s = s.replacingOccurrences(of: "^[\\s,.;:]+", with: "", options: .cached)
+        s = s.replacingOccurrences(of: "[ \\t]{2,}", with: " ", options: .cached)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         // 4c. Spoken breaks become real ones. A paragraph after a sentence that didn't end gets its full stop.
         if s.contains(lineMark) || s.contains(paragraphMark) {
             let endsSentence = mode == .ai ? "" : "."
-            s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])[,;:]?\\s*\(paragraphMark)", with: endsSentence + paragraphMark, options: .regularExpression)
-            s = s.replacingOccurrences(of: "[,;:]?\\s*\(paragraphMark)\\s*", with: "\n\n", options: .regularExpression)
-            s = s.replacingOccurrences(of: "[,;:]?\\s*\(lineMark)\\s*", with: "\n", options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?<=[A-Za-z0-9])[,;:]?\\s*\(paragraphMark)", with: endsSentence + paragraphMark, options: .cached)
+            s = s.replacingOccurrences(of: "[,;:]?\\s*\(paragraphMark)\\s*", with: "\n\n", options: .cached)
+            s = s.replacingOccurrences(of: "[,;:]?\\s*\(lineMark)\\s*", with: "\n", options: .cached)
             s = s.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         if mode == .email { s = emailLayout(s) }
@@ -414,8 +414,8 @@ public enum Tidy {
         s = s.replacingOccurrences(of: chantMark, with: "")
         guard !s.isEmpty else { return s }
         // 4d. "i'll" and a lone "i" are "I'll" and "I". Not in code: "for i in items", "i++", "a[i]".
-        s = s.replacingOccurrences(of: "(?<![\\w'])i(?='(?:m|ll|ve|d)\\b)", with: "I", options: .regularExpression)
-        s = s.replacingOccurrences(of: "(?<![\\w'.\\-/$\\[(])(?<!for )i(?=\\s+(?!in\\b)[a-z]{2,})", with: "I", options: .regularExpression)
+        s = s.replacingOccurrences(of: "(?<![\\w'])i(?='(?:m|ll|ve|d)\\b)", with: "I", options: .cached)
+        s = s.replacingOccurrences(of: "(?<![\\w'.\\-/$\\[(])(?<!for )i(?=\\s+(?!in\\b)[a-z]{2,})", with: "I", options: .cached)
         // 5. Capital letters at the start and after sentence ends.
         s = capitalizeSentences(s)
         // 5b. Days of the week are names ("friday" is "Friday"). Not in AI mode, where the text may be code.
@@ -436,9 +436,9 @@ public enum Tidy {
     /// acronym, not a word written with a capital elsewhere in the same text), and drops a final full stop. Question and
     /// exclamation marks stay: they carry meaning.
     static func texting(_ text: String, words: WordList = BundledWordList.shared) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(^|[.!?]\\s+|\\n\\s*)([A-Z][\\w']*)") else { return text }
+        guard let re = Rx.cached(pattern: "(^|[.!?]\\s+|\\n\\s*)([A-Z][\\w']*)") else { return text }
         let ns = text as NSString
-        let capitalizedMidSentence = Set((try? NSRegularExpression(pattern: "(?<=[a-z,;:] )[A-Z][\\w']*"))?
+        let capitalizedMidSentence = Set((Rx.cached(pattern: "(?<=[a-z,;:] )[A-Z][\\w']*"))?
             .matches(in: text, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range) } ?? [])
         var out = text
         for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
@@ -460,7 +460,7 @@ public enum Tidy {
     static func fillerYouKnow(_ text: String) -> String {
         var s = text
         func re(_ pattern: String, _ template: String) {
-            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .cached)
         }
         let verbBefore = "(?<!\\bdo)(?<!\\bdid)(?<!\\bdon't)(?<!\\bdidn't)(?<!\\bif)(?<!\\bas)(?<!\\bnow)(?<!\\bwhat)(?<!\\bhow)"
             + "(?<!\\bthat)(?<!\\bwho)(?<!\\bwould)(?<!\\bwill)(?<!\\bcould)(?<!\\bshould)(?<!\\bmay)(?<!\\bmight)(?<!\\bwhether)"
@@ -483,7 +483,7 @@ public enum Tidy {
     }
 
     static func numberRanges(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "\\b(\\d{1,3})\\s+(\\d{1,3})\\s+(?=(?:minutes|mins|hours|days|weeks|months|years|people|dollars|bucks|percent|miles|times|seconds)\\b)") else { return text }
+        guard let re = Rx.cached(pattern: "\\b(\\d{1,3})\\s+(\\d{1,3})\\s+(?=(?:minutes|mins|hours|days|weeks|months|years|people|dollars|bucks|percent|miles|times|seconds)\\b)") else { return text }
         let ns = text as NSString
         var out = text
         for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
@@ -506,14 +506,14 @@ public enum Tidy {
         ]
         var out = text
         for p in patterns {
-            guard let re = try? NSRegularExpression(pattern: p) else { continue }
+            guard let re = Rx.cached(pattern: p) else { continue }
             let ns = out as NSString
             for m in re.matches(in: out, range: NSRange(location: 0, length: ns.length)).reversed() {
                 let r = m.range(at: 1)
                 let word = (out as NSString).substring(with: r)
                 // A possessive before the comma ("my mom, dad and I") is a list, not someone spoken to.
                 let before = (out as NSString).substring(to: m.range.location)
-                if p.hasPrefix("(?i),"), before.range(of: "(?i)\\b(?:my|your|his|her|our|their|the)\\s+\\w+$", options: .regularExpression) != nil { continue }
+                if p.hasPrefix("(?i),"), before.range(of: "(?i)\\b(?:my|your|his|her|our|their|the)\\s+\\w+$", options: .cached) != nil { continue }
                 out = (out as NSString).replacingCharacters(in: r, with: word.prefix(1).uppercased() + word.dropFirst())
             }
         }
@@ -521,7 +521,7 @@ public enum Tidy {
     }
 
     static func capitalizeWeekdays(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(?<![\\w./_\\-])(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s?)(?![\\w/_\\-])") else { return text }
+        guard let re = Rx.cached(pattern: "(?<![\\w./_\\-])(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(s?)(?![\\w/_\\-])") else { return text }
         let ns = text as NSString
         var out = text
         for m in re.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
@@ -538,7 +538,7 @@ public enum Tidy {
     static func professional(_ text: String, keepSwearing: Bool, voice: Bool = true) -> String {
         var s = text
         func re(_ pattern: String, _ template: String) {
-            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .cached)
         }
         let start = "(^|[.!?]\\s+)"
         // Spoken forms written out. "it's gotta" is "it has to", not "it's have to".
@@ -671,7 +671,7 @@ public enum Tidy {
         ]
         var s = text
         for (pattern, template) in rules {
-            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)" + pattern, with: template, options: .cached)
         }
         return s
     }
@@ -680,14 +680,14 @@ public enum Tidy {
     /// sentence. Meant, so the copies are joined with `chantMark` and the repeat rules below don't see a repeat. A
     /// single stutter word ("and then I, I, I.") is not a chant.
     static func markChants(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){0,2})((?:,?\\s+\\1\\b){2,})(?=\\s*(?:[.!?]|$))")
+        guard let re = Rx.cached(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){0,2})((?:,?\\s+\\1\\b){2,})(?=\\s*(?:[.!?]|$))")
         else { return text }
         let stutters = Set(stutterWords.split(separator: "|").map(String.init))
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let phrase = Range(m.range(at: 1), in: s), let copies = Range(m.range(at: 2), in: s) else { continue }
             if stutters.contains(s[phrase].lowercased()) { continue }
-            let joined = s[copies].replacingOccurrences(of: "(,?)(\\s+)", with: "$1\(chantMark)$2", options: .regularExpression)
+            let joined = s[copies].replacingOccurrences(of: "(,?)(\\s+)", with: "$1\(chantMark)$2", options: .cached)
             s.replaceSubrange(copies, with: joined)
         }
         return s
@@ -704,7 +704,7 @@ public enum Tidy {
     /// that same word comes right after it: the speaker stumbled and restarted ("when we w when we"). A capital letter
     /// is a label ("plan B because"), and real short words ("an answer is an answer") are never fragments.
     static func cutOffRestarts(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "\\b(([a-z]{1,2})[a-z']+)\\s+((?:[\\w']+\\s+){0,2})\\2\\s+(?=\\1\\b)",
+        guard let re = Rx.cached(pattern: "\\b(([a-z]{1,2})[a-z']+)\\s+((?:[\\w']+\\s+){0,2})\\2\\s+(?=\\1\\b)",
                                                 options: [.caseInsensitive]) else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
@@ -730,7 +730,7 @@ public enum Tidy {
         func isFragment(_ f: String) -> Bool {
             f == f.lowercased() && !shortWords.contains(f) && (!words.contains(f) || !f.contains(where: { "aeiouy".contains($0) }))
         }
-        if let re = try? NSRegularExpression(pattern: "(?i)\\b([a-z']+)\\s+([a-z]{1,3}),?\\s+\\1\\b") {
+        if let re = Rx.cached(pattern: "(?i)\\b([a-z']+)\\s+([a-z]{1,3}),?\\s+\\1\\b") {
             for m in re.matches(in: s, range: NSRange(location: 0, length: (s as NSString).length)).reversed() {
                 let ns = s as NSString
                 let fragment = ns.substring(with: m.range(at: 2))
@@ -739,7 +739,7 @@ public enum Tidy {
                 s = ns.replacingCharacters(in: m.range, with: ns.substring(with: m.range(at: 1)))
             }
         }
-        if let re = try? NSRegularExpression(pattern: "(?i)\\b((?:[a-z']+\\s+){0,3})([a-z]{2,8}),?\\s+\\1(\\2[a-z']+)\\b") {
+        if let re = Rx.cached(pattern: "(?i)\\b((?:[a-z']+\\s+){0,3})([a-z]{2,8}),?\\s+\\1(\\2[a-z']+)\\b") {
             for m in re.matches(in: s, range: NSRange(location: 0, length: (s as NSString).length)).reversed() {
                 let ns = s as NSString
                 let lead = ns.substring(with: m.range(at: 1)), fragment = ns.substring(with: m.range(at: 2))
@@ -757,7 +757,7 @@ public enum Tidy {
     }
 
     static func repeatedPhrases(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){1,2})\\s+\\1\\b") else { return text }
+        guard let re = Rx.cached(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){1,2})\\s+\\1\\b") else { return text }
         let numberWords: Set<String> = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "zero"]
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
@@ -781,7 +781,7 @@ public enum Tidy {
     /// fine.") is emphasis and stays.
     static func restartedAroundAside(_ text: String) -> String {
         let asides = "yeah|yes|okay|ok|well|oh|like|i mean|sorry|you know"
-        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){2,4}),?\\s+(?:\(asides)),?\\s+(\\1)(?=\\s+[\\w'])") else { return text }
+        guard let re = Rx.cached(pattern: "(?i)\\b([\\w']+(?:\\s+[\\w']+){2,4}),?\\s+(?:\(asides)),?\\s+(\\1)(?=\\s+[\\w'])") else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let whole = Range(m.range, in: s), let second = Range(m.range(at: 2), in: s), let first = Range(m.range(at: 1), in: s) else { continue }
@@ -798,7 +798,7 @@ public enum Tidy {
     /// ("the house, the horse") and stays; short words ("a bit a big") are left alone.
     static func soundedOutStarts(_ text: String) -> String {
         let lead = "the|a|an|my|your|our|their|his|her|this|that"
-        guard let re = try? NSRegularExpression(pattern: "\\b(\(lead))\\s+([a-z]{2,6})\\s+(?=(?i:\\1)\\s+([a-z]+)\\b)", options: [.caseInsensitive]) else { return text }
+        guard let re = Rx.cached(pattern: "\\b(\(lead))\\s+([a-z]{2,6})\\s+(?=(?i:\\1)\\s+([a-z]+)\\b)", options: [.caseInsensitive]) else { return text }
         var s = text
         var changed = true
         while changed {
@@ -836,7 +836,7 @@ public enum Tidy {
     /// A word said exactly twice in a row with nothing between ("add add") becomes one. Three or more in a row is meant
     /// (a chant, a sound: "pow pow pow"), and so are the doubles in `meantDoubles`.
     static func doubledWords(_ text: String) -> String {
-        guard let re = try? NSRegularExpression(pattern: "(?i)\\b([a-z']{2,})(?:\\s+\\1\\b)+") else { return text }
+        guard let re = Rx.cached(pattern: "(?i)\\b([a-z']{2,})(?:\\s+\\1\\b)+") else { return text }
         let keep = Set(meantDoubles.split(separator: "|").map(String.init))
         let ns = text as NSString
         var out = text
@@ -847,7 +847,7 @@ public enum Tidy {
         }
         // With a comma between, only opening a sentence and running straight on: "Tell, tell Nina the news". Elsewhere
         // the comma is usually meant ("into sound, sound into code", "tell me, me first", "Testing, testing, one").
-        guard let lead = try? NSRegularExpression(pattern: "(?i)(^|[.!?]\\s+)([a-z']{2,}),\\s+\\2\\s+(?=\\p{Ll})") else { return out }
+        guard let lead = Rx.cached(pattern: "(?i)(^|[.!?]\\s+)([a-z']{2,}),\\s+\\2\\s+(?=\\p{Ll})") else { return out }
         let o = out as NSString
         for m in lead.matches(in: out, range: NSRange(location: 0, length: o.length)).reversed() {
             let word = o.substring(with: m.range(at: 2))
@@ -863,14 +863,14 @@ public enum Tidy {
     static func cuedCorrections(_ text: String) -> String {
         // The cue usually follows a comma; the speech model sometimes ends the sentence there instead ("leave at seven. No,
         // let's leave at eight"), so a full stop counts too.
-        guard let cue = try? NSRegularExpression(pattern: "(?i)([,.])\\s+(\(correctionCues)),?\\s+(?=[\\w$])") else { return text }
+        guard let cue = Rx.cached(pattern: "(?i)([,.])\\s+(\(correctionCues)),?\\s+(?=[\\w$])") else { return text }
         var s = text
         var guardCount = 0
         while guardCount < 6, let m = cue.firstMatch(in: s, range: NSRange(location: 0, length: (s as NSString).length)) {
             guardCount += 1
             let ns = s as NSString
             let head = ns.substring(to: m.range.location), tail = ns.substring(from: m.range.location + m.range.length)
-            let sentenceStart = head.range(of: "[.!?]\\s+(?=[^.!?]*$)", options: .regularExpression)?.upperBound ?? head.startIndex
+            let sentenceStart = head.range(of: "[.!?]\\s+(?=[^.!?]*$)", options: .cached)?.upperBound ?? head.startIndex
             let first = tail.prefix { $0.isLetter || $0.isNumber || $0 == "'" || $0 == "$" }.lowercased()
             guard !first.isEmpty else { break }
             let said0 = ns.substring(with: m.range(at: 2)).lowercased()
@@ -929,15 +929,15 @@ public enum Tidy {
             // Same kind just before the cue: "for four, I mean five people".
             var replaced = false
             for kind in correctionKinds {
-                if let r = head.range(of: "(?i)\\b" + kind + "$", options: .regularExpression),
-                   tail.range(of: "(?i)^" + kind + "\\b", options: .regularExpression) != nil {
+                if let r = head.range(of: "(?i)\\b" + kind + "$", options: .cached),
+                   tail.range(of: "(?i)^" + kind + "\\b", options: .cached) != nil {
                     s = String(head[..<r.lowerBound]) + tail; replaced = true; break
                 }
             }
             // One word swapped for one word, ending the sentence: "paint it blue, no wait, green".
             if !replaced, strong, said != "no", !said.hasPrefix("sorry"),
-               tail.range(of: "^[\\w']+(?=[.!?]?\\s*$)", options: .regularExpression) != nil,
-               let last = head.range(of: "\\b[\\w']+$", options: .regularExpression),
+               tail.range(of: "^[\\w']+(?=[.!?]?\\s*$)", options: .cached) != nil,
+               let last = head.range(of: "\\b[\\w']+$", options: .cached),
                !["i", "it", "you", "we", "they", "the", "a", "an", "is", "was"].contains(head[last].lowercased()) {
                 s = String(head[..<last.lowerBound]) + tail
                 replaced = true
@@ -955,7 +955,7 @@ public enum Tidy {
         for kind in correctionKinds {
             // The comma before the cue is optional here: the speech model often writes "Thursday No, wait, Friday", and a
             // day or number on both sides of the cue is a correction whatever the punctuation.
-            s = s.replacingOccurrences(of: "(?i)\\b\(kind)[,.]?\\s+(?:no,?\\s+wait|no|wait|sorry|i mean|or rather),?\\s+(\(kind))\\b", with: "$1", options: .regularExpression)
+            s = s.replacingOccurrences(of: "(?i)\\b\(kind)[,.]?\\s+(?:no,?\\s+wait|no|wait|sorry|i mean|or rather),?\\s+(\(kind))\\b", with: "$1", options: .cached)
         }
         return s
     }
