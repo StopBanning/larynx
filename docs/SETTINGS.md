@@ -49,7 +49,7 @@ override allows a later `defaults write` for that key to take effect again.
 | `meetingClaude` | `opus` | Which Claude writes meeting notes: `opus` or `sonnet` (lighter on a Claude plan, cheaper with a key). On four test meetings, Sonnet left out due dates ("today", "Thursday") that Opus kept, so Opus is the default. `larynx meeting --claude sonnet` overrides it for one run. |
 | `meetingEmail` | `""` | The address "Email this to me" fills in for meeting notes. Empty: Mail opens with no recipient. |
 | `learn` | `on` | `on` or `off`; watch the field for a correction after insertion. |
-| `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Fn, Right Option, Right Command. `--key` overrides it; menu key changes also update the active listener. |
+| `keys` | `""` | Comma-separated `fn,rightOption,rightCommand,rightControl`; empty means Right Option (the setup window asks; anyone set up before Nov 28 keeps Fn, Right Option and Right Command, written here once). `--key` overrides it; menu key changes also update the active listener. |
 | `handsFree` | `on` | `on` or `off`; double-tap a talk key to keep recording with no key held. The next press of a talk key finishes, Esc cancels, and it stops by itself after 30 minutes. |
 | `toggleKeys` | `""` | Comma-separated keys (same names as `keys`) that start hands-free with one press and finish it with the next: map a second macro-pad button to one, for example `rightControl`. |
 | `loginItemSet` | `false` | Internal boolean: first-run login-item setup has been attempted. Actual login-item status comes from macOS. |

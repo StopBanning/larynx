@@ -55,7 +55,8 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/uni
 
 ## Using it
 
-Hold **Fn**, **Right Option** or **Right Command**, talk, and let go. Everything else is in the menu bar icon and in
+Hold your talk key, talk, and let go. You pick it in the setup window: **Right Option** unless you choose **Right
+Command** or **Fn**. Everything else is in the menu bar icon and in
 Settings (⌘,).
 
 - **Hands-free.** Double-tap the talk key and keep talking without holding anything. Press it again to finish, or Esc

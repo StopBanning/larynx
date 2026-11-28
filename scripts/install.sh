@@ -70,4 +70,4 @@ else
   open "$HOME/Applications/Larynx.app"
 fi
 say "Done. Larynx is in your menu bar; the setup window walks you through three permissions."
-say "Hold Fn, Right Option or Right Command, speak, let go."
+say "Pick your talk key in the setup window (Right Option unless you choose another), then hold it, speak, let go."

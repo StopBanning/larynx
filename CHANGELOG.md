@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **One talk key, picked at setup.** New users choose Right Option (recommended), Right Command or Fn in the setup window, with a note on what each one also does: right-hand ⌘ shortcuts briefly start and cancel a dictation, and Fn is also Apple's Globe key. It used to be all three at once. Anyone already set up keeps the three keys they had; Settings still allows several.
+
 - **macOS 15 is now tested, and old developer tools get a plain message.** A Mac on macOS 15 with up-to-date developer tools (version 26) now builds and installs Larynx in the automatic checks. With older tools (Swift 6.1 or earlier) the build used to fail after a long wait with a message about "traits"; the installer now checks first and says which update to install.
 
 - **Less work on the main thread, and other apps put back at quit.** Saving each dictation to History (encoding the kept audio and writing the row, 15 to 50 ms and growing with History) now happens off the thread that hears the talk key, and old recordings are pruned once an hour instead of after every dictation. When Larynx quits, including the plain kill an update uses, it switches off the accessibility support it turned on in other apps (Claude, Chrome, Slack) instead of leaving that to them. The update script now restarts only the app, not a running `larynx mcp` or `serve`.

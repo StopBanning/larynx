@@ -4,10 +4,20 @@ import Foundation
 import LarynxCore
 import LarynxText
 
-// Talk keys: --key, else `defaults write com.automatedworkflow.larynx keys fn,rightCommand`, else Fn, Right Option or Right Command.
+// Talk keys: --key, else the `keys` setting, else Right Option. New users pick one in the setup window. Until Nov 28 the
+// default was Fn, Right Option and Right Command together: a right-hand ⌘C flashed the microphone, and Fn is also the
+// Globe key. Anyone set up before then keeps those three, written into their settings once.
 let savedKeys = (Settings.shared.string(.keys)).split(separator: ",").compactMap { Hotkey.Key(rawValue: String($0)) }
-let listenKeys: [Hotkey.Key] = option("--key").flatMap(Hotkey.Key.init(rawValue:)).map { [$0] }
-    ?? (savedKeys.isEmpty ? [.fn, .rightOption, .rightCommand] : savedKeys)
+let listenKeys: [Hotkey.Key] = {
+    if let key = option("--key").flatMap(Hotkey.Key.init(rawValue:)) { return [key] }
+    if !savedKeys.isEmpty { return savedKeys }
+    if inApp, Settings.shared.string(.onboarded) == "true" {
+        let earlier: [Hotkey.Key] = [.fn, .rightOption, .rightCommand]
+        try? Settings.shared.set(earlier.map(\.rawValue).joined(separator: ","), for: .keys)
+        return earlier
+    }
+    return [.rightOption]
+}()
 // MARK: - Menu bar (app mode)
 
 let inApp = Bundle.main.bundleURL.pathExtension == "app"

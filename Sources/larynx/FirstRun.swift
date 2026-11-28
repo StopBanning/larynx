@@ -55,6 +55,7 @@ final class FirstRunModel: ObservableObject {
     private var preparingSince: Date?
     @Published var level: Float = 0
     @Published var tryText = ""
+    @Published var talkKey = ((activeHotkey?.keys ?? listenKeys).first ?? .rightOption).rawValue
     private var timer: Timer?
     private var meter: AVAudioEngine?
 
@@ -211,6 +212,27 @@ struct FirstRunView: View {
                 StepRow(done: model.accessibility, title: "Accessibility",
                         detail: "To put your words where the cursor is and check they arrived. Password fields are never read or saved.",
                         button: "Open Settings", hint: FirstRunView.staleHint) { Inserter.requestTrust(); FirstRunModel.openPane("Privacy_Accessibility") }
+            }
+            if LarynxCore.Settings.shared.string(.onboarded) != "true" {
+                Section("Talk key") {
+                    Picker("Hold this key to talk", selection: $model.talkKey) {
+                        Text("Right Option (recommended)").tag(Hotkey.Key.rightOption.rawValue)
+                        Text("Right Command").tag(Hotkey.Key.rightCommand.rawValue)
+                        Text("Fn / Globe").tag(Hotkey.Key.fn.rawValue)
+                    }
+                    .pickerStyle(.radioGroup)
+                    .onChange(of: model.talkKey) { _, key in
+                        guard let chosen = Hotkey.Key(rawValue: key) else { return }
+                        try? LarynxCore.Settings.shared.set(chosen.rawValue, for: .keys)
+                        activeHotkey?.keys = withProfessionalKey([chosen])
+                    }
+                    Text(model.talkKey == Hotkey.Key.fn.rawValue
+                         ? "On Apple keyboards macOS also gives this key a job (emoji, input source or dictation). Set System Settings › Keyboard › \"Press 🌐 key to\" to Do Nothing."
+                         : model.talkKey == Hotkey.Key.rightCommand.rawValue
+                         ? "Shortcuts typed with the right-hand ⌘ (⌘C, ⌘V) will briefly start and cancel a dictation."
+                         : "The Option key to the right of the space bar. Change it any time in Settings.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             Section {
                 Button("What Larynx can and can't see") { NSWorkspace.shared.open(URL(string: Links.repo + "/blob/main/docs/PRIVACY.md")!) }
