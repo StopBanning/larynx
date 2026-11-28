@@ -37,5 +37,9 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - run: sw_vers; xcode-select -p; swift --version
+      # Someone on macOS 15 who updated their developer tools: the newest Xcode on the machine (version 26 or later).
+      - run: |
+          x=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$x" ]; then sudo xcode-select -s "$x"; fi
+          sw_vers; xcode-select -p; swift --version
       - run: python3 tests/install.py

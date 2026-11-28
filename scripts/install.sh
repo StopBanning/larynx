@@ -19,6 +19,17 @@ if ! xcrun --find swift >/dev/null 2>&1; then
   xcode-select --install 2>/dev/null || true
   fail "When that window says the software was installed, paste the same line into Terminal again."
 fi
+# The speech library needs Swift 6.2 or newer (Apple's developer tools version 26). Older tools fail only after a
+# long wait, with a message about "traits", so check first and say what to do.
+swiftv=$(xcrun swift --version 2>/dev/null | sed -nE 's/.*Swift version ([0-9]+)\.([0-9]+).*/\1 \2/p' | head -1)
+if [[ -n "$swiftv" ]]; then
+  smaj=${swiftv% *}; smin=${swiftv#* }
+  if (( smaj < 6 || (smaj == 6 && smin < 2) )); then
+    say "This Mac's developer tools have Swift $smaj.$smin; Larynx needs Swift 6.2 or newer (the tools for Xcode 26)."
+    say "Open System Settings, General, Software Update, and install \"Command Line Tools for Xcode 26\" (or update Xcode)."
+    fail "Then paste the same line into Terminal again."
+  fi
+fi
 
 # Use this checkout when run from inside one; otherwise fetch the source (or update it).
 here="${0:a:h}/.."
