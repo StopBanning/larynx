@@ -240,59 +240,7 @@ case "pill-demo":
     let seconds = Double(args.dropFirst().first ?? "") ?? 12
     let sample = args.count > 2 ? args[2] : "I wanna add you on my schedule for Wednesday, and can you send the report before the meeting starts on Friday afternoon?"
     NSApplication.shared.setActivationPolicy(.accessory)
-    Task { @MainActor in
-        // LARYNX_DEMO_BACKDROP=1: colour stripes behind the pill, to see (and screenshot) what the glass does.
-        if ["1", "dark"].contains(ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] ?? ""), let area = NSScreen.main?.visibleFrame {
-            let frame = NSRect(x: area.midX - 380, y: area.minY + 20, width: 760, height: 200)
-            let backdrop = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            backdrop.level = .floating
-            backdrop.ignoresMouseEvents = true
-            let view = NSView(frame: NSRect(origin: .zero, size: frame.size))
-            view.wantsLayer = true
-            let stripes = CAGradientLayer()
-            stripes.frame = view.bounds
-            stripes.startPoint = CGPoint(x: 0, y: 0.5); stripes.endPoint = CGPoint(x: 1, y: 0.5)
-            stripes.colors = [NSColor.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple].map(\.cgColor)
-            // LARYNX_DEMO_BACKDROP=dark: a near-black window like a dark-mode chat app instead.
-            if ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] == "dark" {
-                stripes.colors = [NSColor(white: 0.13, alpha: 1).cgColor, NSColor(white: 0.13, alpha: 1).cgColor]
-            }
-            view.layer?.addSublayer(stripes)
-            let text = NSTextField(labelWithString: "Larynx Larynx Larynx Larynx Larynx Larynx")
-            text.font = .systemFont(ofSize: 44, weight: .heavy)
-            text.textColor = .white
-            text.frame = NSRect(x: 10, y: 60, width: 740, height: 60)
-            view.addSubview(text)
-            backdrop.contentView = view
-            backdrop.orderFrontRegardless()
-        }
-        let started = Date()
-        // Speech-like loudness: syllables (~5 Hz) inside phrases (~0.4 Hz), with short pauses.
-        let level: () -> Float = {
-            let t = Date().timeIntervalSince(started)
-            let syllable = (sin(t * 2 * .pi * 4.7) + 1) / 2, phrase = max(0, sin(t * 2 * .pi * 0.38) + 0.35)
-            return Float(0.004 + 0.12 * syllable * min(1, phrase) + Double.random(in: 0...0.015))
-        }
-        let front = NSWorkspace.shared.frontmostApplication
-        Pill.shared.listen(app: front, privateField: false, field: Inserter.focusedFieldFrame(in: front), level: level)
-        log("pill window \(Pill.shared.windowNumber ?? -1)")
-        let words = sample.split(separator: " ")
-        let speaking = seconds * 0.7
-        var shown = 0
-        while Date().timeIntervalSince(started) < speaking {
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            let due = Int(Double(words.count) * min(1, (Date().timeIntervalSince(started) - 0.8) / (speaking - 1)))
-            if due > shown { shown = due; Pill.shared.words(words.prefix(shown).joined(separator: " ")) }
-        }
-        log("pill frame words \(Pill.shared.frame.map { NSStringFromRect($0) } ?? "-")")
-        Pill.shared.transcribing()
-        try? await Task.sleep(nanoseconds: UInt64(seconds * 0.2 * 1_000_000_000))
-        Pill.shared.message("Copied: press ⌘V to paste", symbol: "doc.on.clipboard", tint: .systemOrange)
-        try? await Task.sleep(nanoseconds: UInt64(seconds * 0.1 * 1_000_000_000))
-        Pill.shared.hide()
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        exit(0)
-    }
+    Task { @MainActor in await runPillDemo(seconds: seconds, sample: sample) }
     NSApplication.shared.run()
 case "rewrite":
     // Text in, through tidy, numbers and (if triggered) the rewrite, as in the pipeline; the decision goes to stderr.
@@ -656,4 +604,60 @@ func runFeed(_ path: String) async {
     } catch {
         log("\(error)"); exit(1)
     }
+}
+
+/// `larynx pill-demo`: the pill's states, played with a synthetic voice. A function of its own, not one long closure:
+/// the macOS 15 compiler (Swift 6.2) gave up type-checking it inline.
+@MainActor func runPillDemo(seconds: Double, sample: String) async {
+    // LARYNX_DEMO_BACKDROP=1: colour stripes behind the pill, to see (and screenshot) what the glass does.
+    if ["1", "dark"].contains(ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] ?? ""), let area = NSScreen.main?.visibleFrame {
+        let frame = NSRect(x: area.midX - 380, y: area.minY + 20, width: 760, height: 200)
+        let backdrop = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        backdrop.level = .floating
+        backdrop.ignoresMouseEvents = true
+        let view = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        view.wantsLayer = true
+        let stripes = CAGradientLayer()
+        stripes.frame = view.bounds
+        stripes.startPoint = CGPoint(x: 0, y: 0.5); stripes.endPoint = CGPoint(x: 1, y: 0.5)
+        stripes.colors = [NSColor.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple].map(\.cgColor)
+        // LARYNX_DEMO_BACKDROP=dark: a near-black window like a dark-mode chat app instead.
+        if ProcessInfo.processInfo.environment["LARYNX_DEMO_BACKDROP"] == "dark" {
+            stripes.colors = [NSColor(white: 0.13, alpha: 1).cgColor, NSColor(white: 0.13, alpha: 1).cgColor]
+        }
+        view.layer?.addSublayer(stripes)
+        let text = NSTextField(labelWithString: "Larynx Larynx Larynx Larynx Larynx Larynx")
+        text.font = .systemFont(ofSize: 44, weight: .heavy)
+        text.textColor = .white
+        text.frame = NSRect(x: 10, y: 60, width: 740, height: 60)
+        view.addSubview(text)
+        backdrop.contentView = view
+        backdrop.orderFrontRegardless()
+    }
+    let started = Date()
+    // Speech-like loudness: syllables (~5 Hz) inside phrases (~0.4 Hz), with short pauses.
+    let level: () -> Float = {
+        let t = Date().timeIntervalSince(started)
+        let syllable = (sin(t * 2 * .pi * 4.7) + 1) / 2, phrase = max(0, sin(t * 2 * .pi * 0.38) + 0.35)
+        return Float(0.004 + 0.12 * syllable * min(1, phrase) + Double.random(in: 0...0.015))
+    }
+    let front = NSWorkspace.shared.frontmostApplication
+    Pill.shared.listen(app: front, privateField: false, field: Inserter.focusedFieldFrame(in: front), level: level)
+    log("pill window \(Pill.shared.windowNumber ?? -1)")
+    let words = sample.split(separator: " ")
+    let speaking = seconds * 0.7
+    var shown = 0
+    while Date().timeIntervalSince(started) < speaking {
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let due = Int(Double(words.count) * min(1, (Date().timeIntervalSince(started) - 0.8) / (speaking - 1)))
+        if due > shown { shown = due; Pill.shared.words(words.prefix(shown).joined(separator: " ")) }
+    }
+    log("pill frame words \(Pill.shared.frame.map { NSStringFromRect($0) } ?? "-")")
+    Pill.shared.transcribing()
+    try? await Task.sleep(nanoseconds: UInt64(seconds * 0.2 * 1_000_000_000))
+    Pill.shared.message("Copied: press ⌘V to paste", symbol: "doc.on.clipboard", tint: .systemOrange)
+    try? await Task.sleep(nanoseconds: UInt64(seconds * 0.1 * 1_000_000_000))
+    Pill.shared.hide()
+    try? await Task.sleep(nanoseconds: 300_000_000)
+    exit(0)
 }
