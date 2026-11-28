@@ -30,3 +30,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 tests/install.py
+  install-macos-15:
+    # The README says macOS 15 or later. This is what someone on macOS 15 with its own developer tools gets.
+    # Reported but not yet required (Nov 28): the pill's Liquid Glass may need the macOS 26 tools to compile.
+    runs-on: macos-15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: sw_vers; xcode-select -p; swift --version
+      - run: python3 tests/install.py
