@@ -24,7 +24,7 @@ override allows a later `defaults write` for that key to take effect again.
 | Key | Default | Values and meaning |
 | --- | --- | --- |
 | `engine` | `ultra` | Speech model, selected at launch; `--engine` overrides it. `ultra` (Parakeet Ultra, 25 languages, the most accurate in docs/BENCHMARKS.md), `clean` (Bark 3.0 Clean, English, drops ums as it listens; the default before v0.5; non-commercial licence, see packaging/CREDITS.md), `parakeet` (Parakeet TDT v3, 25 languages), and benchmark candidates `bark3` (verbatim Bark) and `unified` (Parakeet Unified, English with built-in punctuation). |
-| `rewrite` | `auto` | `auto` or `off`; trigger-based Apple rewrite; `--rewrite` overrides it. `--clean` requests a forced rewrite, unless the rewrite stage is off. |
+| `rewrite` | `off` | `auto` or `off`; trigger-based Apple rewrite (off by default since Nov 27: about 2 s a run, and the rules now make its stutter fixes); `--rewrite` overrides it. `--clean` requests a forced rewrite, unless the rewrite stage is off. |
 | `vocabulary` | `on` | `on` or `off`; speech vocabulary boosting; `--vocab` overrides it. |
 | `vocabularyRoots` | `~/work` | Comma-separated project root paths; tilde expanded; empty disables project roots. |
 | `devTerms` | `on` | `on` or `off`; include the built-in developer term list in vocabulary. |

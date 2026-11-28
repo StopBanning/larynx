@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Apple's AI rewrite is now off by default.** In apps for people (Mail, Messages, Notes, browsers) it used to run on dictations with words like "actually", "sorry" or "like,", and on long ones, and each run kept you waiting about 2 seconds (3.5 at the slow end). Over two weeks of the developer's real use it ran 45 times and changed the text 10 times, always by removing words: 5 stutters, which the strong stutter rules now catch 4 of; 4 filler "like"s; and once a word that should have stayed. Turn it back on in Settings › Cleanup or with `rewrite: auto`.
+
 - **Strong stutter cleanup catches more, instantly.** It now also removes a start cut off before an "uh" or "um" and then said whole ("check the deli um delivery" becomes "check the delivery"), even when the speech model misheard the start a little ("it was apar uh apparently fine"), and a subject said again after a small word ("I just I need" becomes "I just need"). These were the stutter fixes only Apple's AI rewrite used to make, at about 2 seconds each. On the developer's 4,110 dictations the new patterns change 25, none of them a word that was meant; on 2,207 sentences of other people's speech they change nothing. Short real words before a filler stay ("go to um today's game"). For everyone, a letter said more than once before a word ("w w went") now goes too.
 
 - **No waiting for the disk.** Larynx used to save your recording before it started transcribing, about 35 ms on a typical dictation and now and then a second on a busy disk. It now saves while it transcribes. The crash test kills Larynx 0.2 s after you let go: the dictation comes back word for word, and the save took 2 ms.

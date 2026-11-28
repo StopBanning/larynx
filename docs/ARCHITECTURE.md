@@ -70,10 +70,12 @@ Four layers, cheapest first:
 2. **Tidy rules.** Leftover fillers, stutters ("the the", "I, I"), stranded commas and capitals. Instant, never
    rewrites a word, and leaves real doubles alone ("very very", "had had").
 3. **Numbers.** Spoken numbers, times and percentages become digits by rule, in every app.
-4. **AI rewrite, only when needed.** Self-corrections ("three, no wait, four") and verbal tics ("you know",
-   "basically") go to Apple's on-device model (macOS 26+, free, about 0.3 s). It never runs for AI chats,
-   terminals or code editors, and a guard rejects any reply that adds a word or drops too much, falling back to
-   the tidied text. Turn it off in Settings (Cleanup) or with `--rewrite off`.
+4. **AI rewrite, optional and off by default.** With `rewrite: auto`, self-corrections ("three, no wait, four") and
+   verbal tics ("you know", "basically") go to Apple's on-device model (macOS 26+, free). It never runs for AI
+   chats, terminals or code editors, and a guard rejects any reply that adds a word or drops too much, falling back
+   to the tidied text. Off by default since Nov 27: over two weeks of real use it took about 2 s a run (3.5 s at
+   p90) and changed the text 10 times in 45 runs: 5 stutters (the strong stutter rules now catch 4), 4 filler
+   "like"s, and once a word that was meant.
 
 The app you are dictating into sets the mode: a light touch for AI chats, terminals and editors; text that ends like
 a sentence for Mail, Slack, Messages and Notes.

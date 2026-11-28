@@ -69,7 +69,10 @@ func runMCP() async {
                 let input = Transcript(text: raw, raw: raw, engine: "text", mode: mode, audioSeconds: 0,
                                        asrMs: 0, rewriteMs: 0, totalMs: 0, rewrite: "off", rewritten: false)
                 let style = (a["style"] as? String).flatMap(Style.init(rawValue:)) ?? .casual
-                let context = Pipeline.Context(dictionary: Dictionary.load(), settings: Settings.shared.snapshot(), style: style)
+                let settings = Settings.shared.snapshot()
+                // The AI rewrite only when the setting asks for it, as in dictation.
+                let context = Pipeline.Context(rewrite: settings.string(.rewrite) == "auto", dictionary: Dictionary.load(),
+                                               settings: settings, style: style)
                 text(id, await Pipeline().run(input, context: context).text)
             case "add_dictionary_word":
                 guard let heard = a["heard"] as? String, let written = a["written"] as? String, !heard.isEmpty

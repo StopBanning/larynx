@@ -94,7 +94,7 @@ Larynx directly. Tools:
 | Tool | Arguments | Returns |
 | --- | --- | --- |
 | `transcribe_file` | `path`, optional `mode` | The cleaned transcript of an audio file |
-| `clean_text` | `text`, optional `mode` (default `correspondence`) | Dictionary, tidy rules and, when needed, the AI rewrite |
+| `clean_text` | `text`, optional `mode` (default `correspondence`) | Dictionary and tidy rules, plus the AI rewrite when `rewrite` is `auto` |
 | `add_dictionary_word` | `heard`, `written` | Adds an entry to `~/Library/Application Support/Larynx/dictionary.json` |
 | `status` | none | Speech model, rewrite availability, dictionary size |
 

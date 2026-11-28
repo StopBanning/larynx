@@ -26,7 +26,7 @@ public final class Settings: @unchecked Sendable {
         public var defaultValue: String {
             switch self {
             case .engine: return "ultra"
-            case .rewrite: return "auto"
+            case .rewrite: return "off"  // Nov 27: ~2 s a run; the rules now make its stutter fixes
             case .vocabularyRoots: return "~/work"
             case .keys, .toggleKeys, .micDevice: return ""
             case .loginItemSet: return "false"

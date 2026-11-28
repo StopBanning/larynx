@@ -83,8 +83,9 @@ Settings (⌘,).
 - Adjusts to the app. AI chats, terminals and code editors get a light touch. Mail, Slack and Messages get finished
   sentences.
 
-Almost all of this is rules, so it's instant. Apple's on-device model only steps in for changes of mind, on macOS 26
-and later. It never runs in AI chats, terminals or editors, and you can turn it off.
+All of this is rules, so it's instant. An optional pass by Apple's on-device model (macOS 26 and later) is off by
+default: each run took about 2 seconds, and it rarely changed anything the rules don't. You can turn it on in
+Settings; it never runs in AI chats, terminals or editors.
 
 ## Privacy
 
