@@ -138,8 +138,7 @@ public final class History: @unchecked Sendable {
     public func complete(_ pending: Pending, transcript: Transcript, delivery: String, flags: [String] = [],
                          timing: Timing? = nil) -> Row? {
         guard let spool = pending.spool else { return nil }
-        defer { Self.removeSpool(spool) }
-        guard !transcript.text.isEmpty else { return nil }
+        guard !transcript.text.isEmpty else { Self.removeSpool(spool); return nil }
         var audioPath: String?
         if settings.snapshot().days(.keepAudio) != nil, (try? Self.makePrivateDirectory(audioDir)) != nil {
             // Kept as 16-bit FLAC, about a quarter of the spool's float WAV. If that fails, keep the WAV itself.
@@ -158,7 +157,9 @@ public final class History: @unchecked Sendable {
                       audioSeconds: transcript.audioSeconds, totalMs: transcript.totalMs, delivery: delivery,
                       audioPath: audioPath, flags: flags + (transcript.doubtful == nil || flags.contains("doubtful") ? [] : ["doubtful"]),
                       timing: timing)
+        // If the row can't be saved, the recording stays in the spool and the next launch tries again.
         do { try insert(row) } catch { return nil }
+        Self.removeSpool(spool)
         prune()
         return row
     }

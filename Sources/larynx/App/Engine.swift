@@ -15,6 +15,8 @@ let engine: Engine = option("--engine").flatMap(Engine.init(rawValue:))
 final class Loader: @unchecked Sendable {
     static let shared = Loader()
     lazy var task: Task<Void, Error> = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) }
+    /// After a failed load: a fresh attempt.
+    func retry() { task = Task { try await transcriber.load(modelsDir: modelsDir, engine: engine) } }
     /// Your vocabulary (project names, dictionary, vocabulary.txt). Loads after the speech model; the app doesn't wait for it.
     lazy var vocabulary: Task<Void, Never> = Task { await reloadVocabulary() }
 }

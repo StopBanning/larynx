@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import LarynxCore
@@ -67,4 +68,24 @@ private final class Probe {
     let q = Probe(); q.hotkey.doubleTapLocks = false
     q.press(); q.release(after: 0.1); q.press(after: 0.1); q.release(after: 0.1)
     #expect(!q.hotkey.isLocked)  // double-tap turned off
+}
+
+@Test func larynxsOwnPasteDoesNotCancelTheNextDictation() {
+    // The previous dictation's ⌘V lands while the talk key is already held for the next one.
+    let p = Probe()
+    p.press()
+    let own = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true)!
+    own.flags = .maskCommand
+    own.setIntegerValueField(.eventSourceUserData, value: Hotkey.ownEventMarker)
+    p.hotkey.handle(type: .keyDown, event: own)
+    p.release(after: 1.0)
+    #expect(p.events == ["down", "up"])
+    // The person's own ⌘V while holding is still a shortcut.
+    let q = Probe()
+    q.press()
+    let theirs = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true)!
+    theirs.flags = .maskCommand
+    q.hotkey.handle(type: .keyDown, event: theirs)
+    q.release(after: 1.0)
+    #expect(q.events == ["down", "cancel"])
 }

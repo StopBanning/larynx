@@ -58,8 +58,12 @@ func emit(_ object: [String: Any]) {
     FileHandle.standardOutput.write(Data([0x0A]))
 }
 
+/// The menu bar app's log lines carry the time, so "what happened at 3:15" has an answer.
+private let logClock: DateFormatter = { let f = DateFormatter(); f.dateFormat = "MM-dd HH:mm:ss.SSS"; return f }()
+
 func log(_ message: String) {
-    FileHandle.standardError.write(Data("larynx: \(message)\n".utf8))
+    let stamp = inApp ? logClock.string(from: Date()) + " " : ""
+    FileHandle.standardError.write(Data("larynx: \(stamp)\(message)\n".utf8))
 }
 
 func ms(since start: Date) -> Int { Int(Date().timeIntervalSince(start) * 1000) }

@@ -32,6 +32,8 @@ public final class Recorder: @unchecked Sendable {
     /// True while `stopAfterTail` is still listening past key-up; a `start()` then takes over instead.
     private var tailing = false
     private var handedOver: [Float]?
+    /// True from key-up until that recording is collected (`willStop()`): a press in between starts its own.
+    private var stopPending = false
 
     /// Loudness of the most recent buffer (RMS, 0...1; speech is usually 0.01-0.3). Drives the pill's waveform.
     public var level: Float {
@@ -62,8 +64,12 @@ public final class Recorder: @unchecked Sendable {
         if isRecording {
             // A new press while the last dictation's tail is still recording: hand that recording over and keep the
             // microphone running for the new one.
+            // The same when the key was let go but that recording hasn't been collected yet: without this, the new press
+            // had no recording of its own and its release got the previous one again (pasted twice, Nov 12).
             lock.lock(); defer { lock.unlock() }
-            if tailing { handedOver = samples; samples.removeAll(keepingCapacity: true); tailing = false }
+            if tailing || stopPending {
+                handedOver = samples; samples.removeAll(keepingCapacity: true); tailing = false; stopPending = false
+            }
             return
         }
         cooling?.cancel(); cooling = nil
@@ -116,7 +122,11 @@ public final class Recorder: @unchecked Sendable {
         if let started { throw started }
     }
 
-    /// Stops capture and returns everything recorded since `start()`.
+    /// The key was let go: the recording will be collected shortly (by `stopAfterTail`). A press before that starts
+    /// a recording of its own.
+    public func willStop() { lock.withLock { stopPending = true } }
+
+    /// Stops capture and returns everything recorded since `start()`, once: a second call returns nothing.
     @discardableResult
     public func stop() -> [Float] {
         if isRecording {
@@ -131,7 +141,10 @@ public final class Recorder: @unchecked Sendable {
             }
         }
         lock.lock(); defer { lock.unlock() }
-        return samples
+        stopPending = false
+        let out = samples
+        samples.removeAll(keepingCapacity: true)
+        return out
     }
 
     private func coolDownNow() {
@@ -152,6 +165,8 @@ public final class Recorder: @unchecked Sendable {
     /// most `maxTail` seconds, so the end of a word said as the key comes up isn't cut off. Most dictations end in a
     /// pause and stop at once, so this adds no delay to them. Returns the samples and how long the tail ran.
     public func stopAfterTail(maxTail: TimeInterval = 0.3) async -> (samples: [Float], tailMs: Int) {
+        // A new press already set this recording aside and is recording on: hand it over without stopping.
+        if let taken: [Float] = lock.withLock({ defer { handedOver = nil }; return handedOver }) { return (taken, 0) }
         guard isRecording, maxTail > 0, Recorder.speechAtEnd(snapshot()) else { return (stop(), 0) }
         lock.withLock { tailing = true }
         let started = Date()
@@ -181,6 +196,10 @@ public final class Recorder: @unchecked Sendable {
         let end = rms(Array(samples.suffix(frame * 2)))
         return end > max(0.012, floor * 4)
     }
+
+    /// Tests only: recording without a microphone, and samples arriving as if from one.
+    func beginForTest() { lock.withLock { isRecording = true } }
+    func appendForTest(_ more: [Float]) { lock.withLock { samples.append(contentsOf: more) } }
 
     /// Everything recorded so far, without stopping (for the live preview).
     public func snapshot() -> [Float] {

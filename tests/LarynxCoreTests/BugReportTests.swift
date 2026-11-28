@@ -28,6 +28,18 @@ struct BugReportTests {
         #expect(r.hasPrefix("Larynx report"))
     }
 
+    @Test func dictatedWordsInResultLinesAreLeftOut() {
+        // With debugText on, a result line ends with what was said: marked ("| said:"), or the older ": " form.
+        let log = """
+            larynx: 11-18 09:15:01.000 140 ms [standard com.apple.Notes] inserted, rewrite: not needed (0 ms), 6 words, 20261118-091501-000-abc123; mic 12 asr 90 | said: Meet me at the bakery on Elm.
+            larynx: 140 ms [ai com.anthropic.claudefordesktop] pasted+copied, rewrite: not needed (0 ms), 7 words, 20261118-091502-000-def456; asr 88 reason no-focus: Tell Priya it's on the shelf.
+            larynx: learned from a repeat: Bakkery → Bakery
+            """
+        let r = BugReport.build(app: "Larynx 1.0", computer: "macOS 26", log: log, meetings: [], home: "")
+        for secret in ["bakery on Elm", "Priya", "shelf", "Bakkery"] { #expect(!r.contains(secret), "\(secret) leaked:\n\(r)") }
+        #expect(r.contains("asr 90") && r.contains("asr 88") && r.contains("11-18 09:15:01.000"))
+    }
+
     @Test func onlyTheEndOfALongLog() {
         let log = (0..<1000).map { "larynx: tap \($0)" }.joined(separator: "\n")
         let r = BugReport.build(app: "", computer: "", log: log, meetings: [], home: "")

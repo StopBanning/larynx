@@ -43,6 +43,26 @@ public enum Inserter {
                 return item
             }
             if !items.isEmpty { board.writeObjects(items) }
+            lastRestore = Date()
+        }
+    }
+
+    /// When the clipboard was last put back after a paste.
+    nonisolated(unsafe) static var lastRestore: Date?
+    /// Where the late-paste check reports (the app's log). Counts only, never words.
+    nonisolated(unsafe) public static var note: ((String) -> Void)?
+
+    /// Measuring for a day whether a "missed" paste was only late (Big Brother R2, Nov 28): 2 s after Larynx inserted
+    /// the words a second way, or gave up, how many copies of their start are in the field, and whether the old
+    /// clipboard was already back when the second way ran (a late ⌘V would then paste the old clipboard).
+    @MainActor static func checkLater(_ element: AXUIElement, text: String, after method: String) {
+        let start = String(text.prefix(60))
+        let clipboardBack = (lastRestore ?? .distantPast) > (lastPasteSent ?? .distantFuture)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard let field = value(of: element) else { note?("late-paste check after \(method): field unreadable 2 s later"); return }
+            let copies = field.components(separatedBy: start).count - 1
+            note?("late-paste check after \(method): \(copies >= 2 ? "2+" : String(copies)) copies of the words 2 s later; old clipboard \(clipboardBack ? "already back" : "not back yet") when it ran")
         }
     }
 
@@ -152,7 +172,7 @@ public enum Inserter {
         }
         if AXUIElementSetAttributeValue(element, kAXSelectedTextAttribute as CFString, text as CFString) == .success {
             switch await outcome(element, in: app, from: before, text: text, within: 0.3) {
-            case .changed: return .insertedBy("accessibility")
+            case .changed: checkLater(element, text: text, after: "accessibility"); return .insertedBy("accessibility")
             case .unknown(let why): copyOnly(text); return .pastedAndCopied("insert " + why)
             case .unchanged: break
             }
@@ -165,8 +185,11 @@ public enum Inserter {
                 copyOnly(text); return .copied("a key was held down, so the words were not typed")
             }
             typeUnicode(text)
-            if case .changed = await outcome(element, in: app, from: before, text: text, within: 0.5) { return .insertedBy("typing") }
+            if case .changed = await outcome(element, in: app, from: before, text: text, within: 0.5) {
+                checkLater(element, text: text, after: "typing"); return .insertedBy("typing")
+            }
         }
+        checkLater(element, text: text, after: "giving up")
         copyOnly(text)
         return .copied("the paste didn't arrive in the field")
     }
@@ -254,6 +277,12 @@ public enum Inserter {
         return false
     }
 
+    /// Posts a key event marked as Larynx's own, so the talk-key listener ignores it.
+    static func postOwn(_ event: CGEvent?) {
+        event?.setIntegerValueField(.eventSourceUserData, value: Hotkey.ownEventMarker)
+        event?.post(tap: .cghidEventTap)
+    }
+
     static let modifierKeys: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift, .maskSecondaryFn]
 
     /// True once no modifier key is physically held, waiting up to `seconds`.
@@ -278,7 +307,7 @@ public enum Inserter {
                 let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: down)
                 chunk.withUnsafeBufferPointer { event?.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: $0.baseAddress) }
                 event?.flags = []
-                event?.post(tap: .cghidEventTap)
+                postOwn(event)
             }
             usleep(4000)
             i += 16
@@ -293,7 +322,7 @@ public enum Inserter {
         for down in [true, false] {
             let event = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: down)
             event?.flags = .maskCommand
-            event?.post(tap: .cghidEventTap)
+            postOwn(event)
         }
     }
 
@@ -364,8 +393,8 @@ public enum Inserter {
         let up = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: false)
         down?.flags = .maskCommand
         up?.flags = .maskCommand
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        postOwn(down)
+        postOwn(up)
     }
 
     /// The key that types `letter` in the current layout (Dvorak, AZERTY...), falling back to the US position.

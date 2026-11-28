@@ -71,7 +71,18 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         try? await Task.sleep(nanoseconds: 1_000_000_000)
     }
     setStatus("Loading speech model...")
-    do { try await Loader.shared.task.value } catch { setStatus("Model failed to load"); log("\(error)"); return }
+    // A failed download or load tries again by itself (10 s, 30 s, then every 2 minutes) and says so.
+    var attempt = 0
+    while true {
+        do { try await Loader.shared.task.value; break } catch {
+            attempt += 1
+            let wait = attempt == 1 ? 10 : attempt == 2 ? 30 : 120
+            log("speech model failed to load (try \(attempt)), trying again in \(wait) s: \(error)")
+            setStatus("Model failed to load: trying again in \(wait) s. Check the internet connection")
+            try? await Task.sleep(nanoseconds: UInt64(wait) * 1_000_000_000)
+            Loader.shared.retry()
+        }
+    }
     _ = Loader.shared.vocabulary  // starts loading in the background
     if inApp { Task { @MainActor in MeetingController.shared.recoverCutOff() } }
 
@@ -91,7 +102,9 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         log("dictation key: \(activeHotkey?.pressedKey?.label ?? "?")\(session.style == .professional ? ", professional" : "")")
         let micStart = Date()
         do { try recorder.start() } catch {
-            session.reset(); log("\(error)")
+            session.reset(); log("microphone would not open: \(error)")
+            setStatus("The microphone would not open")
+            if inApp { Task { @MainActor in Pill.shared.message("The microphone would not open. Check it in Settings", symbol: "mic.slash", tint: .systemOrange, seconds: 3) } }
             if inApp { DispatchQueue.main.async { MeetingController.shared.setDictating(false) } }
             return
         }
@@ -149,6 +162,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         }
     }, onUp: {
         guard let session = ListenSession.current, session.state.finish() else { return }
+        recorder.willStop()  // a press before this recording is collected gets one of its own
         if inApp { DispatchQueue.main.async { MeetingController.shared.setDictating(false) } }
         session.stopPreview()
         let keyUp = Date()
@@ -159,8 +173,19 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         session.timing.tailMs = tailMs
         if tailMs > 0 { log("kept listening \(tailMs) ms after the key: a word was still being said") }
         let app = session.target
-        guard Double(samples.count) / Recorder.sampleRate >= 0.3 else {  // a tap, not dictation
-            session.reset(); setStatus("Ready"); Pill.shared.hide(); return
+        guard Double(samples.count) / Recorder.sampleRate >= 0.3 else {
+            let held = keyUp.timeIntervalSince(session.pressedAt)
+            session.reset()
+            if held >= 1.0 {
+                // Held for a second or more and almost no audio came in: the microphone, not a tap.
+                log(String(format: "no sound from the microphone: key held %.1f s, %.2f s of audio", held, Double(samples.count) / Recorder.sampleRate))
+                setStatus("No sound from the microphone")
+                Pill.shared.message("No sound from the microphone. Check it in Settings", symbol: "mic.slash", tint: .systemOrange, seconds: 3)
+            } else {
+                log(String(format: "a tap (%.2f s), not dictation", held))
+                setStatus("Ready"); Pill.shared.hide()
+            }
+            return
         }
         NSSound(named: "Pop")?.play()
         setStatus("Transcribing...")
@@ -219,7 +244,16 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
                    Golden.isWordFix(previous.text, text) {
                     History.shared.recordCorrection(id: previous.id, text: text, source: "repeat")
                 }
-                if case .copied(let why) = delivery {
+                // macOS took away Larynx's Accessibility access (an update, or a reset): every paste goes blind until
+                // it is added back, so say so plainly instead of a quiet "copied" each time.
+                let accessLost = !Inserter.isTrusted || (delivery.reason ?? "").contains("-25211")
+                if accessLost {
+                    log("Accessibility access is off: the words were left on the clipboard")
+                    if session.shouldPresent {
+                        setStatus("Accessibility is off: add Larynx again in System Settings")
+                        Pill.shared.message("Accessibility is off for Larynx. Your words are on the clipboard", symbol: "exclamationmark.triangle", tint: .systemRed, seconds: 4)
+                    }
+                } else if case .copied(let why) = delivery {
                     // Nowhere to type: say so where the user is looking, and keep the words on the clipboard.
                     if session.shouldPresent { NSSound(named: "Funk")?.play(); setStatus("Copied, press ⌘V") }
                     log("copied: \(why)")
@@ -276,6 +310,8 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
         .compactMap { Hotkey.Key(rawValue: $0.trimmingCharacters(in: .whitespaces)) }
     let started = await MainActor.run { hotkey.start() }
     guard started else { setStatus("macOS refused the key listener"); log("macOS refused the key listener"); return }
+    Inserter.note = { log($0) }
+    hotkey.onTapRestarted = { why in log("key listener: macOS switched it off (\(why)); switched back on") }
     activeHotkey = hotkey
     setStatus(Inserter.isTrusted ? "Ready" : "Ready (needs Accessibility to paste)")
     var ready = "ready: hold " + keys.map(\.label).joined(separator: " or ") + ", speak, release"
@@ -316,7 +352,8 @@ func recoverAbandoned(before cutoff: Date) async -> [History.Row] {
 
 /// Transcript text stays out of the log unless `debugText` is on.
 func logTranscript(_ line: String, text: String) {
-    log(Settings.shared.string(.debugText) == "on" ? "\(line): \(text)" : line)
+    // "said:" marks where the words start, so "Send a Report…" can always leave them out.
+    log(Settings.shared.string(.debugText) == "on" ? "\(line) | said: \(text)" : line)
 }
 
 /// Rewrite notes can quote the rejected model output; keep only the decision.

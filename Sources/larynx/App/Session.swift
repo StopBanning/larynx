@@ -9,6 +9,8 @@ import LarynxCore
     /// The preview waits until then: it backs off on a slow Mac (see the preview timer in Listen.swift).
     static var nextPreview = Date.distantPast
     let target: NSRunningApplication?
+    /// When the talk key went down: a long hold with almost no audio means the microphone, not a tap.
+    let pressedAt = Date()
     var state = SessionState()
     var previewTimer: Timer?
     /// A password field or an app on the privacy list: the words never touch the disk.

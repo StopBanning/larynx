@@ -39,6 +39,8 @@ public final class Hotkey: @unchecked Sendable {
     private let onUp: () -> Void
     private let onCancel: () -> Void
     private let onLock: () -> Void
+    /// Called when macOS switched the listener off (a slow callback, or secure input) and it was switched back on.
+    public var onTapRestarted: ((String) -> Void)?
     private var tap: CFMachPort?
     private var isDown = false
     private var cancelled = false
@@ -98,11 +100,18 @@ public final class Hotkey: @unchecked Sendable {
         return true
     }
 
-    private func handle(type: CGEventType, event: CGEvent) {
+    /// Stamped on every key event Larynx posts itself (the paste's ⌘V, typed words, "scratch that"), so the listener
+    /// can tell them from the person's own keys. Without it, a paste landing while the talk key was already held for
+    /// the next sentence counted as a shortcut and threw that recording away.
+    public static let ownEventMarker: Int64 = 0x4C61_7279_6E78  // "Larynx"
+
+    func handle(type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            onTapRestarted?(type == .tapDisabledByTimeout ? "timeout" : "user input")
             return
         }
+        if event.getIntegerValueField(.eventSourceUserData) == Hotkey.ownEventMarker { return }
         if type == .keyDown {
             otherKeyDown(code: event.getIntegerValueField(.keyboardEventKeycode))
             return

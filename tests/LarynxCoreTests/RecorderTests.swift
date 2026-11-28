@@ -17,3 +17,19 @@ private func clip(speech: Double, pause: Double) -> [Float] {
     #expect(!Recorder.speechAtEnd(clip(speech: 0, pause: 1.0)))       // nothing said
     #expect(!Recorder.speechAtEnd([Float](repeating: 0.2, count: 400))) // too short to judge
 }
+
+@Test func aPressBeforeTheLastRecordingIsCollectedGetsItsOwn() async throws {
+    let r = Recorder()
+    r.warmSeconds = { 60 }  // no cool-down during the test
+    let first = [Float](repeating: 0.001, count: 16_000), second = [Float](repeating: 0.002, count: 8_000)
+    r.beginForTest(); r.appendForTest(first)
+    r.willStop()            // key up: the collection task hasn't run yet
+    try r.start()           // the next press arrives first
+    r.appendForTest(second)
+    let a = await r.stopAfterTail()
+    #expect(a.samples == first)
+    #expect(r.isRecording)  // the new dictation is still recording
+    let b = await r.stopAfterTail()
+    #expect(b.samples == second)
+    #expect(r.stop().isEmpty)  // handed over once: never the same audio twice
+}

@@ -37,8 +37,14 @@ public enum BugReport {
 
     /// Log lines that name words (what a correction taught Larynx) keep only their start; anything quoted is cut.
     static func scrub(_ line: String) -> String {
-        for marker in ["learned from your fix:", "heard:", "typed:", "meant:"] {
+        for marker in ["learned from your fix:", "learned from a repeat:", "| said:", "heard:", "typed:", "meant:"] {
             if let r = line.range(of: marker) { return line[..<r.upperBound] + " (words left out)" }
+        }
+        // A dictation's result line from before "said:" marked the words: "… 12 words, <id>; <timings>: <the words>".
+        if line.range(of: "\\d+ ms \\[[^\\]]*\\] ", options: .regularExpression) != nil,
+           let w = line.range(of: " words, "), let semi = line.range(of: "; ", range: w.upperBound..<line.endIndex),
+           let colon = line.range(of: ": ", range: semi.upperBound..<line.endIndex) {
+            return line[..<colon.lowerBound] + " (words left out)"
         }
         if let q = line.firstIndex(where: { "\"“”'‘’".contains($0) }), line.contains(" ") {
             return String(line[..<q]) + "(left out)"
