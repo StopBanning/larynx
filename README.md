@@ -28,7 +28,8 @@ curl -fsSL https://raw.githubusercontent.com/StopBanning/larynx/main/scripts/ins
 ```
 
 This builds Larynx from source into `~/Applications` and opens it. The first build takes a few minutes. If Apple's
-free command-line developer tools aren't installed, the script opens their installer for you.
+free command-line developer tools aren't installed, the script opens their installer for you. They need to be
+version 26 or newer (Swift 6.2); on older tools the script says so and how to update.
 
 A setup window then walks you through three permissions (Microphone, Input Monitoring and Accessibility) and a
 quick microphone test. The speech model (about 600 MB) downloads once, on first launch.

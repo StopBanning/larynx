@@ -32,9 +32,9 @@ jobs:
       - run: python3 tests/install.py
   install-macos-15:
     # The README says macOS 15 or later. This is what someone on macOS 15 with its own developer tools gets.
-    # Reported but not yet required (Nov 28): the pill's Liquid Glass may need the macOS 26 tools to compile.
+    # Passes with Xcode 26 (Swift 6.2) since Nov 28; Swift 6.1 can't resolve the speech library, and the installer
+    # says so up front.
     runs-on: macos-15
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       # Someone on macOS 15 who updated their developer tools: the newest Xcode on the machine (version 26 or later).

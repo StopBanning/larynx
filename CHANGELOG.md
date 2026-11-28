@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **macOS 15 is now tested, and old developer tools get a plain message.** A Mac on macOS 15 with up-to-date developer tools (version 26) now builds and installs Larynx in the automatic checks. With older tools (Swift 6.1 or earlier) the build used to fail after a long wait with a message about "traits"; the installer now checks first and says which update to install.
+
 - **Less work on the main thread, and other apps put back at quit.** Saving each dictation to History (encoding the kept audio and writing the row, 15 to 50 ms and growing with History) now happens off the thread that hears the talk key, and old recordings are pruned once an hour instead of after every dictation. When Larynx quits, including the plain kill an update uses, it switches off the accessibility support it turned on in other apps (Claude, Chrome, Slack) instead of leaving that to them. The update script now restarts only the app, not a running `larynx mcp` or `serve`.
 
 - **Fast back-to-back dictation no longer loses or repeats one.** Larynx's own ⌘V, landing while the talk key was already down for the next sentence, counted as a shortcut and threw that recording away (12 times in the log). Larynx now marks every key it sends and the talk key ignores them. And letting go and pressing again before the first recording was collected could paste the first one twice (seen once, Nov 12); each recording is now handed over exactly once, and the quick second press gets its own.
