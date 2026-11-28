@@ -85,6 +85,7 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
     }
     _ = Loader.shared.vocabulary  // starts loading in the background
     if inApp { Task { @MainActor in MeetingController.shared.recoverCutOff() } }
+    if inApp { switchAppsBackAtQuit() }
 
     // Each press is one utterance with its own target app, captured at key-down, so switching apps mid-sentence
     // (or a slow result) never sends text to the wrong place.
@@ -231,8 +232,13 @@ func withProfessionalKey(_ keys: [Hotkey.Key], settings: Settings = .shared) -> 
                 session.timing.reason = delivery.reason
                 ListenSession.lastDelivered = Date()
                 await addContextShadow(&result, screen: screen)
-                let saved = History.shared.complete(pending, transcript: result, delivery: delivery.label,
-                                                    flags: session.style == .professional ? ["professional"] : [], timing: session.timing)
+                // Off the main thread: encoding the kept audio and writing the row take 15-50 ms, and the talk key is
+                // heard on the main thread.
+                let (finalResult, label, timing) = (result, delivery.label, session.timing)
+                let flags: [String] = session.style == .professional ? ["professional"] : []
+                let saved = await Task.detached(priority: .utility) {
+                    History.shared.complete(pending, transcript: finalResult, delivery: label, flags: flags, timing: timing)
+                }.value
                 if delivery.isInserted { Undo.last = Undo.Entry(id: saved?.id, pid: app?.processIdentifier, time: Date()) }
                 if let doubtful = result.doubtful { log("not sure about: \(doubtful.count) word\(doubtful.count == 1 ? "" : "s")") }
                 MenuController.shared.remember(text)
@@ -451,4 +457,18 @@ func loadAverage() -> Double? {
     var loads = [Double](repeating: 0, count: 3)
     guard getloadavg(&loads, 3) > 0 else { return nil }
     return (loads[0] * 10).rounded() / 10
+}
+
+/// Larynx turns on other apps' accessibility support (Claude, Chrome, Slack...) to read their text fields. At quit,
+/// including the plain kill an update uses, switch it back off rather than leave it to each app.
+private var quitSignal: DispatchSourceSignal?
+func switchAppsBackAtQuit() {
+    NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
+        AccessibilityModes.disableAll()
+    }
+    signal(SIGTERM, SIG_IGN)
+    let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .global())  // not main: a busy main thread must not block quitting
+    source.setEventHandler { AccessibilityModes.disableAll(); exit(0) }
+    source.resume()
+    quitSignal = source
 }

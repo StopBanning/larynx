@@ -9,7 +9,7 @@ while true; do
   [[ "$last" != *"recording..."* && "$last" != *"hands-free"* && $age -ge 30 ]] && break
   sleep 3
 done
-pkill -x larynx; sleep 1
+pkill -f "Larynx.app/Contents/MacOS/larynx"; sleep 1  # the app only, not a running `larynx mcp` or `serve`
 open ~/Applications/Larynx.app
 start=$(wc -l < "$LOG")
 for i in {1..90}; do

@@ -104,6 +104,7 @@ public final class History: @unchecked Sendable {
     private let settings: Settings
     private let lock = NSLock()
     private var db: OpaquePointer?
+    private var lastPrune = Date.distantPast
 
     public init(root: URL, settings: Settings = .shared) {
         self.root = root
@@ -160,7 +161,8 @@ public final class History: @unchecked Sendable {
         // If the row can't be saved, the recording stays in the spool and the next launch tries again.
         do { try insert(row) } catch { return nil }
         Self.removeSpool(spool)
-        prune()
+        // Pruning lists every kept recording (4,000 after three weeks): once an hour is plenty.
+        if lock.withLock({ let due = Date().timeIntervalSince(lastPrune) > 3600; if due { lastPrune = Date() }; return due }) { prune() }
         return row
     }
 
