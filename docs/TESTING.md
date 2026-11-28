@@ -5,7 +5,7 @@ of each.
 
 | Suite | What it checks | Latest |
 | --- | --- | --- |
-| `swift test` | 119 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence, meeting notes, the microphone surviving an audio engine error, reused patterns giving Foundation's exact results, the doubtful-word check giving the same words in its faster order | all pass (Nov 27) |
+| `swift test` | 121 tests: every cleanup rule against `tests/cases.json`, 100 sentences that must not change in 3 modes, numbers, fitting the field, the rewrite guard, the pipeline, settings (each one documented), history, crash spool, privacy rules, self-learning, word confidence, meeting notes, the microphone surviving an audio engine error, reused patterns giving Foundation's exact results, the doubtful-word check giving the same words in its faster order, stutters around an "uh" or "um" | all pass (Nov 27) |
 | `python3 tests/suite.py --rewrite auto` | About 40 messy sentences spoken by 5 macOS voices at 2 speeds, transcribed and scored, plus a 26-case benchmark for the on-device AI rewrite | Nov 11: rules 73/73, rewrite 26/26, spoken 281/300 with Parakeet Ultra (most misses are the speech model mishearing a synthetic voice) |
 | `python3 tests/protocol.py` | The `serve` and MCP wire formats stay compatible | pass |
 | `python3 tests/agents.py` | The examples in [docs/AGENTS.md](AGENTS.md): AI mode, the four MCP tools, the professional style, and your real dictionary untouched | 10/10 (Nov 13) |

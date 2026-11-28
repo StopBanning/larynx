@@ -226,6 +226,39 @@ public enum Tidy {
         return s
     }
 
+    /// Strong stutter patterns that need the "uh" or "um" still in place, so they run before the fillers go:
+    /// - a cut-off start, a filler, then within two words the word it starts: "it was apar uh apparently
+    ///   fine" -> "it was apparently fine" (the start is no word);
+    /// - a word, a filler, then a longer word it starts: "she will some um sometimes call" -> "she will sometimes call";
+    /// and one that doesn't: a subject said again after a small word, "I just I can't" -> "I just can't".
+    static func hesitatedRestarts(_ text: String) -> String {
+        var s = text
+        if let re = Rx.cached(pattern: "(?<![\\w'-])([a-z]{2,6})[,.]?\\s+\(fillers)[,.]?\\s+(?=[a-z])") {
+            for m in re.matches(in: s, range: NSRange(s.startIndex..., in: s)).reversed() {
+                guard let whole = Range(m.range, in: s), let frag = Range(m.range(at: 1), in: s) else { continue }
+                let start = String(s[frag])
+                let isWord = shortWords.contains(start) || BundledWordList.shared.contains(start)
+                if !isWord && !BundledWordList.shared.startsAWord(start) { continue }
+                let next = s[whole.upperBound...].split(whereSeparator: \.isWhitespace).prefix(3)
+                    .map { $0.lowercased().trimmingCharacters(in: .punctuationCharacters) }
+                // The word it starts: exactly, or (for a start that is no word, which the speech model may have
+                // misheard: "apar" for "appar-") nearly, with the same first letter.
+                guard let k = next.firstIndex(where: { word in
+                    guard word.count >= start.count + 2 else { return false }
+                    if word.hasPrefix(start) { return true }
+                    return !isWord && word.first == start.first && LetterSimilarity.ratio(start, String(word.prefix(start.count + 1))) >= 0.8
+                }) else { continue }
+                // A word or two in between: only a start that is no word. Right before the word: a real word too, if it
+                // has four letters or more ("some um sometimes"); "to um today", "an um answer" are left alone.
+                if isWord && (k > 0 || start.count < 4) { continue }
+                s.removeSubrange(whole)
+            }
+        }
+        s = s.replacingOccurrences(of: "(?i)(?<![\\w'])(i|we|you|they|he|she)\\s+(just|really|actually|also|still|never|always|honestly)\\s+\\1\\s+(?!know\\b|mean\\b|think\\b|guess\\b)(?=[a-z])",
+                                   with: "$1 $2 ", options: .cached)
+        return s
+    }
+
     /// Words before a lone letter that make it a label, not a stumble: "plan b", "vitamin d", "press k".
     static let letterLabels: Set<String> = ["plan", "vitamin", "letter", "option", "grade", "type", "class", "section", "part",
         "step", "row", "column", "size", "model", "version", "level", "tier", "group", "team", "line", "the", "a", "press", "hit",
@@ -234,7 +267,8 @@ public enum Tidy {
     /// A lone lowercase letter right before a word it starts: "that k kids" -> "that kids", "nearly t ten" -> "nearly
     /// ten". Not "a" or "I", not a capital, and not a label ("plan b because", "the c code").
     static func letterRestarts(_ text: String) -> String {
-        guard let re = Rx.cached(pattern: "(?<![\\w'.-])([b-hj-z])\\s+(?=\\1[a-z]{2,})") else { return text }
+        // The letter may be said more than once: "used d d dictation" -> "used dictation".
+        guard let re = Rx.cached(pattern: "(?<![\\w'.-])([b-hj-z])(?:\\s+\\1)*\\s+(?=\\1[a-z]{2,})") else { return text }
         var s = text
         for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let whole = Range(m.range, in: s) else { continue }
@@ -282,6 +316,8 @@ public enum Tidy {
         // 0b. "I, uh, pressed that": the comma after a subject pronoun was only the pause before the filler.
         s = s.replacingOccurrences(of: "\\b(I|[Ww]e|[Yy]ou|[Tt]hey|[Hh]e|[Ss]he),\\s*(?i:\(fillers))[,.]?\\s+(?=[a-z])", with: "$1 ",
                                    options: .cached)
+        // 0c. Strong stutter cleanup that needs the fillers still there ("the deli um delivery").
+        if stutter == .strong { s = hesitatedRestarts(s) }
         // 1. Leftover fillers, with the comma that came with them.
         s = s.replacingOccurrences(of: "(?i)(^|[\\s,])\(fillers)[,.]?(?=\\s|$)", with: "$1", options: .cached)
         // 1b. "er", "ah", "eh" in the middle of a sentence are hesitations ("the total is, er, about"). Lowercase only,

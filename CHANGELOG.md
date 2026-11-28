@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Strong stutter cleanup catches more, instantly.** It now also removes a start cut off before an "uh" or "um" and then said whole ("check the deli um delivery" becomes "check the delivery"), even when the speech model misheard the start a little ("it was apar uh apparently fine"), and a subject said again after a small word ("I just I need" becomes "I just need"). These were the stutter fixes only Apple's AI rewrite used to make, at about 2 seconds each. On the developer's 4,110 dictations the new patterns change 25, none of them a word that was meant; on 2,207 sentences of other people's speech they change nothing. Short real words before a filler stay ("go to um today's game"). For everyone, a letter said more than once before a word ("w w went") now goes too.
+
 - **No waiting for the disk.** Larynx used to save your recording before it started transcribing, about 35 ms on a typical dictation and now and then a second on a busy disk. It now saves while it transcribes. The crash test kills Larynx 0.2 s after you let go: the dictation comes back word for word, and the save took 2 ms.
 
 - **Typed words can no longer turn into shortcuts.** When a paste doesn't show up, Larynx types the words instead. Typed keys take on any modifier key held at that moment, so with Right Command as the talk key, pressing it again for the next dictation while the words were still being typed turned them into ⌘-shortcuts in the app (a sidebar closing, a folder opening). Larynx now types only once every modifier key is let go, and otherwise leaves the words on the clipboard.

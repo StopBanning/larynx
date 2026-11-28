@@ -316,3 +316,33 @@ private struct Cases: Decodable {
 @Test func strongStutterKeepsAndRepeats() {
     #expect(Tidy.apply("She knocks and knocks and knocks.", mode: .correspondence, stutter: .strong) == "She knocks and knocks and knocks.")
 }
+
+@Test func strongStutterAroundAFiller() {
+    func n(_ s: String) -> String { Tidy.apply(s, mode: .correspondence) }
+    func strong(_ s: String) -> String { Tidy.apply(s, mode: .correspondence, stutter: .strong) }
+    // A word, a filler, then a longer word it starts.
+    #expect(strong("The team felt disap uh disappointed.") == "The team felt disappointed.")
+    #expect(strong("Can you check the deli um delivery?") == "Can you check the delivery?")
+    #expect(strong("She will some um sometimes call.") == "She will sometimes call.")
+    // A start that is no word, a word or two later, even slightly misheard ("apar" for "appar-").
+    #expect(strong("It was apar uh apparently fine.") == "It was apparently fine.")
+    #expect(strong("The team felt disap uh really disappointed.") == "The team felt really disappointed.")
+    // Short real words before a filler are left alone: they are often meant.
+    #expect(strong("We should go to um today's game.") == "We should go to today's game.")
+    #expect(strong("That is an um answer.") == "That is an answer.")
+    #expect(strong("The bat um battery died.") == "The bat battery died.")
+    // A real word with a word between is not a stumble.
+    #expect(strong("The plan uh for planning day.") == "The plan for planning day.")
+    // A subject said again after "just", "really"...: "I just I need" -> "I just need".
+    #expect(strong("Honestly I just I need a nap.") == "Honestly I just need a nap.")
+    #expect(strong("We really we should leave.") == "We really should leave.")
+    #expect(strong("You just, you know, go.") == "You just go.")
+    #expect(strong("I just I know it.") == "I just I know it.")
+    // The standard rules leave them.
+    #expect(n("Honestly I just I need a nap.") == "Honestly I just I need a nap.")
+}
+
+@Test func letterSaidMoreThanOnce() {
+    #expect(Tidy.apply("We w w went home early.", mode: .correspondence) == "We went home early.")
+    #expect(Tidy.apply("Take plan b because it works.", mode: .correspondence) == "Take plan b because it works.")
+}
